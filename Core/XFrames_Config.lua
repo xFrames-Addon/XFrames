@@ -13,6 +13,15 @@ local defaults = {
 		},
 		player = {
 			enabled = true,
+			width = 240,
+			height = 84,
+			scale = 1,
+			position = {
+				point = "CENTER",
+				relativePoint = "CENTER",
+				x = -360,
+				y = -220,
+			},
 		},
 		target = {
 			enabled = true,
