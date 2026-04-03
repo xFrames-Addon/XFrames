@@ -16,6 +16,23 @@ local defaults = {
 			width = 240,
 			height = 84,
 			scale = 1,
+			castBar = {
+				enabled = true,
+				width = 240,
+				height = 20,
+			},
+			pet = {
+				enabled = true,
+				width = 180,
+				height = 58,
+				scale = 0.9,
+				position = {
+					point = "CENTER",
+					relativePoint = "CENTER",
+					x = -520,
+					y = -270,
+				},
+			},
 			position = {
 				point = "CENTER",
 				relativePoint = "CENTER",

@@ -8,5 +8,6 @@
 Core/XFrames.lua
 Core/XFrames_Config.lua
 Modules/Player/XFrames_Player.lua
+Modules/Player/XFrames_PlayerPet.lua
 Modules/Target/XFrames_Target.lua
 Modules/Raid/XFrames_Raid.lua

@@ -8,7 +8,9 @@ local PowerBarColor = PowerBarColor
 
 local CreateFrame = CreateFrame
 local SetPortraitTexture = SetPortraitTexture
+local UnitCastingInfo = UnitCastingInfo
 local UnitClass = UnitClass
+local UnitChannelInfo = UnitChannelInfo
 local UnitHealth = UnitHealth
 local UnitHealthMax = UnitHealthMax
 local UnitIsAFK = UnitIsAFK
@@ -21,8 +23,11 @@ local UnitName = UnitName
 local UnitPower = UnitPower
 local UnitPowerMax = UnitPowerMax
 local UnitPowerType = UnitPowerType
+local GetTime = GetTime
 
 local HEALTH_BAR_COLOR = {r = 0.18, g = 0.78, b = 0.35}
+local CAST_BAR_COLOR = {r = 0.87, g = 0.68, b = 0.21}
+local CHANNEL_BAR_COLOR = {r = 0.35, g = 0.71, b = 0.92}
 local BACKDROP_COLOR = {0.08, 0.09, 0.11, 0.92}
 local BORDER_COLOR = {0.24, 0.27, 0.31, 0.95}
 local POWER_BAR_COLORS = {
@@ -116,6 +121,21 @@ local function createBar(parent, height, anchorPoint, relativeTo, relativePoint,
 	return bar
 end
 
+local function createBackdropFrame(name, parent, width, height, anchorPoint, relativeTo, relativePoint, x, y)
+	local frame = CreateFrame("Frame", name, parent, "BackdropTemplate")
+	frame:SetSize(width, height)
+	frame:SetPoint(anchorPoint, relativeTo, relativePoint, x, y)
+	frame:SetBackdrop({
+		bgFile = "Interface\\Buttons\\WHITE8x8",
+		edgeFile = "Interface\\Buttons\\WHITE8x8",
+		edgeSize = 1,
+		insets = {left = 1, right = 1, top = 1, bottom = 1},
+	})
+	frame:SetBackdropColor(unpack(BACKDROP_COLOR))
+	frame:SetBackdropBorderColor(unpack(BORDER_COLOR))
+	return frame
+end
+
 function Player:CreateFrame()
 	if self.frame then
 		return self.frame
@@ -151,6 +171,17 @@ function Player:CreateFrame()
 
 	frame.powerLabel = createText(frame, "OVERLAY", "GameFontNormalSmall", 11, "TOPLEFT", frame.healthBar, "BOTTOMLEFT", 0, -10, "LEFT")
 	frame.powerBar = createBar(frame, 14, "TOPLEFT", frame.powerLabel, "BOTTOMLEFT", 0, -2)
+
+	if config.castBar and config.castBar.enabled then
+		frame.castFrame = createBackdropFrame(nil, frame, config.castBar.width, config.castBar.height, "TOPLEFT", frame, "BOTTOMLEFT", 0, -8)
+		frame.castBar = createBar(frame.castFrame, config.castBar.height - 6, "TOPLEFT", frame.castFrame, "TOPLEFT", 3, -3)
+		frame.castBar:SetPoint("RIGHT", frame.castFrame, "RIGHT", -3, 0)
+		frame.castBar.valueText:Hide()
+		frame.castBar.percentText:Hide()
+		frame.castSpellText = createText(frame.castFrame, "OVERLAY", "GameFontHighlightSmall", 11, "LEFT", frame.castBar, "LEFT", 6, 0, "LEFT")
+		frame.castTimeText = createText(frame.castFrame, "OVERLAY", "GameFontHighlightSmall", 10, "RIGHT", frame.castBar, "RIGHT", -6, 0, "RIGHT")
+		frame.castFrame:Hide()
+	end
 
 	self.frame = frame
 	return frame
@@ -219,6 +250,88 @@ function Player:UpdatePower()
 	bar.percentText:SetText(percentText(current, maximum))
 end
 
+function Player:StopCastBar()
+	if not self.frame or not self.frame.castFrame then
+		return
+	end
+
+	self.castState = nil
+	self.frame.castFrame:Hide()
+	self.frame.castFrame:SetScript("OnUpdate", nil)
+end
+
+function Player:UpdateCastBarVisual()
+	local state = self.castState
+	local frame = self.frame
+	if not state or not frame or not frame.castBar then
+		return
+	end
+
+	local now = GetTime()
+	local duration
+	if state.channeling then
+		duration = state.endTime - now
+	else
+		duration = now - state.startTime
+	end
+
+	if duration < 0 then
+		duration = 0
+	end
+
+	local total = state.endTime - state.startTime
+	if total <= 0 then
+		total = 0.1
+	end
+
+	if now >= state.endTime then
+		self:StopCastBar()
+		return
+	end
+
+	frame.castFrame:Show()
+	frame.castBar:SetMinMaxValues(0, total)
+	frame.castBar:SetValue(duration)
+	frame.castSpellText:SetText(state.spellName or "")
+	frame.castTimeText:SetText(string.format("%.1f", state.endTime - now))
+end
+
+function Player:StartCastBar(spellName, startMS, endMS, channeling)
+	if not self.frame or not self.frame.castFrame then
+		return
+	end
+
+	local color = channeling and CHANNEL_BAR_COLOR or CAST_BAR_COLOR
+	self.castState = {
+		spellName = spellName,
+		startTime = startMS / 1000,
+		endTime = endMS / 1000,
+		channeling = channeling,
+	}
+
+	self.frame.castBar:SetStatusBarColor(color.r, color.g, color.b)
+	self.frame.castFrame:SetScript("OnUpdate", function()
+		self:UpdateCastBarVisual()
+	end)
+	self:UpdateCastBarVisual()
+end
+
+function Player:RefreshCastState()
+	local spellName, _, _, startMS, endMS = UnitCastingInfo("player")
+	if spellName then
+		self:StartCastBar(spellName, startMS, endMS, false)
+		return
+	end
+
+	spellName, _, _, startMS, endMS = UnitChannelInfo("player")
+	if spellName then
+		self:StartCastBar(spellName, startMS, endMS, true)
+		return
+	end
+
+	self:StopCastBar()
+end
+
 function Player:Refresh()
 	if not self.frame then
 		return
@@ -230,10 +343,11 @@ function Player:Refresh()
 	self:UpdatePortrait()
 	self:UpdateHealth()
 	self:UpdatePower()
+	self:RefreshCastState()
 end
 
 function Player:OnEvent(event, unit)
-	if unit and unit ~= "player" then
+	if unit and unit ~= "player" and not string.find(event, "^UNIT_SPELLCAST") then
 		return
 	end
 
@@ -267,6 +381,16 @@ function Player:OnEvent(event, unit)
 		return
 	end
 
+	if event == "UNIT_SPELLCAST_START" or event == "UNIT_SPELLCAST_CHANNEL_START" or event == "UNIT_SPELLCAST_CHANNEL_UPDATE" or event == "UNIT_SPELLCAST_DELAYED" then
+		self:RefreshCastState()
+		return
+	end
+
+	if event == "UNIT_SPELLCAST_STOP" or event == "UNIT_SPELLCAST_CHANNEL_STOP" or event == "UNIT_SPELLCAST_INTERRUPTED" or event == "UNIT_SPELLCAST_FAILED" then
+		self:StopCastBar()
+		return
+	end
+
 	self:Refresh()
 end
 
@@ -282,6 +406,14 @@ function Player:RegisterEvents()
 	frame:RegisterUnitEvent("UNIT_DISPLAYPOWER", "player")
 	frame:RegisterUnitEvent("UNIT_NAME_UPDATE", "player")
 	frame:RegisterUnitEvent("UNIT_PORTRAIT_UPDATE", "player")
+	frame:RegisterUnitEvent("UNIT_SPELLCAST_START", "player")
+	frame:RegisterUnitEvent("UNIT_SPELLCAST_STOP", "player")
+	frame:RegisterUnitEvent("UNIT_SPELLCAST_INTERRUPTED", "player")
+	frame:RegisterUnitEvent("UNIT_SPELLCAST_FAILED", "player")
+	frame:RegisterUnitEvent("UNIT_SPELLCAST_DELAYED", "player")
+	frame:RegisterUnitEvent("UNIT_SPELLCAST_CHANNEL_START", "player")
+	frame:RegisterUnitEvent("UNIT_SPELLCAST_CHANNEL_STOP", "player")
+	frame:RegisterUnitEvent("UNIT_SPELLCAST_CHANNEL_UPDATE", "player")
 	frame:SetScript("OnEvent", function(_, event, ...)
 		XFrames:SafeCall("module Player:OnEvent", self.OnEvent, self, event, ...)
 	end)
