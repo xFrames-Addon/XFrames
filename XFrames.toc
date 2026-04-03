@@ -1,0 +1,12 @@
+## Interface: 120100
+## Title: XFrames
+## Notes: Retail-only unit frames rebuilt from scratch
+## Author: Jim Adkins, OpenAI Codex
+## Version: 0.1.0
+## SavedVariables: XFramesDB
+
+Core/XFrames.lua
+Core/XFrames_Config.lua
+Modules/Player/XFrames_Player.lua
+Modules/Target/XFrames_Target.lua
+Modules/Raid/XFrames_Raid.lua
