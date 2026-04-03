@@ -25,6 +25,27 @@ local defaults = {
 		},
 		target = {
 			enabled = true,
+			width = 240,
+			height = 84,
+			scale = 1,
+			position = {
+				point = "CENTER",
+				relativePoint = "CENTER",
+				x = 360,
+				y = -220,
+			},
+			focus = {
+				enabled = true,
+				width = 220,
+				height = 78,
+				scale = 0.95,
+				position = {
+					point = "CENTER",
+					relativePoint = "CENTER",
+					x = 360,
+					y = -120,
+				},
+			},
 			targettarget = {
 				enabled = true,
 			},
