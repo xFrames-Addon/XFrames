@@ -5,6 +5,12 @@ local XFrames = ns.XFrames
 local defaults = {
 	profile = {
 		debug = false,
+		diagnostics = {
+			autoEnableCVars = true,
+			taintLogLevel = "5",
+			logLimit = 200,
+			logs = {},
+		},
 		player = {
 			enabled = true,
 		},
@@ -37,4 +43,5 @@ function XFrames:InitializeDatabase()
 	XFramesDB = XFramesDB or {}
 	copyDefaults(defaults, XFramesDB)
 	self.db = XFramesDB
+	self.db.profile.diagnostics.logs = self.db.profile.diagnostics.logs or {}
 end

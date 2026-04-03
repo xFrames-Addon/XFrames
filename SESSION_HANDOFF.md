@@ -10,6 +10,7 @@ The project intentionally starts with:
 - one `.toc`
 - one saved-variable table
 - a small module registration system
+- built-in diagnostic mode with saved log buffering and debug slash commands
 
 ## Intentional Non-Goals Right Now
 
@@ -28,3 +29,14 @@ Build the first real frame path:
 4. player pet shell
 
 Raid frames come later after the core patterns are proven.
+
+## Debugging
+
+Use:
+
+- `/xframes status`
+- `/xframes debug on`
+- `/xframes debug dump`
+- `/xframes debug clear`
+
+When debug is enabled, the addon attempts to turn on `scriptErrors` and `taintLog` and also keeps its own rolling diagnostic log in saved variables.

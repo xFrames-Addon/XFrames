@@ -7,10 +7,31 @@ XFrames.name = addonName
 XFrames.modules = {}
 XFrames.events = {}
 
+local InCombatLockdown = InCombatLockdown
+local date = date
+local geterrorhandler = geterrorhandler
+local pairs = pairs
+local select = select
+local string = string
+local tostring = tostring
+local tinsert = table.insert
+
 local function printf(...)
 	if DEFAULT_CHAT_FRAME then
 		DEFAULT_CHAT_FRAME:AddMessage(string.format(...))
 	end
+end
+
+local function trim(msg)
+	return msg and msg:match("^%s*(.-)%s*$") or ""
+end
+
+local function safeToString(value)
+	if value == nil then
+		return "nil"
+	end
+
+	return tostring(value)
 end
 
 function XFrames:RegisterModule(name, module)
@@ -26,10 +47,82 @@ function XFrames:GetModule(name)
 	return self.modules[name]
 end
 
+function XFrames:GetDiagnostics()
+	return self.db and self.db.profile and self.db.profile.diagnostics
+end
+
+function XFrames:IsDebugEnabled()
+	return self.db and self.db.profile and self.db.profile.debug
+end
+
+function XFrames:AddLog(level, message)
+	local diagnostics = self:GetDiagnostics()
+	if not diagnostics then
+		return
+	end
+
+	local logs = diagnostics.logs
+	local entry = {
+		time = date("%H:%M:%S"),
+		level = level,
+		message = safeToString(message),
+	}
+
+	tinsert(logs, entry)
+
+	local limit = diagnostics.logLimit or 200
+	while #logs > limit do
+		table.remove(logs, 1)
+	end
+
+	if self:IsDebugEnabled() or level == "ERROR" or level == "WARN" then
+		printf("|cff33ff99XFrames|r [%s] %s", level, entry.message)
+	end
+end
+
+function XFrames:Debug(message)
+	self:AddLog("DEBUG", message)
+end
+
+function XFrames:Info(message)
+	self:AddLog("INFO", message)
+end
+
+function XFrames:Warn(message)
+	self:AddLog("WARN", message)
+end
+
+function XFrames:Error(message)
+	self:AddLog("ERROR", message)
+end
+
+function XFrames:HandleError(scope, err)
+	local message = string.format("%s failed: %s", scope or "XFrames", safeToString(err))
+	self:Error(message)
+
+	local handler = geterrorhandler()
+	if handler then
+		handler(message)
+	end
+end
+
+function XFrames:SafeCall(scope, fn, ...)
+	if type(fn) ~= "function" then
+		return false
+	end
+
+	local args = {...}
+	return xpcall(function()
+		return fn(unpack(args))
+	end, function(err)
+		self:HandleError(scope, err)
+	end)
+end
+
 function XFrames:ForEachModule(method)
 	for _, module in pairs(self.modules) do
 		if type(module[method]) == "function" then
-			module[method](module, self)
+			self:SafeCall(string.format("module %s:%s", module.name or "unknown", method), module[method], module, self)
 		end
 	end
 end
@@ -41,23 +134,128 @@ function XFrames:Initialize()
 
 	self.initialized = true
 	self:InitializeDatabase()
+	self:Info("Initializing addon core")
 	self:ForEachModule("Initialize")
 	self:RegisterSlashCommands()
+end
+
+function XFrames:SetDebugEnabled(enabled)
+	self.db.profile.debug = not not enabled
+	self:Info(string.format("Debug mode %s", self.db.profile.debug and "enabled" or "disabled"))
+	if self.db.profile.debug then
+		self:ApplyDiagnosticCVars()
+	end
+end
+
+function XFrames:TrySetCVar(name, value)
+	local setter = C_CVar and C_CVar.SetCVar or SetCVar
+	if not setter then
+		self:Warn(string.format("No CVar setter available for %s", name))
+		return false
+	end
+
+	if InCombatLockdown and InCombatLockdown() then
+		self.pendingDiagnosticCVars = true
+		self:Warn(string.format("Deferred setting CVar %s until out of combat", name))
+		return false
+	end
+
+	local ok = setter(name, value)
+	if ok == nil or ok == false then
+		self:Warn(string.format("Unable to set CVar %s to %s", name, safeToString(value)))
+		return false
+	end
+
+	self:Debug(string.format("Set CVar %s=%s", name, safeToString(value)))
+	return true
+end
+
+function XFrames:ApplyDiagnosticCVars()
+	local diagnostics = self:GetDiagnostics()
+	if not diagnostics or not diagnostics.autoEnableCVars or not self:IsDebugEnabled() then
+		return
+	end
+
+	self:TrySetCVar("scriptErrors", "1")
+	self:TrySetCVar("taintLog", diagnostics.taintLogLevel or "5")
+end
+
+function XFrames:DumpLogs(count)
+	local diagnostics = self:GetDiagnostics()
+	if not diagnostics then
+		return
+	end
+
+	local logs = diagnostics.logs or {}
+	local total = #logs
+	local limit = tonumber(count) or 20
+	local startIndex = math.max(1, total - limit + 1)
+
+	if total == 0 then
+		printf("|cff33ff99XFrames|r no diagnostic log entries yet")
+		return
+	end
+
+	for index = startIndex, total do
+		local entry = logs[index]
+		printf("|cff33ff99XFrames|r [%s] [%s] %s", entry.time or "??:??:??", entry.level or "INFO", entry.message or "")
+	end
+end
+
+function XFrames:ClearLogs()
+	local diagnostics = self:GetDiagnostics()
+	if not diagnostics then
+		return
+	end
+
+	diagnostics.logs = {}
+	printf("|cff33ff99XFrames|r diagnostic log cleared")
 end
 
 function XFrames:RegisterSlashCommands()
 	SLASH_XFRAMES1 = "/xframes"
 	SlashCmdList.XFRAMES = function(msg)
-		msg = msg and msg:lower():match("^%s*(.-)%s*$") or ""
+		msg = trim(msg):lower()
 
-		if msg == "status" or msg == "" then
-			printf("|cff33ff99XFrames|r loaded. Modules: %d", self:CountModules())
+		local command, arg = msg:match("^(%S+)%s*(.-)$")
+		command = command or ""
+
+		if command == "status" or msg == "" then
+			printf("|cff33ff99XFrames|r loaded. Modules: %d. Debug: %s", self:CountModules(), self:IsDebugEnabled() and "on" or "off")
 			return
 		end
 
-		if msg == "debug" then
-			self.db.profile.debug = not self.db.profile.debug
-			printf("|cff33ff99XFrames|r debug is now %s", self.db.profile.debug and "on" or "off")
+		if command == "debug" then
+			arg = trim(arg)
+			if arg == "" or arg == "toggle" then
+				self:SetDebugEnabled(not self:IsDebugEnabled())
+				return
+			end
+			if arg == "on" then
+				self:SetDebugEnabled(true)
+				return
+			end
+			if arg == "off" then
+				self:SetDebugEnabled(false)
+				return
+			end
+			if arg == "status" then
+				printf("|cff33ff99XFrames|r debug is %s", self:IsDebugEnabled() and "on" or "off")
+				return
+			end
+			if arg:match("^dump") then
+				self:DumpLogs(arg:match("^dump%s+(%d+)$"))
+				return
+			end
+			if arg == "clear" then
+				self:ClearLogs()
+				return
+			end
+			if arg == "cvars" then
+				self:ApplyDiagnosticCVars()
+				return
+			end
+			printf("|cff33ff99XFrames|r debug commands: on, off, toggle, status, dump [count], clear, cvars")
 			return
 		end
 
@@ -83,15 +281,24 @@ function XFrames.events:ADDON_LOADED(loadedAddon)
 end
 
 function XFrames.events:PLAYER_LOGIN()
+	XFrames:ApplyDiagnosticCVars()
 	XFrames:ForEachModule("Enable")
+end
+
+function XFrames.events:PLAYER_REGEN_ENABLED()
+	if XFrames.pendingDiagnosticCVars then
+		XFrames.pendingDiagnosticCVars = nil
+		XFrames:ApplyDiagnosticCVars()
+	end
 end
 
 XFrames:SetScript("OnEvent", function(_, event, ...)
 	local handler = XFrames.events[event]
 	if handler then
-		handler(XFrames.events, ...)
+		XFrames:SafeCall(string.format("event %s", event), handler, XFrames.events, ...)
 	end
 end)
 
 XFrames:RegisterEvent("ADDON_LOADED")
 XFrames:RegisterEvent("PLAYER_LOGIN")
+XFrames:RegisterEvent("PLAYER_REGEN_ENABLED")

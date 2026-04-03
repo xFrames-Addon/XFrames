@@ -27,3 +27,11 @@ Raid frames are planned, but they will be built fresh after the core frame archi
 - no disabling or reparening Blizzard-managed frames
 - no legacy XML-heavy options system unless there is a clear need
 - prefer small Lua modules with explicit lifecycle hooks
+
+## Diagnostics
+
+Built-in debugging is part of the core design.
+
+See:
+
+- `DEBUGGING.md`
