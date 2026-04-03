@@ -48,6 +48,27 @@ local defaults = {
 			},
 			targettarget = {
 				enabled = true,
+				width = 180,
+				height = 54,
+				scale = 0.9,
+				position = {
+					point = "CENTER",
+					relativePoint = "CENTER",
+					x = 565,
+					y = -225,
+				},
+			},
+			focustarget = {
+				enabled = true,
+				width = 172,
+				height = 50,
+				scale = 0.88,
+				position = {
+					point = "CENTER",
+					relativePoint = "CENTER",
+					x = 540,
+					y = -125,
+				},
 			},
 		},
 		raid = {

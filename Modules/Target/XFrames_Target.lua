@@ -27,6 +27,8 @@ local UnitPowerType = UnitPowerType
 
 local HEALTH_BAR_COLOR = {r = 0.72, g = 0.22, b = 0.22}
 local FOCUS_HEALTH_BAR_COLOR = {r = 0.72, g = 0.58, b = 0.22}
+local TARGET_TARGET_HEALTH_BAR_COLOR = {r = 0.68, g = 0.32, b = 0.32}
+local FOCUS_TARGET_HEALTH_BAR_COLOR = {r = 0.68, g = 0.52, b = 0.28}
 local BACKDROP_COLOR = {0.08, 0.09, 0.11, 0.92}
 local BORDER_COLOR = {0.24, 0.27, 0.31, 0.95}
 local POWER_BAR_COLORS = {
@@ -167,6 +169,49 @@ function Target:CreateUnitFrame(key, unit, config, accent)
 	return frame
 end
 
+function Target:CreateCompactUnitFrame(key, unit, config, accent)
+	local frameName
+	if key == "targettarget" then
+		frameName = "XFramesTargetTargetFrame"
+	else
+		frameName = "XFramesFocusTargetFrame"
+	end
+
+	local frame = CreateFrame("Frame", frameName, UIParent, "BackdropTemplate")
+	frame.unit = unit
+	frame.unitKey = key
+	frame.fallbackLabel = key == "targettarget" and "ToT" or "FoT"
+	frame.isCompact = true
+	frame:SetSize(config.width, config.height)
+	frame:SetScale(config.scale or 1)
+	frame:SetPoint(config.position.point, UIParent, config.position.relativePoint, config.position.x, config.position.y)
+	frame:SetFrameStrata("MEDIUM")
+	frame:SetBackdrop({
+		bgFile = "Interface\\Buttons\\WHITE8x8",
+		edgeFile = "Interface\\Buttons\\WHITE8x8",
+		edgeSize = 1,
+		insets = {left = 1, right = 1, top = 1, bottom = 1},
+	})
+	frame:SetBackdropColor(unpack(BACKDROP_COLOR))
+	frame:SetBackdropBorderColor(unpack(BORDER_COLOR))
+	frame:Hide()
+
+	frame.nameText = createText(frame, "OVERLAY", "GameFontNormal", 12, "TOPLEFT", frame, "TOPLEFT", 8, -8, "LEFT")
+	frame.levelText = createText(frame, "OVERLAY", "GameFontHighlightSmall", 10, "TOPRIGHT", frame, "TOPRIGHT", -8, -9, "RIGHT")
+	frame.statusText = nil
+
+	frame.healthBar = createBar(frame, 12, "TOPLEFT", frame, "TOPLEFT", 8, -24)
+	frame.healthBar:SetPoint("RIGHT", frame, "RIGHT", -8, 0)
+	frame.healthAccent = accent
+
+	frame.powerBar = createBar(frame, 10, "TOPLEFT", frame.healthBar, "BOTTOMLEFT", 0, -6)
+	frame.powerBar:SetPoint("RIGHT", frame, "RIGHT", -8, 0)
+	frame.powerLabel = nil
+	frame.healthLabel = nil
+
+	return frame
+end
+
 function Target:UpdateName(frame)
 	if not UnitExists(frame.unit) then
 		frame.nameText:SetText(frame.fallbackLabel)
@@ -201,10 +246,16 @@ function Target:UpdateLevel(frame)
 end
 
 function Target:UpdateStatus(frame)
-	frame.statusText:SetText(getStatusText(frame.unit, frame.fallbackLabel))
+	if frame.statusText then
+		frame.statusText:SetText(getStatusText(frame.unit, frame.fallbackLabel))
+	end
 end
 
 function Target:UpdatePortrait(frame)
+	if not frame.portraitTexture then
+		return
+	end
+
 	if not UnitExists(frame.unit) then
 		frame.portraitTexture:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
 		return
@@ -241,7 +292,9 @@ function Target:UpdatePower(frame)
 		maximum = 1
 	end
 
-	frame.powerLabel:SetText(POWER_LABELS[powerType] or "Power")
+	if frame.powerLabel then
+		frame.powerLabel:SetText(POWER_LABELS[powerType] or "Power")
+	end
 	bar:SetStatusBarColor(color.r, color.g, color.b)
 	bar:SetMinMaxValues(0, maximum)
 	bar:SetValue(current)
@@ -271,17 +324,32 @@ end
 function Target:RefreshAll()
 	self:RefreshFrame(self.targetFrame)
 	self:RefreshFrame(self.focusFrame)
+	self:RefreshFrame(self.targetTargetFrame)
+	self:RefreshFrame(self.focusTargetFrame)
 end
 
 function Target:OnEvent(event, unit)
 	if event == "PLAYER_TARGET_CHANGED" then
 		self:RefreshFrame(self.targetFrame)
+		self:RefreshFrame(self.targetTargetFrame)
 		return
 	end
 
 	if event == "PLAYER_FOCUS_CHANGED" then
 		self:RefreshFrame(self.focusFrame)
+		self:RefreshFrame(self.focusTargetFrame)
 		return
+	end
+
+	if event == "UNIT_TARGET" then
+		if unit == "target" then
+			self:RefreshFrame(self.targetTargetFrame)
+			return
+		end
+		if unit == "focus" then
+			self:RefreshFrame(self.focusTargetFrame)
+			return
+		end
 	end
 
 	if unit == "target" then
@@ -294,6 +362,16 @@ function Target:OnEvent(event, unit)
 		return
 	end
 
+	if unit == "targettarget" then
+		self:RefreshFrame(self.targetTargetFrame)
+		return
+	end
+
+	if unit == "focustarget" then
+		self:RefreshFrame(self.focusTargetFrame)
+		return
+	end
+
 	self:RefreshAll()
 end
 
@@ -303,13 +381,14 @@ function Target:RegisterEvents()
 	frame:RegisterEvent("PLAYER_TARGET_CHANGED")
 	frame:RegisterEvent("PLAYER_FOCUS_CHANGED")
 	frame:RegisterEvent("PLAYER_FLAGS_CHANGED")
-	frame:RegisterUnitEvent("UNIT_HEALTH", "target", "focus")
-	frame:RegisterUnitEvent("UNIT_MAXHEALTH", "target", "focus")
-	frame:RegisterUnitEvent("UNIT_POWER_UPDATE", "target", "focus")
-	frame:RegisterUnitEvent("UNIT_MAXPOWER", "target", "focus")
-	frame:RegisterUnitEvent("UNIT_DISPLAYPOWER", "target", "focus")
-	frame:RegisterUnitEvent("UNIT_NAME_UPDATE", "target", "focus")
-	frame:RegisterUnitEvent("UNIT_PORTRAIT_UPDATE", "target", "focus")
+	frame:RegisterUnitEvent("UNIT_TARGET", "target", "focus")
+	frame:RegisterUnitEvent("UNIT_HEALTH", "target", "focus", "targettarget", "focustarget")
+	frame:RegisterUnitEvent("UNIT_MAXHEALTH", "target", "focus", "targettarget", "focustarget")
+	frame:RegisterUnitEvent("UNIT_POWER_UPDATE", "target", "focus", "targettarget", "focustarget")
+	frame:RegisterUnitEvent("UNIT_MAXPOWER", "target", "focus", "targettarget", "focustarget")
+	frame:RegisterUnitEvent("UNIT_DISPLAYPOWER", "target", "focus", "targettarget", "focustarget")
+	frame:RegisterUnitEvent("UNIT_NAME_UPDATE", "target", "focus", "targettarget", "focustarget")
+	frame:RegisterUnitEvent("UNIT_PORTRAIT_UPDATE", "target", "focus", "targettarget", "focustarget")
 	frame:SetScript("OnEvent", function(_, event, ...)
 		XFrames:SafeCall("module Target:OnEvent", self.OnEvent, self, event, ...)
 	end)
@@ -319,6 +398,7 @@ function Target:Initialize()
 	self.enabled = XFrames.db.profile.target.enabled
 	self.focusEnabled = XFrames.db.profile.target.focus.enabled
 	self.targetTargetEnabled = XFrames.db.profile.target.targettarget.enabled
+	self.focusTargetEnabled = XFrames.db.profile.target.focustarget.enabled
 end
 
 function Target:Enable()
@@ -330,12 +410,24 @@ function Target:Enable()
 	if self.focusEnabled then
 		self.focusFrame = self:CreateUnitFrame("focus", "focus", XFrames.db.profile.target.focus, FOCUS_HEALTH_BAR_COLOR)
 	end
+	if self.targetTargetEnabled then
+		self.targetTargetFrame = self:CreateCompactUnitFrame("targettarget", "targettarget", XFrames.db.profile.target.targettarget, TARGET_TARGET_HEALTH_BAR_COLOR)
+	end
+	if self.focusTargetEnabled then
+		self.focusTargetFrame = self:CreateCompactUnitFrame("focustarget", "focustarget", XFrames.db.profile.target.focustarget, FOCUS_TARGET_HEALTH_BAR_COLOR)
+	end
 	self.eventFrame = self.eventFrame or CreateFrame("Frame")
 	self:RegisterEvents()
 	self:RefreshAll()
 	XFrames:Info("Target shell enabled")
 	if self.focusFrame then
 		XFrames:Info("Focus shell enabled")
+	end
+	if self.targetTargetFrame then
+		XFrames:Info("Target-of-target shell enabled")
+	end
+	if self.focusTargetFrame then
+		XFrames:Info("Focus-target shell enabled")
 	end
 end
 
