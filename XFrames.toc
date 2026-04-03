@@ -1,4 +1,4 @@
-## Interface: 120100
+## Interface: 120000, 120001
 ## Title: XFrames
 ## Notes: Retail-only unit frames rebuilt from scratch
 ## Author: Jim Adkins, OpenAI Codex
