@@ -12,6 +12,7 @@ local BACKDROP_COLOR = {0.08, 0.09, 0.11, 0.92}
 local BORDER_COLOR = {0.24, 0.27, 0.31, 0.95}
 local HEALTH_BAR_COLOR = {r = 0.26, g = 0.34, b = 0.24}
 local POWER_BAR_COLOR = {r = 0.23, g = 0.27, b = 0.35}
+local PORTRAIT_BG_COLOR = {0.10, 0.11, 0.14, 0.98}
 local PLACEHOLDER_BAR_VALUE = 0.6
 local PLACEHOLDER_VALUE_TEXT = "Restricted"
 
@@ -51,6 +52,21 @@ local function createBar(parent, height, anchorPoint, relativeTo, relativePoint,
 	return bar
 end
 
+local function createBackdropFrame(name, parent, width, height, anchorPoint, relativeTo, relativePoint, x, y)
+	local frame = CreateFrame("Frame", name, parent, "BackdropTemplate")
+	frame:SetSize(width, height)
+	frame:SetPoint(anchorPoint, relativeTo, relativePoint, x, y)
+	frame:SetBackdrop({
+		bgFile = "Interface\\Buttons\\WHITE8x8",
+		edgeFile = "Interface\\Buttons\\WHITE8x8",
+		edgeSize = 1,
+		insets = {left = 1, right = 1, top = 1, bottom = 1},
+	})
+	frame:SetBackdropColor(unpack(PORTRAIT_BG_COLOR))
+	frame:SetBackdropBorderColor(unpack(BORDER_COLOR))
+	return frame
+end
+
 function PlayerPet:CreateFrame()
 	if self.frame then
 		return self.frame
@@ -72,8 +88,9 @@ function PlayerPet:CreateFrame()
 	frame:SetBackdropBorderColor(unpack(BORDER_COLOR))
 	frame:Hide()
 
-	frame.portraitTexture = frame:CreateTexture(nil, "ARTWORK")
-	frame.portraitTexture:SetPoint("TOPLEFT", frame, "TOPLEFT", 6, -6)
+	frame.portraitFrame = createBackdropFrame(nil, frame, 42, 42, "TOPLEFT", frame, "TOPLEFT", 4, -4)
+	frame.portraitTexture = frame.portraitFrame:CreateTexture(nil, "ARTWORK")
+	frame.portraitTexture:SetPoint("TOPLEFT", frame.portraitFrame, "TOPLEFT", 2, -2)
 	frame.portraitTexture:SetSize(38, 38)
 	frame.portraitTexture:SetTexCoord(0.08, 0.92, 0.08, 0.92)
 

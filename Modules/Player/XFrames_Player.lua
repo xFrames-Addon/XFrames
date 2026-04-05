@@ -14,6 +14,7 @@ local HEALTH_BAR_COLOR = {r = 0.24, g = 0.32, b = 0.28}
 local BACKDROP_COLOR = {0.08, 0.09, 0.11, 0.92}
 local BORDER_COLOR = {0.24, 0.27, 0.31, 0.95}
 local POWER_BAR_COLOR = {r = 0.24, g = 0.28, b = 0.36}
+local PORTRAIT_BG_COLOR = {0.10, 0.11, 0.14, 0.98}
 local PLACEHOLDER_BAR_VALUE = 0.65
 local PLACEHOLDER_VALUE_TEXT = "Restricted"
 
@@ -92,8 +93,10 @@ function Player:CreateFrame()
 	frame:SetBackdropColor(unpack(BACKDROP_COLOR))
 	frame:SetBackdropBorderColor(unpack(BORDER_COLOR))
 
-	frame.portraitTexture = frame:CreateTexture(nil, "ARTWORK")
-	frame.portraitTexture:SetPoint("TOPLEFT", frame, "TOPLEFT", 8, -8)
+	frame.portraitFrame = createBackdropFrame(nil, frame, 52, 52, "TOPLEFT", frame, "TOPLEFT", 6, -6)
+	frame.portraitFrame:SetBackdropColor(unpack(PORTRAIT_BG_COLOR))
+	frame.portraitTexture = frame.portraitFrame:CreateTexture(nil, "ARTWORK")
+	frame.portraitTexture:SetPoint("TOPLEFT", frame.portraitFrame, "TOPLEFT", 2, -2)
 	frame.portraitTexture:SetSize(48, 48)
 	frame.portraitTexture:SetTexCoord(0.08, 0.92, 0.08, 0.92)
 
@@ -126,6 +129,17 @@ function Player:CreateFrame()
 	return frame
 end
 
+function Player:UpdatePortraitBorder()
+	local _, class = UnitClass("player")
+	local color = class and RAID_CLASS_COLORS and RAID_CLASS_COLORS[class]
+
+	if color then
+		self.frame.portraitFrame:SetBackdropBorderColor(color.r, color.g, color.b, 1)
+	else
+		self.frame.portraitFrame:SetBackdropBorderColor(unpack(BORDER_COLOR))
+	end
+end
+
 function Player:UpdateName()
 	local frame = self.frame
 	local name = UnitName("player") or "Player"
@@ -150,6 +164,7 @@ end
 
 function Player:UpdatePortrait()
 	SetPortraitTexture(self.frame.portraitTexture, "player")
+	self:UpdatePortraitBorder()
 end
 
 function Player:UpdateHealth()

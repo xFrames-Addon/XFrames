@@ -20,6 +20,7 @@ local FOCUS_TARGET_HEALTH_BAR_COLOR = {r = 0.31, g = 0.28, b = 0.22}
 local BACKDROP_COLOR = {0.08, 0.09, 0.11, 0.92}
 local BORDER_COLOR = {0.24, 0.27, 0.31, 0.95}
 local POWER_BAR_COLOR = {r = 0.24, g = 0.28, b = 0.36}
+local PORTRAIT_BG_COLOR = {0.10, 0.11, 0.14, 0.98}
 local PLACEHOLDER_BAR_VALUE = 0.62
 local PLACEHOLDER_VALUE_TEXT = "Restricted"
 
@@ -59,6 +60,21 @@ local function createBar(parent, height, anchorPoint, relativeTo, relativePoint,
 	return bar
 end
 
+local function createBackdropFrame(name, parent, width, height, anchorPoint, relativeTo, relativePoint, x, y)
+	local frame = CreateFrame("Frame", name, parent, "BackdropTemplate")
+	frame:SetSize(width, height)
+	frame:SetPoint(anchorPoint, relativeTo, relativePoint, x, y)
+	frame:SetBackdrop({
+		bgFile = "Interface\\Buttons\\WHITE8x8",
+		edgeFile = "Interface\\Buttons\\WHITE8x8",
+		edgeSize = 1,
+		insets = {left = 1, right = 1, top = 1, bottom = 1},
+	})
+	frame:SetBackdropColor(unpack(PORTRAIT_BG_COLOR))
+	frame:SetBackdropBorderColor(unpack(BORDER_COLOR))
+	return frame
+end
+
 local function getStatusText(unit, fallbackLabel)
 	if not UnitExists(unit) then
 		return fallbackLabel
@@ -91,8 +107,9 @@ function Target:CreateUnitFrame(key, unit, config, accent)
 	frame:SetBackdropBorderColor(unpack(BORDER_COLOR))
 	frame:Hide()
 
-	frame.portraitTexture = frame:CreateTexture(nil, "ARTWORK")
-	frame.portraitTexture:SetPoint("TOPLEFT", frame, "TOPLEFT", 8, -8)
+	frame.portraitFrame = createBackdropFrame(nil, frame, 52, 52, "TOPLEFT", frame, "TOPLEFT", 6, -6)
+	frame.portraitTexture = frame.portraitFrame:CreateTexture(nil, "ARTWORK")
+	frame.portraitTexture:SetPoint("TOPLEFT", frame.portraitFrame, "TOPLEFT", 2, -2)
 	frame.portraitTexture:SetSize(48, 48)
 	frame.portraitTexture:SetTexCoord(0.08, 0.92, 0.08, 0.92)
 
@@ -110,6 +127,21 @@ function Target:CreateUnitFrame(key, unit, config, accent)
 	frame.powerBar.labelText:SetText("Power")
 
 	return frame
+end
+
+function Target:UpdatePortraitBorder(frame)
+	if not frame.portraitFrame then
+		return
+	end
+
+	local _, class = UnitClass(frame.unit)
+	local color = UnitExists(frame.unit) and UnitIsPlayer(frame.unit) and class and RAID_CLASS_COLORS and RAID_CLASS_COLORS[class]
+
+	if color then
+		frame.portraitFrame:SetBackdropBorderColor(color.r, color.g, color.b, 1)
+	else
+		frame.portraitFrame:SetBackdropBorderColor(unpack(BORDER_COLOR))
+	end
 end
 
 function Target:CreateCompactUnitFrame(key, unit, config, accent)
@@ -191,10 +223,12 @@ function Target:UpdatePortrait(frame)
 
 	if not UnitExists(frame.unit) then
 		frame.portraitTexture:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
+		self:UpdatePortraitBorder(frame)
 		return
 	end
 
 	SetPortraitTexture(frame.portraitTexture, frame.unit)
+	self:UpdatePortraitBorder(frame)
 end
 
 function Target:UpdateHealth(frame)
