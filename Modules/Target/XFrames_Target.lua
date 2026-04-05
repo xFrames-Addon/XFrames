@@ -293,7 +293,7 @@ function Target:HandleInspectReady(inspectGUID)
 				local _, name = GetSpecializationInfoByID(specID)
 				if name then
 					self.inspectCache = self.inspectCache or {}
-					self.inspectCache[inspectGUID] = name
+					self.inspectCache[inspectGUID] = XFrames:FormatSpecLabel(name)
 				end
 			end
 		end

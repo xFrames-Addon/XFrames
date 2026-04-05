@@ -393,6 +393,14 @@ function XFrames:GetUnitAccentColor(unit)
 	return DEFAULT_UNIT_ACCENT_COLOR
 end
 
+function XFrames:FormatSpecLabel(name)
+	if not name or name == "" then
+		return ""
+	end
+
+	return name:match("^[^%s]+") or name
+end
+
 function XFrames:CreateAccentFrame(parent, inset, edgeSize)
 	if not parent then
 		return nil

@@ -35,7 +35,7 @@ local function getSpecText()
 	end
 
 	local _, name = GetSpecializationInfo(specIndex)
-	return name or ""
+	return XFrames:FormatSpecLabel(name)
 end
 
 local function createText(parent, layer, template, size, anchorPoint, relativeTo, relativePoint, x, y, justify)
