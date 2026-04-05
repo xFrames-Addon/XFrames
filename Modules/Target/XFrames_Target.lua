@@ -36,8 +36,6 @@ local POWER_BAR_COLOR = {r = 0.24, g = 0.28, b = 0.36}
 local PORTRAIT_BG_COLOR = {0.10, 0.11, 0.14, 0.98}
 local CAST_BAR_COLOR = {r = 0.22, g = 0.78, b = 0.32}
 local CHANNEL_BAR_COLOR = {r = 0.22, g = 0.78, b = 0.32}
-local LOCKED_BAR_COLOR = {r = 0.86, g = 0.20, b = 0.20}
-local INTERRUPT_BORDER_COLOR = {r = 0.90, g = 0.24, b = 0.20}
 
 local function createText(parent, layer, template, size, anchorPoint, relativeTo, relativePoint, x, y, justify)
 	local text = parent:CreateFontString(nil, layer, template)
@@ -92,20 +90,18 @@ local function createBackdropFrame(name, parent, width, height, anchorPoint, rel
 end
 
 local function getCastInfo(unit)
-	local name, _, _, startTimeMS, endTimeMS, _, _, notInterruptible = UnitCastingInfo(unit)
+	local name = UnitCastingInfo(unit)
 	if name then
 		return {
 			name = name,
-			notInterruptible = notInterruptible,
 			channel = false,
 		}
 	end
 
-	local channelName, _, _, channelStartMS, channelEndMS, _, channelNotInterruptible = UnitChannelInfo(unit)
+	local channelName = UnitChannelInfo(unit)
 	if channelName then
 		return {
 			name = channelName,
-			notInterruptible = channelNotInterruptible,
 			channel = true,
 		}
 	end
@@ -184,11 +180,6 @@ function Target:UpdatePortraitBorder(frame)
 end
 
 function Target:UpdateFrameBorder(frame)
-	if frame == self.targetFrame and self.castState and not self.castState.notInterruptible and UnitExists("target") then
-		frame.accentFrame:SetBackdropBorderColor(INTERRUPT_BORDER_COLOR.r, INTERRUPT_BORDER_COLOR.g, INTERRUPT_BORDER_COLOR.b, 1)
-		return
-	end
-
 	local color = XFrames:GetUnitAccentColor(frame.unit)
 	frame.accentFrame:SetBackdropBorderColor(color.r, color.g, color.b, 1)
 end
@@ -480,7 +471,7 @@ function Target:RefreshCastState()
 		self:UpdateFrameBorder(self.targetFrame)
 	end
 
-	local color = info.notInterruptible and LOCKED_BAR_COLOR or (info.channel and CHANNEL_BAR_COLOR or CAST_BAR_COLOR)
+	local color = info.channel and CHANNEL_BAR_COLOR or CAST_BAR_COLOR
 	castFrame.bar:SetMinMaxValues(0, 1)
 	castFrame.bar:SetValue(info.channel and 0.35 or 1)
 	castFrame.bar:SetStatusBarColor(color.r, color.g, color.b)
