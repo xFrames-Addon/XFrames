@@ -7,6 +7,8 @@ local RAID_CLASS_COLORS = RAID_CLASS_COLORS
 
 local CreateFrame = CreateFrame
 local SetPortraitTexture = SetPortraitTexture
+local GetSpecialization = GetSpecialization
+local GetSpecializationInfo = GetSpecializationInfo
 local UnitClass = UnitClass
 local UnitHealth = UnitHealth
 local UnitHealthMax = UnitHealthMax
@@ -24,6 +26,16 @@ local PORTRAIT_BG_COLOR = {0.10, 0.11, 0.14, 0.98}
 local function getStatusText()
 	local className = UnitClass("player")
 	return className or "Player"
+end
+
+local function getSpecText()
+	local specIndex = GetSpecialization and GetSpecialization()
+	if not specIndex or not GetSpecializationInfo then
+		return ""
+	end
+
+	local _, name = GetSpecializationInfo(specIndex)
+	return name or ""
 end
 
 local function createText(parent, layer, template, size, anchorPoint, relativeTo, relativePoint, x, y, justify)
@@ -104,6 +116,7 @@ function Player:CreateFrame()
 	frame.portraitTexture:SetPoint("TOPLEFT", frame.portraitFrame, "TOPLEFT", 2, -2)
 	frame.portraitTexture:SetSize(48, 48)
 	frame.portraitTexture:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+	frame.specText = createText(frame, "OVERLAY", "GameFontHighlightSmall", 10, "TOP", frame.portraitFrame, "BOTTOM", 0, -4, "CENTER")
 
 	frame.nameText = createText(frame, "OVERLAY", "GameFontNormalLarge", 13, "TOPLEFT", frame, "TOPLEFT", 64, -10, "LEFT")
 	frame.levelText = createText(frame, "OVERLAY", "GameFontHighlight", 12, "TOPRIGHT", frame, "TOPRIGHT", -10, -10, "RIGHT")
@@ -170,6 +183,10 @@ function Player:UpdateStatus()
 	self.frame.statusText:SetText(getStatusText())
 end
 
+function Player:UpdateSpec()
+	self.frame.specText:SetText(getSpecText())
+end
+
 function Player:UpdatePortrait()
 	SetPortraitTexture(self.frame.portraitTexture, "player")
 	self:UpdatePortraitBorder()
@@ -219,6 +236,7 @@ function Player:Refresh()
 	self:UpdateName()
 	self:UpdateLevel()
 	self:UpdateStatus()
+	self:UpdateSpec()
 	self:UpdatePortrait()
 	self:UpdateHealth()
 	self:UpdatePower()
@@ -232,6 +250,11 @@ function Player:OnEvent(event, unit)
 
 	if event == "PLAYER_LEVEL_UP" then
 		self:UpdateLevel()
+		return
+	end
+
+	if event == "PLAYER_SPECIALIZATION_CHANGED" or event == "ACTIVE_TALENT_GROUP_CHANGED" then
+		self:UpdateSpec()
 		return
 	end
 
@@ -266,6 +289,8 @@ end
 function Player:RegisterEvents()
 	local frame = self.frame
 	frame:RegisterEvent("PLAYER_ENTERING_WORLD")
+	frame:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED")
+	frame:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
 	frame:RegisterEvent("PLAYER_LEVEL_UP")
 	frame:RegisterEvent("PLAYER_FLAGS_CHANGED")
 	frame:RegisterUnitEvent("UNIT_HEALTH", "player")
