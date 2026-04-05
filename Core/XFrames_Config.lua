@@ -101,6 +101,7 @@ local defaults = {
 			height = 96,
 			spacing = 10,
 			scale = 1,
+			subtitleMode = "status",
 			position = {
 				point = "CENTER",
 				relativePoint = "CENTER",

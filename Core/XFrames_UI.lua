@@ -300,7 +300,7 @@ function XFrames:CreateSettingsPanel()
 		return self.settingsFrame
 	end
 
-	local frame = createPanel(UIParent, 280, 154, "CENTER", UIParent, "CENTER", 0, 0)
+	local frame = createPanel(UIParent, 280, 186, "CENTER", UIParent, "CENTER", 0, 0)
 	frame:SetFrameStrata("DIALOG")
 	frame:Hide()
 
@@ -310,11 +310,20 @@ function XFrames:CreateSettingsPanel()
 	frame.statusText = createText(frame, "GameFontHighlight", 11, "TOPLEFT", frame.titleText, "BOTTOMLEFT", 0, -12, "LEFT")
 	frame.helpText = createText(frame, "GameFontHighlightSmall", 10, "TOPLEFT", frame.statusText, "BOTTOMLEFT", 0, -8, "LEFT")
 	frame.helpText:SetText("Unlock to drag frames with the left mouse button.")
+	frame.partyModeText = createText(frame, "GameFontHighlightSmall", 10, "TOPLEFT", frame.helpText, "BOTTOMLEFT", 0, -12, "LEFT")
 
 	frame.lockButton = createButton(frame, "Unlock Frames", 118, "BOTTOMLEFT", frame, "BOTTOMLEFT", 12, 12, function()
 		XFrames:ToggleFrameLocks()
 	end)
-	frame.blizzardButton = createButton(frame, "Hide Blizzard", 118, "TOPLEFT", frame.helpText, "BOTTOMLEFT", 0, -12, function()
+	frame.partyModeButton = createButton(frame, "Party: Status", 118, "TOPLEFT", frame.partyModeText, "BOTTOMLEFT", 0, -10, function()
+		if XFrames:GetPartySubtitleMode() == "performance" then
+			XFrames:SetPartySubtitleMode("status")
+			return
+		end
+
+		XFrames:SetPartySubtitleMode("performance")
+	end)
+	frame.blizzardButton = createButton(frame, "Hide Blizzard", 118, "TOPLEFT", frame.partyModeButton, "BOTTOMLEFT", 0, -10, function()
 		XFrames:ToggleBlizzardFrames()
 	end)
 	frame.reloadButton = createButton(frame, "Reload UI", 78, "LEFT", frame.lockButton, "RIGHT", 8, 0, function()
@@ -338,6 +347,8 @@ function XFrames:RefreshSettingsPanel()
 	local ui = self:GetUISettings()
 	self.settingsFrame.statusText:SetText(unlocked and "Frames are unlocked" or "Frames are locked")
 	self.settingsFrame.lockButton:SetText(unlocked and "Lock Frames" or "Unlock Frames")
+	self.settingsFrame.partyModeText:SetText(string.format("Party subtitles: %s", self:GetPartySubtitleMode()))
+	self.settingsFrame.partyModeButton:SetText(self:GetPartySubtitleMode() == "performance" and "Party: Performance" or "Party: Status")
 	self.settingsFrame.blizzardButton:SetText(ui and ui.hideBlizzard ~= false and "Show Blizzard" or "Hide Blizzard")
 end
 

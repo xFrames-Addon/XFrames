@@ -6,6 +6,7 @@ local Party = {}
 local RAID_CLASS_COLORS = RAID_CLASS_COLORS
 
 local CreateFrame = CreateFrame
+local GetTexCoordsForRole = GetTexCoordsForRole
 local InCombatLockdown = InCombatLockdown
 local SetPortraitTexture = SetPortraitTexture
 local UnitClass = UnitClass
@@ -20,6 +21,8 @@ local UnitName = UnitName
 local UnitPower = UnitPower
 local UnitPowerMax = UnitPowerMax
 
+local PERFORMANCE_UPDATE_INTERVAL = 0.5
+
 local HEALTH_BAR_COLOR = {r = 0.18, g = 0.62, b = 0.32}
 local BACKDROP_COLOR = {0.08, 0.09, 0.11, 0.92}
 local BORDER_COLOR = {0.24, 0.27, 0.31, 0.95}
@@ -27,7 +30,7 @@ local PORTRAIT_BG_COLOR = {0.10, 0.11, 0.14, 0.98}
 local SECONDARY_TEXT_COLOR = {0.72, 0.77, 0.84}
 local LEVEL_TEXT_COLOR = {0.90, 0.92, 0.96}
 local ROLE_BG_COLOR = {0.12, 0.14, 0.18, 0.96}
-
+local ROLE_ICON_TEXTURE = "Interface\\LFGFrame\\UI-LFG-ICON-PORTRAITROLES"
 local function getPartyAccentColor(unit)
 	if not UnitExists(unit) then
 		return {r = BORDER_COLOR[1], g = BORDER_COLOR[2], b = BORDER_COLOR[3]}
@@ -134,17 +137,32 @@ local function setRoleIcon(texture, role)
 	end
 
 	if role == "TANK" then
-		texture:SetAtlas("groupfinder-icon-role-large-tank", true)
+		texture:SetTexture(ROLE_ICON_TEXTURE)
+		if GetTexCoordsForRole then
+			texture:SetTexCoord(GetTexCoordsForRole(role))
+		else
+			texture:SetTexCoord(0, 19 / 64, 22 / 64, 41 / 64)
+		end
 		texture:Show()
 		return
 	end
 	if role == "HEALER" then
-		texture:SetAtlas("groupfinder-icon-role-large-heal", true)
+		texture:SetTexture(ROLE_ICON_TEXTURE)
+		if GetTexCoordsForRole then
+			texture:SetTexCoord(GetTexCoordsForRole(role))
+		else
+			texture:SetTexCoord(20 / 64, 39 / 64, 1 / 64, 20 / 64)
+		end
 		texture:Show()
 		return
 	end
 	if role == "DAMAGER" then
-		texture:SetAtlas("groupfinder-icon-role-large-dps", true)
+		texture:SetTexture(ROLE_ICON_TEXTURE)
+		if GetTexCoordsForRole then
+			texture:SetTexCoord(GetTexCoordsForRole(role))
+		else
+			texture:SetTexCoord(20 / 64, 39 / 64, 22 / 64, 41 / 64)
+		end
 		texture:Show()
 		return
 	end
@@ -283,7 +301,11 @@ function Party:UpdateRole(frame)
 end
 
 function Party:UpdateStatus(frame)
-	frame.statusText:SetText(getStatusText(frame.unit, frame.fallbackLabel))
+	if XFrames:GetPartySubtitleMode() == "performance" and UnitExists(frame.unit) then
+		frame.statusText:SetText(XFrames:GetPerformanceTextForUnit(frame.unit) or "")
+	else
+		frame.statusText:SetText(getStatusText(frame.unit, frame.fallbackLabel))
+	end
 	frame.statusText:SetTextColor(unpack(SECONDARY_TEXT_COLOR))
 end
 
@@ -387,6 +409,30 @@ function Party:RefreshAll()
 	self:RefreshAnchor()
 end
 
+function Party:RefreshPerformanceMode()
+	self.performanceElapsed = 0
+
+	if not self.eventFrame then
+		return
+	end
+
+	if XFrames:GetPartySubtitleMode() == "performance" then
+		self.eventFrame:SetScript("OnUpdate", function(_, elapsed)
+			self.performanceElapsed = (self.performanceElapsed or 0) + elapsed
+			if self.performanceElapsed < PERFORMANCE_UPDATE_INTERVAL then
+				return
+			end
+
+			self.performanceElapsed = 0
+			self:RefreshAll()
+		end)
+	else
+		self.eventFrame:SetScript("OnUpdate", nil)
+	end
+
+	self:RefreshAll()
+end
+
 function Party:OnEvent(event, unit)
 	if event == "GROUP_ROSTER_UPDATE" or event == "PLAYER_ENTERING_WORLD" then
 		self:RefreshAll()
@@ -429,6 +475,7 @@ function Party:RegisterEvents()
 	frame:SetScript("OnEvent", function(_, eventName, ...)
 		XFrames:SafeCall("module Party:OnEvent", self.OnEvent, self, eventName, ...)
 	end)
+	self:RefreshPerformanceMode()
 end
 
 function Party:Initialize()

@@ -10,7 +10,10 @@ XFrames.events = {}
 local InCombatLockdown = InCombatLockdown
 local date = date
 local geterrorhandler = geterrorhandler
+local math = math
+local pcall = pcall
 local ReloadUI = ReloadUI
+local ipairs = ipairs
 local pairs = pairs
 local select = select
 local string = string
@@ -18,12 +21,16 @@ local tostring = tostring
 local tinsert = table.insert
 local UnitClass = UnitClass
 local UnitExists = UnitExists
+local UnitGroupRolesAssigned = UnitGroupRolesAssigned
+local UnitGUID = UnitGUID
 local UnitIsPlayer = UnitIsPlayer
 local UnitPowerType = UnitPowerType
 local UnitSelectionColor = UnitSelectionColor
 
 local DEFAULT_POWER_BAR_COLOR = {r = 0.24, g = 0.28, b = 0.36}
 local DEFAULT_UNIT_ACCENT_COLOR = {r = 0.24, g = 0.27, b = 0.31}
+local DAMAGE_METER_TYPE_DPS = 1
+local DAMAGE_METER_TYPE_HPS = 3
 local POWER_LABELS = {
 	MANA = "Mana",
 	RAGE = "Rage",
@@ -60,6 +67,10 @@ local function safeToString(value)
 	end
 
 	return tostring(value)
+end
+
+local function roundNumber(value)
+	return math.floor((value or 0) + 0.5)
 end
 
 function XFrames:RegisterModule(name, module)
@@ -296,6 +307,24 @@ function XFrames:RegisterSlashCommands()
 			return
 		end
 
+		if command == "party" then
+			arg = trim(arg)
+			if arg == "" or arg == "mode" then
+				printf("|cff33ff99XFrames|r party subtitle mode: %s", self:GetPartySubtitleMode())
+				return
+			end
+			if arg == "status" then
+				self:SetPartySubtitleMode("status")
+				return
+			end
+			if arg == "performance" or arg == "meter" then
+				self:SetPartySubtitleMode("performance")
+				return
+			end
+			printf("|cff33ff99XFrames|r party commands: status, performance, mode")
+			return
+		end
+
 		if command == "debug" then
 			arg = trim(arg)
 			if arg == "" or arg == "toggle" then
@@ -330,7 +359,7 @@ function XFrames:RegisterSlashCommands()
 			return
 		end
 
-		printf("|cff33ff99XFrames|r commands: status, settings, lock, unlock, toggle, blizzard, reload, debug")
+		printf("|cff33ff99XFrames|r commands: status, settings, lock, unlock, toggle, blizzard, party, reload, debug")
 	end
 end
 
@@ -359,6 +388,23 @@ function XFrames:SetValueText(fontString, value, maxValue)
 	end
 
 	fontString:SetText(string.format("%d", value))
+end
+
+function XFrames:FormatCompactNumber(value)
+	value = tonumber(value)
+	if not value then
+		return ""
+	end
+
+	local absoluteValue = math.abs(value)
+	if absoluteValue >= 1000000 then
+		return (string.format("%.1fm", value / 1000000):gsub("%.0m", "m"))
+	end
+	if absoluteValue >= 1000 then
+		return (string.format("%.1fk", value / 1000):gsub("%.0k", "k"))
+	end
+
+	return string.format("%d", roundNumber(value))
 end
 
 function XFrames:SetBarValues(bar, value, maxValue)
@@ -417,6 +463,95 @@ function XFrames:FormatSpecLabel(name)
 	end
 
 	return name:match("^[^%s]+") or name
+end
+
+function XFrames:GetPartySubtitleMode()
+	return self.db and self.db.profile and self.db.profile.party and self.db.profile.party.subtitleMode or "status"
+end
+
+function XFrames:SetPartySubtitleMode(mode)
+	if mode ~= "status" and mode ~= "performance" then
+		self:Warn(string.format("Unknown party subtitle mode: %s", safeToString(mode)))
+		return
+	end
+
+	if not (self.db and self.db.profile and self.db.profile.party) then
+		return
+	end
+
+	self.db.profile.party.subtitleMode = mode
+	self:Info(string.format("Party subtitle mode set to %s", mode))
+
+	local party = self:GetModule("Party")
+	if party and type(party.RefreshPerformanceMode) == "function" then
+		party:RefreshPerformanceMode()
+	end
+
+	self:RefreshSettingsPanel()
+end
+
+function XFrames:GetPerformanceMetricForUnit(unit)
+	if not unit or not UnitExists(unit) then
+		return nil, nil
+	end
+
+	local role = UnitGroupRolesAssigned and UnitGroupRolesAssigned(unit)
+	if role == "HEALER" then
+		return DAMAGE_METER_TYPE_HPS, "HPS"
+	end
+	if role == "TANK" or role == "DAMAGER" then
+		return DAMAGE_METER_TYPE_DPS, "DPS"
+	end
+
+	return nil, nil
+end
+
+function XFrames:GetCurrentDamageMeterValue(unit, meterType)
+	if not unit or not meterType or not (C_DamageMeter and C_DamageMeter.GetCurrentCombatSession) then
+		return nil
+	end
+
+	local guid = UnitGUID(unit)
+	if not guid then
+		return nil
+	end
+
+	local ok, session = pcall(C_DamageMeter.GetCurrentCombatSession, meterType)
+	if not ok or type(session) ~= "table" then
+		return nil
+	end
+
+	local sources = session.combatSources
+	if type(sources) ~= "table" then
+		return nil
+	end
+
+	for _, source in ipairs(sources) do
+		if source and source.unitToken == guid then
+			return source.totalAmount
+		end
+	end
+
+	return nil
+end
+
+function XFrames:GetPerformanceTextForUnit(unit)
+	local meterType, label = self:GetPerformanceMetricForUnit(unit)
+	if not meterType or not label then
+		return nil
+	end
+
+	local value = self:GetCurrentDamageMeterValue(unit, meterType)
+	if value == nil then
+		return nil
+	end
+
+	local compactValue = self:FormatCompactNumber(value)
+	if compactValue == "" then
+		return nil
+	end
+
+	return string.format("%s %s", compactValue, label)
 end
 
 function XFrames:CreateAccentFrame(parent, inset, edgeSize)
