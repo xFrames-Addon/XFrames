@@ -1,0 +1,234 @@
+Message: ...nterface/AddOns/XFrames/Core/XFrames_NativeMeter.lua:185: attempt to compare local 'sourceGUID' (a secret string value tainted by 'XFrames')
+Time: Sun Apr  5 14:36:45 2026
+Count: 69
+Stack:
+[Interface/AddOns/XFrames/Core/XFrames_NativeMeter.lua]:185: in function 'GetNativeMeterSourceForUnit'
+[Interface/AddOns/XFrames/Core/XFrames_NativeMeter.lua]:228: in function 'GetPerformanceTextForUnit'
+[Interface/AddOns/XFrames/Modules/Player/XFrames_Player.lua]:176: in function 'UpdateSpec'
+[Interface/AddOns/XFrames/Modules/Player/XFrames_Player.lua]:249: in function <...ace/AddOns/XFrames/Modules/Player/XFrames_Player.lua:242>
+
+Locals:
+self = Frame {
+ modules = <table> {
+ }
+ db = <table> {
+ }
+ events = <table> {
+ }
+ name = "XFrames"
+ minimapButton = XFramesMinimapButton {
+ }
+ settingsFrame = Frame {
+ }
+ nativeMeterCache = <table> {
+ }
+ initialized = true
+}
+unit = "player"
+meterType = 1
+sessionType = 1
+view = <table> {
+ durationSeconds = <no value>
+ combatSources = <table> {
+ }
+ totalAmount = <no value>
+ maxAmount = <no value>
+}
+sources = <table> {
+ 1 = <table> {
+ }
+ 2 = <table> {
+ }
+ 3 = <table> {
+ }
+}
+unitGUID = "Player-86-0B004BE4"
+unitName = "Aduna"
+unitCreatureID = nil
+creatureMatch = nil
+nameMatch = nil
+(for state) = <table> {
+ 1 = <table> {
+ }
+ 2 = <table> {
+ }
+ 3 = <table> {
+ }
+}
+(for control) = 1
+_ = 1
+source = <table> {
+ classFilename = "SHAMAN"
+ deathRecapID = 0
+ amountPerSecond = <no value>
+ sourceCreatureID = <no value>
+ name = <no value>
+ classification = ""
+ deathTimeSeconds = <no value>
+ totalAmount = <no value>
+ isLocalPlayer = false
+ sourceGUID = <no value>
+}
+sourceGUID = <no value>
+(*temporary) = <table> {
+ classFilename = "SHAMAN"
+ deathRecapID = 0
+ amountPerSecond = <no value>
+ sourceCreatureID = <no value>
+ name = <no value>
+ classification = ""
+ deathTimeSeconds = <no value>
+ totalAmount = <no value>
+ isLocalPlayer = false
+ sourceGUID = <no value>
+}
+(*temporary) = <no value>
+(*temporary) = <table> {
+ classFilename = "SHAMAN"
+ deathRecapID = 0
+ amountPerSecond = <no value>
+ sourceCreatureID = <no value>
+ name = <no value>
+ classification = ""
+ deathTimeSeconds = <no value>
+ totalAmount = <no value>
+ isLocalPlayer = false
+ sourceGUID = <no value>
+}
+(*temporary) = "attempt to compare local 'sourceGUID' (a secret string value tainted by 'XFrames')"
+DAMAGE_METER_SESSION_CURRENT = 1
+
+Message: ...nterface/AddOns/XFrames/Core/XFrames_NativeMeter.lua:185: attempt to compare local 'sourceGUID' (a secret string value tainted by 'XFrames')
+Time: Sun Apr  5 14:36:45 2026
+Count: 69
+Stack:
+[Interface/AddOns/XFrames/Core/XFrames_NativeMeter.lua]:185: in function 'GetNativeMeterSourceForUnit'
+[Interface/AddOns/XFrames/Core/XFrames_NativeMeter.lua]:228: in function 'GetPerformanceTextForUnit'
+[Interface/AddOns/XFrames/Modules/Party/XFrames_Party.lua]:305: in function 'UpdateStatus'
+[Interface/AddOns/XFrames/Modules/Party/XFrames_Party.lua]:379: in function 'RefreshFrame'
+[Interface/AddOns/XFrames/Modules/Party/XFrames_Party.lua]:407: in function 'RefreshAll'
+[Interface/AddOns/XFrames/Modules/Party/XFrames_Party.lua]:427: in function <...rface/AddOns/XFrames/Modules/Party/XFrames_Party.lua:420>
+
+Locals:
+self = Frame {
+ modules = <table> {
+ }
+ db = <table> {
+ }
+ events = <table> {
+ }
+ name = "XFrames"
+ minimapButton = XFramesMinimapButton {
+ }
+ settingsFrame = Frame {
+ }
+ nativeMeterCache = <table> {
+ }
+ initialized = true
+}
+unit = "party1"
+meterType = 1
+sessionType = 1
+view = <table> {
+ durationSeconds = <no value>
+ combatSources = <table> {
+ }
+ totalAmount = <no value>
+ maxAmount = <no value>
+}
+sources = <table> {
+ 1 = <table> {
+ }
+ 2 = <table> {
+ }
+ 3 = <table> {
+ }
+}
+unitGUID = "Vehicle-0-3777-2813-233866-209057-000052D5C9"
+unitName = "Captain Garrick"
+unitCreatureID = 209057
+creatureMatch = nil
+nameMatch = nil
+(for state) = <table> {
+ 1 = <table> {
+ }
+ 2 = <table> {
+ }
+ 3 = <table> {
+ }
+}
+(for control) = 1
+_ = 1
+source = <table> {
+ classFilename = "SHAMAN"
+ deathRecapID = 0
+ amountPerSecond = <no value>
+ sourceCreatureID = <no value>
+ name = <no value>
+ classification = ""
+ deathTimeSeconds = <no value>
+ totalAmount = <no value>
+ isLocalPlayer = false
+ sourceGUID = <no value>
+}
+sourceGUID = <no value>
+(*temporary) = <table> {
+ classFilename = "SHAMAN"
+ deathRecapID = 0
+ amountPerSecond = <no value>
+ sourceCreatureID = <no value>
+ name = <no value>
+ classification = ""
+ deathTimeSeconds = <no value>
+ totalAmount = <no value>
+ isLocalPlayer = false
+ sourceGUID = <no value>
+}
+(*temporary) = <no value>
+(*temporary) = <table> {
+ classFilename = "SHAMAN"
+ deathRecapID = 0
+ amountPerSecond = <no value>
+ sourceCreatureID = <no value>
+ name = <no value>
+ classification = ""
+ deathTimeSeconds = <no value>
+ totalAmount = <no value>
+ isLocalPlayer = false
+ sourceGUID = <no value>
+}
+(*temporary) = "attempt to compare local 'sourceGUID' (a secret string value tainted by 'XFrames')"
+DAMAGE_METER_SESSION_CURRENT = 1
+
+Message: module Party:OnEvent failed: ...nterface/AddOns/XFrames/Core/XFrames_NativeMeter.lua:185: attempt to compare local 'sourceGUID' (a secret string value tainted by 'XFrames')
+Time: Sun Apr  5 14:36:46 2026
+Count: 148
+Stack:
+[Interface/AddOns/XFrames/Core/XFrames.lua]:172: in function 'SafeCall'
+[Interface/AddOns/XFrames/Modules/Party/XFrames_Party.lua]:476: in function <...rface/AddOns/XFrames/Modules/Party/XFrames_Party.lua:475>
+
+Locals:
+self = Frame {
+ modules = <table> {
+ }
+ db = <table> {
+ }
+ events = <table> {
+ }
+ name = "XFrames"
+ minimapButton = XFramesMinimapButton {
+ }
+ settingsFrame = Frame {
+ }
+ nativeMeterCache = <table> {
+ }
+ initialized = true
+}
+scope = "module Party:OnEvent"
+args = <table> {
+ 1 = <table> {
+ }
+ 2 = "UNIT_POWER_UPDATE"
+ 3 = "party4"
+ 4 = "ENERGY"
+}
