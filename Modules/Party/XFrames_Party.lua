@@ -9,6 +9,7 @@ local CreateFrame = CreateFrame
 local SetPortraitTexture = SetPortraitTexture
 local UnitClass = UnitClass
 local UnitExists = UnitExists
+local UnitGroupRolesAssigned = UnitGroupRolesAssigned
 local UnitHealth = UnitHealth
 local UnitHealthMax = UnitHealthMax
 local UnitLevel = UnitLevel
@@ -89,6 +90,21 @@ local function getStatusText(unit, fallbackLabel)
 	return className or fallbackLabel
 end
 
+local function getRoleBadge(unit)
+	local role = UnitGroupRolesAssigned and UnitGroupRolesAssigned(unit)
+	if role == "TANK" then
+		return "T", 0.32, 0.72, 1
+	end
+	if role == "HEALER" then
+		return "H", 0.26, 0.95, 0.54
+	end
+	if role == "DAMAGER" then
+		return "D", 1, 0.3, 0.3
+	end
+
+	return "", 1, 1, 1
+end
+
 function Party:CreateAnchorFrame()
 	if self.anchorFrame then
 		return self.anchorFrame
@@ -144,13 +160,14 @@ function Party:CreateUnitFrame(index)
 
 	frame.nameText = createText(frame, "OVERLAY", "GameFontNormal", 12, "TOPLEFT", frame, "TOPLEFT", 50, -8, "LEFT")
 	frame.levelText = createText(frame, "OVERLAY", "GameFontHighlightSmall", 10, "TOPRIGHT", frame, "TOPRIGHT", -8, -9, "RIGHT")
+	frame.roleText = createText(frame, "OVERLAY", "GameFontNormalSmall", 11, "RIGHT", frame.levelText, "LEFT", -6, 0, "RIGHT")
 	frame.statusText = createText(frame, "OVERLAY", "GameFontHighlightSmall", 10, "TOPLEFT", frame.nameText, "BOTTOMLEFT", 0, -2, "LEFT")
 
 	frame.healthBar = createBar(frame, 11, "TOPLEFT", frame, "TOPLEFT", 50, -28)
 	frame.powerBar = createBar(frame, 9, "TOPLEFT", frame.healthBar, "BOTTOMLEFT", 0, -5)
 
 	self.frames[index] = frame
-	XFrames:RegisterInteractiveUnitFrame(frame, unit, false)
+	XFrames:RegisterInteractiveUnitFrame(frame, unit, true)
 	return frame
 end
 
@@ -184,6 +201,12 @@ function Party:UpdateLevel(frame)
 	end
 
 	XFrames:SetValueText(frame.levelText, UnitLevel(frame.unit))
+end
+
+function Party:UpdateRole(frame)
+	local label, r, g, b = getRoleBadge(frame.unit)
+	frame.roleText:SetText(label)
+	frame.roleText:SetTextColor(r, g, b)
 end
 
 function Party:UpdateStatus(frame)
@@ -241,6 +264,7 @@ function Party:RefreshFrame(frame)
 			self:UpdateFrameBorder(frame)
 			self:UpdateName(frame)
 			self:UpdateLevel(frame)
+			self:UpdateRole(frame)
 			self:UpdateStatus(frame)
 			self:UpdatePortrait(frame)
 			self:UpdateHealth(frame)
@@ -255,6 +279,7 @@ function Party:RefreshFrame(frame)
 	self:UpdateFrameBorder(frame)
 	self:UpdateName(frame)
 	self:UpdateLevel(frame)
+	self:UpdateRole(frame)
 	self:UpdateStatus(frame)
 	self:UpdatePortrait(frame)
 	self:UpdateHealth(frame)
@@ -291,6 +316,7 @@ end
 function Party:OnEvent(event, unit)
 	if event == "GROUP_ROSTER_UPDATE" or event == "PLAYER_ENTERING_WORLD" then
 		self:RefreshAll()
+		XFrames:ApplyBlizzardFrameVisibility()
 		return
 	end
 
@@ -315,8 +341,10 @@ function Party:RegisterEvents()
 	self.eventFrame = self.eventFrame or CreateFrame("Frame")
 	local frame = self.eventFrame
 	frame:RegisterEvent("GROUP_ROSTER_UPDATE")
+	frame:RegisterEvent("PLAYER_ROLES_ASSIGNED")
 	frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 	frame:RegisterUnitEvent("UNIT_NAME_UPDATE", "party1", "party2", "party3", "party4")
+	frame:RegisterUnitEvent("UNIT_OTHER_PARTY_CHANGED", "party1", "party2", "party3", "party4")
 	frame:RegisterUnitEvent("UNIT_PORTRAIT_UPDATE", "party1", "party2", "party3", "party4")
 	frame:RegisterUnitEvent("UNIT_HEALTH", "party1", "party2", "party3", "party4")
 	frame:RegisterUnitEvent("UNIT_MAXHEALTH", "party1", "party2", "party3", "party4")

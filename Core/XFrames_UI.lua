@@ -21,6 +21,11 @@ local BLIZZARD_UNIT_FRAME_NAMES = {
 	"PetFrame",
 	"PartyFrame",
 	"CompactPartyFrame",
+	"CompactPartyFrameMemberFrame1",
+	"CompactPartyFrameMemberFrame2",
+	"CompactPartyFrameMemberFrame3",
+	"CompactPartyFrameMemberFrame4",
+	"CompactPartyFrameMemberFrame5",
 	"CompactRaidFrameContainer",
 	"CompactRaidFrameManager",
 	"PartyMemberFrame1",
@@ -77,10 +82,6 @@ function XFrames:GetUISettings()
 end
 
 function XFrames:GetBlizzardUnitFrames()
-	if self.blizzardUnitFrames then
-		return self.blizzardUnitFrames
-	end
-
 	local frames = {}
 	for _, frameName in ipairs(BLIZZARD_UNIT_FRAME_NAMES) do
 		local frame = _G[frameName]
@@ -89,7 +90,6 @@ function XFrames:GetBlizzardUnitFrames()
 		end
 	end
 
-	self.blizzardUnitFrames = frames
 	return frames
 end
 
@@ -155,6 +155,21 @@ function XFrames:RegisterInteractiveUnitFrame(frame, unit, useUnitWatch)
 	frame:SetAttribute("*type1", "target")
 	frame:SetAttribute("*type2", "togglemenu")
 	frame:RegisterForClicks("AnyUp")
+	frame:EnableMouse(true)
+
+	frame:SetScript("OnEnter", function(hoverFrame)
+		if not hoverFrame.unit or not UnitExists(hoverFrame.unit) then
+			return
+		end
+
+		GameTooltip_SetDefaultAnchor(GameTooltip, hoverFrame)
+		GameTooltip:SetUnit(hoverFrame.unit)
+		GameTooltip:Show()
+	end)
+
+	frame:SetScript("OnLeave", function()
+		GameTooltip:Hide()
+	end)
 
 	if useUnitWatch then
 		frame.xfUnitWatch = true
