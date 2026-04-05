@@ -27,7 +27,6 @@ local BLIZZARD_UNIT_FRAME_NAMES = {
 	"CompactPartyFrameMemberFrame4",
 	"CompactPartyFrameMemberFrame5",
 	"CompactRaidFrameContainer",
-	"CompactRaidFrameManager",
 	"PartyMemberFrame1",
 	"PartyMemberFrame2",
 	"PartyMemberFrame3",
