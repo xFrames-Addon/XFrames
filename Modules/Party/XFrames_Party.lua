@@ -7,6 +7,7 @@ local RAID_CLASS_COLORS = RAID_CLASS_COLORS
 
 local CreateFrame = CreateFrame
 local GetTexCoordsForRole = GetTexCoordsForRole
+local InCombatLockdown = InCombatLockdown
 local SetPortraitTexture = SetPortraitTexture
 local UnitClass = UnitClass
 local UnitExists = UnitExists
@@ -174,6 +175,22 @@ function Party:CreateUnitFrame(index)
 
 	self.frames[index] = frame
 	XFrames:RegisterInteractiveUnitFrame(frame, unit, true)
+	frame:RegisterForDrag("LeftButton")
+	frame:SetScript("OnDragStart", function(dragFrame)
+		if not XFrames:IsFramesUnlocked() then
+			return
+		end
+
+		if InCombatLockdown and InCombatLockdown() then
+			return
+		end
+
+		anchor:StartMoving()
+	end)
+	frame:SetScript("OnDragStop", function()
+		anchor:StopMovingOrSizing()
+		XFrames:SaveFramePosition(anchor)
+	end)
 	return frame
 end
 
