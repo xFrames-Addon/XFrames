@@ -71,7 +71,7 @@ local defaults = {
 				position = {
 					point = "CENTER",
 					relativePoint = "CENTER",
-					x = 565,
+					x = 610,
 					y = -225,
 				},
 			},
@@ -83,7 +83,7 @@ local defaults = {
 				position = {
 					point = "CENTER",
 					relativePoint = "CENTER",
-					x = 540,
+					x = 585,
 					y = -125,
 				},
 			},
