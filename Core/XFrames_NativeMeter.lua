@@ -49,6 +49,19 @@ local function getSourceRate(source)
 	return source.amountPerSecond or source.rate or source.totalAmount
 end
 
+local function getSourceRank(source)
+	if type(source) ~= "table" then
+		return nil
+	end
+
+	local rank = tonumber(source.rank or source.order or source.position or source.displayOrder or source.displayIndex)
+	if not rank or rank < 1 then
+		return nil
+	end
+
+	return rank
+end
+
 local function canCompareValue(value)
 	if value == nil then
 		return false
@@ -63,6 +76,14 @@ local function canCompareValue(value)
 	end
 
 	return true
+end
+
+local function getComparableNumber(value)
+	if not canCompareValue(value) then
+		return nil
+	end
+
+	return tonumber(value)
 end
 
 function XFrames:InvalidateMeterCache()
@@ -245,6 +266,11 @@ function XFrames:GetPerformanceRankForUnit(unit)
 		return nil
 	end
 
+	local directRank = getSourceRank(source)
+	if directRank then
+		return directRank
+	end
+
 	local sessionType = self:GetMeterSessionType()
 	local view = self:GetNativeMeterView(sessionType, meterType)
 	if not view and sessionType ~= DAMAGE_METER_SESSION_CURRENT then
@@ -257,6 +283,9 @@ function XFrames:GetPerformanceRankForUnit(unit)
 	local unitGUID = UnitGUID(unit)
 	local unitName = UnitName(unit)
 	local unitCreatureID = getCreatureIDFromGUID(unitGUID)
+	local sourceRate = getComparableNumber(getSourceRate(source))
+	local sourceClass = canCompareValue(source.classFilename) and source.classFilename or nil
+	local sourceIsLocalPlayer = source.isLocalPlayer == true
 
 	for index, candidate in ipairs(view.combatSources) do
 		if type(candidate) == "table" then
@@ -281,6 +310,18 @@ function XFrames:GetPerformanceRankForUnit(unit)
 			local candidateName = candidate.name or candidate.unitName or candidate.sourceName
 			if unitName and canCompareValue(candidateName) and candidateName == unitName then
 				return index
+			end
+
+			local candidateRate = getComparableNumber(getSourceRate(candidate))
+			local candidateClass = canCompareValue(candidate.classFilename) and candidate.classFilename or nil
+			if sourceRate and candidateRate and sourceRate == candidateRate then
+				if sourceIsLocalPlayer and candidate.isLocalPlayer then
+					return index
+				end
+
+				if sourceClass and candidateClass and sourceClass == candidateClass then
+					return index
+				end
 			end
 		end
 	end

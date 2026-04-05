@@ -30,7 +30,7 @@ local PORTRAIT_BG_COLOR = {0.10, 0.11, 0.14, 0.98}
 local SECONDARY_TEXT_COLOR = {0.72, 0.77, 0.84}
 local LEVEL_TEXT_COLOR = {0.90, 0.92, 0.96}
 local ROLE_BG_COLOR = {0.12, 0.14, 0.18, 0.96}
-local ROLE_ICON_TEXTURE = "Interface\\LFGFrame\\UI-LFG-ICON-PORTRAITROLES"
+local ROLE_ICON_TEXTURE = "Interface\\LFGFrame\\UI-LFG-ICON-ROLES"
 local function getPartyAccentColor(unit)
 	if not UnitExists(unit) then
 		return {r = BORDER_COLOR[1], g = BORDER_COLOR[2], b = BORDER_COLOR[3]}
@@ -299,6 +299,11 @@ end
 
 function Party:UpdateRole(frame)
 	local role = getRoleInfo(frame.unit)
+	if role then
+		frame.roleFrame:Show()
+	else
+		frame.roleFrame:Hide()
+	end
 	setRoleIcon(frame.roleIcon, role)
 end
 
