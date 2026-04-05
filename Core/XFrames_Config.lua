@@ -98,9 +98,9 @@ local defaults = {
 		party = {
 			enabled = true,
 			width = 266,
-			height = 62,
+			height = 96,
 			spacing = 8,
-			scale = 0.92,
+			scale = 1,
 			position = {
 				point = "CENTER",
 				relativePoint = "CENTER",
@@ -137,8 +137,11 @@ function XFrames:InitializeDatabase()
 		if self.db.profile.party.width == 232 then
 			self.db.profile.party.width = 266
 		end
-		if self.db.profile.party.height == 58 then
-			self.db.profile.party.height = 62
+		if self.db.profile.party.height == 58 or self.db.profile.party.height == 62 then
+			self.db.profile.party.height = 96
+		end
+		if self.db.profile.party.scale == 0.92 then
+			self.db.profile.party.scale = 1
 		end
 	end
 end

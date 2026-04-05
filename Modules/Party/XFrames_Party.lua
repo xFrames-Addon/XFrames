@@ -6,6 +6,7 @@ local Party = {}
 local RAID_CLASS_COLORS = RAID_CLASS_COLORS
 
 local CreateFrame = CreateFrame
+local GetTexCoordsForRole = GetTexCoordsForRole
 local SetPortraitTexture = SetPortraitTexture
 local UnitClass = UnitClass
 local UnitExists = UnitExists
@@ -90,19 +91,21 @@ local function getStatusText(unit, fallbackLabel)
 	return className or fallbackLabel
 end
 
-local function getRoleBadge(unit)
+local ROLE_ICON_TEXTURE = "Interface\\LFGFrame\\UI-LFG-ICON-ROLES"
+
+local function getRoleInfo(unit)
 	local role = UnitGroupRolesAssigned and UnitGroupRolesAssigned(unit)
 	if role == "TANK" then
-		return "T", 0.32, 0.72, 1
+		return role
 	end
 	if role == "HEALER" then
-		return "H", 0.26, 0.95, 0.54
+		return role
 	end
 	if role == "DAMAGER" then
-		return "D", 1, 0.3, 0.3
+		return role
 	end
 
-	return "", 1, 1, 1
+	return nil
 end
 
 function Party:CreateAnchorFrame()
@@ -152,19 +155,22 @@ function Party:CreateUnitFrame(index)
 	frame.accentFrame = XFrames:CreateAccentFrame(frame, 2, 3)
 	frame:Hide()
 
-	frame.portraitFrame = createBackdropFrame(nil, frame, 42, 42, "TOPLEFT", frame, "TOPLEFT", 4, -4, PORTRAIT_BG_COLOR)
+	frame.portraitFrame = createBackdropFrame(nil, frame, 52, 52, "TOPLEFT", frame, "TOPLEFT", 6, -6, PORTRAIT_BG_COLOR)
 	frame.portraitTexture = frame.portraitFrame:CreateTexture(nil, "ARTWORK")
 	frame.portraitTexture:SetPoint("TOPLEFT", frame.portraitFrame, "TOPLEFT", 2, -2)
-	frame.portraitTexture:SetSize(38, 38)
+	frame.portraitTexture:SetSize(48, 48)
 	frame.portraitTexture:SetTexCoord(0.08, 0.92, 0.08, 0.92)
 
-	frame.nameText = createText(frame, "OVERLAY", "GameFontNormal", 12, "TOPLEFT", frame, "TOPLEFT", 50, -8, "LEFT")
-	frame.levelText = createText(frame, "OVERLAY", "GameFontHighlightSmall", 10, "TOPRIGHT", frame, "TOPRIGHT", -8, -9, "RIGHT")
-	frame.roleText = createText(frame, "OVERLAY", "GameFontNormalSmall", 11, "RIGHT", frame.levelText, "LEFT", -6, 0, "RIGHT")
+	frame.nameText = createText(frame, "OVERLAY", "GameFontNormalLarge", 13, "TOPLEFT", frame, "TOPLEFT", 64, -10, "LEFT")
+	frame.levelText = createText(frame, "OVERLAY", "GameFontHighlight", 12, "TOPRIGHT", frame, "TOPRIGHT", -10, -10, "RIGHT")
+	frame.roleIcon = frame:CreateTexture(nil, "OVERLAY")
+	frame.roleIcon:SetSize(14, 14)
+	frame.roleIcon:SetPoint("RIGHT", frame.levelText, "LEFT", -6, 0)
+	frame.roleIcon:Hide()
 	frame.statusText = createText(frame, "OVERLAY", "GameFontHighlightSmall", 10, "TOPLEFT", frame.nameText, "BOTTOMLEFT", 0, -2, "LEFT")
 
-	frame.healthBar = createBar(frame, 11, "TOPLEFT", frame, "TOPLEFT", 50, -28)
-	frame.powerBar = createBar(frame, 9, "TOPLEFT", frame.healthBar, "BOTTOMLEFT", 0, -5)
+	frame.healthBar = createBar(frame, 14, "TOPLEFT", frame, "TOPLEFT", 64, -40)
+	frame.powerBar = createBar(frame, 12, "TOPLEFT", frame.healthBar, "BOTTOMLEFT", 0, -6)
 
 	self.frames[index] = frame
 	XFrames:RegisterInteractiveUnitFrame(frame, unit, true)
@@ -204,9 +210,17 @@ function Party:UpdateLevel(frame)
 end
 
 function Party:UpdateRole(frame)
-	local label, r, g, b = getRoleBadge(frame.unit)
-	frame.roleText:SetText(label)
-	frame.roleText:SetTextColor(r, g, b)
+	local role = getRoleInfo(frame.unit)
+	if not role then
+		frame.roleIcon:Hide()
+		return
+	end
+
+	frame.roleIcon:SetTexture(ROLE_ICON_TEXTURE)
+	if GetTexCoordsForRole then
+		frame.roleIcon:SetTexCoord(GetTexCoordsForRole(role))
+	end
+	frame.roleIcon:Show()
 end
 
 function Party:UpdateStatus(frame)
