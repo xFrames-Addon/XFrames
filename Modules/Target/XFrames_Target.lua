@@ -118,10 +118,6 @@ local function getCastInfo(unit)
 	return nil
 end
 
-local function formatCastTime(seconds)
-	return string.format("%.1f", math.max(0, seconds or 0))
-end
-
 local function getStatusText(unit, fallbackLabel)
 	if not UnitExists(unit) then
 		return fallbackLabel
@@ -491,32 +487,26 @@ function Target:RefreshCastState()
 
 	local color = info.notInterruptible and LOCKED_BAR_COLOR or (info.channel and CHANNEL_BAR_COLOR or CAST_BAR_COLOR)
 	castFrame.bar:SetStatusBarColor(color.r, color.g, color.b)
+	castFrame.spellText:SetText(info.name or "")
+	castFrame.timeText:SetText("")
 	castFrame:SetScript("OnUpdate", function(_, _)
-		local active = self.castState
+		local active = getCastInfo("target")
 		if not active then
+			self.castState = nil
 			self:RefreshCastState()
 			return
 		end
 
-		local now = GetTime()
-		local duration = math.max(0.001, active.endTime - active.startTime)
-		local elapsed = math.max(0, math.min(duration, now - active.startTime))
-		local remaining = math.max(0, active.endTime - now)
-
-		castFrame.bar:SetMinMaxValues(0, duration)
+		self.castState = active
+		castFrame.bar:SetMinMaxValues(active.startTime, active.endTime)
 		if active.channel then
-			castFrame.bar:SetValue(remaining)
+			castFrame.bar:SetValue(active.endTime)
 		else
-			castFrame.bar:SetValue(elapsed)
+			castFrame.bar:SetValue(GetTime())
 		end
 
 		castFrame.spellText:SetText(active.name or "")
-		castFrame.timeText:SetText(formatCastTime(remaining))
-
-		if remaining <= 0 then
-			self.castState = nil
-			self:RefreshCastState()
-		end
+		castFrame.timeText:SetText("")
 	end)
 end
 
