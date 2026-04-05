@@ -35,8 +35,11 @@ local BLIZZARD_UNIT_FRAME_NAMES = {
 	"FocusFrameToT",
 }
 local BLIZZARD_CAST_BAR_NAMES = {
+	"PlayerCastingBarFrame",
 	"CastingBarFrame",
+	"PetCastingBarFrame",
 	"TargetFrameSpellBar",
+	"FocusFrameSpellBar",
 }
 
 local function createPanel(parent, width, height, anchorPoint, relativeTo, relativePoint, x, y)

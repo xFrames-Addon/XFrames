@@ -35,9 +35,9 @@ local BACKDROP_COLOR = {0.08, 0.09, 0.11, 0.92}
 local BORDER_COLOR = {0.24, 0.27, 0.31, 0.95}
 local POWER_BAR_COLOR = {r = 0.24, g = 0.28, b = 0.36}
 local PORTRAIT_BG_COLOR = {0.10, 0.11, 0.14, 0.98}
-local CAST_BAR_COLOR = {r = 0.86, g = 0.66, b = 0.22}
-local CHANNEL_BAR_COLOR = {r = 0.28, g = 0.56, b = 0.86}
-local LOCKED_BAR_COLOR = {r = 0.55, g = 0.55, b = 0.58}
+local CAST_BAR_COLOR = {r = 0.22, g = 0.78, b = 0.32}
+local CHANNEL_BAR_COLOR = {r = 0.22, g = 0.78, b = 0.32}
+local LOCKED_BAR_COLOR = {r = 0.86, g = 0.20, b = 0.20}
 local INTERRUPT_BORDER_COLOR = {r = 0.90, g = 0.24, b = 0.20}
 
 local function createText(parent, layer, template, size, anchorPoint, relativeTo, relativePoint, x, y, justify)
@@ -221,6 +221,8 @@ function Target:CreateTargetCastFrame()
 	castFrame.bar.percentText:Hide()
 	castFrame.spellText = createText(castFrame, "OVERLAY", "GameFontHighlightSmall", 11, "LEFT", castFrame.bar, "LEFT", 6, 0, "LEFT")
 	castFrame.timeText = createText(castFrame, "OVERLAY", "GameFontHighlightSmall", 10, "RIGHT", castFrame.bar, "RIGHT", -6, 0, "RIGHT")
+	castFrame.spellText:SetWidth(math.max(40, config.width - 70))
+	castFrame.spellText:SetWordWrap(false)
 	castFrame.spellText:SetText("")
 	castFrame.timeText:SetText("")
 	castFrame:Hide()
