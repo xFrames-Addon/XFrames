@@ -6,12 +6,19 @@ local Target = {}
 local RAID_CLASS_COLORS = RAID_CLASS_COLORS
 
 local CreateFrame = CreateFrame
+local CanInspect = CanInspect
+local ClearInspectPlayer = ClearInspectPlayer
+local GetInspectSpecialization = GetInspectSpecialization
+local GetSpecializationInfoByID = GetSpecializationInfoByID
+local InCombatLockdown = InCombatLockdown
+local NotifyInspect = NotifyInspect
 local SetPortraitTexture = SetPortraitTexture
 local UnitClass = UnitClass
 local UnitCreatureType = UnitCreatureType
 local UnitExists = UnitExists
 local UnitHealth = UnitHealth
 local UnitHealthMax = UnitHealthMax
+local UnitGUID = UnitGUID
 local UnitIsPlayer = UnitIsPlayer
 local UnitLevel = UnitLevel
 local UnitName = UnitName
@@ -117,6 +124,7 @@ function Target:CreateUnitFrame(key, unit, config, accent)
 	frame.portraitTexture:SetPoint("TOPLEFT", frame.portraitFrame, "TOPLEFT", 2, -2)
 	frame.portraitTexture:SetSize(48, 48)
 	frame.portraitTexture:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+	frame.specText = createText(frame, "OVERLAY", "GameFontHighlightSmall", 10, "TOP", frame.portraitFrame, "BOTTOM", 0, -4, "CENTER")
 
 	frame.nameText = createText(frame, "OVERLAY", "GameFontNormalLarge", 13, "TOPLEFT", frame, "TOPLEFT", 64, -10, "LEFT")
 	frame.levelText = createText(frame, "OVERLAY", "GameFontHighlight", 12, "TOPRIGHT", frame, "TOPRIGHT", -10, -10, "RIGHT")
@@ -216,6 +224,94 @@ function Target:UpdateName(frame)
 	end
 end
 
+function Target:GetInspectSpecName(unit)
+	if not UnitExists(unit) or not UnitIsPlayer(unit) then
+		return ""
+	end
+
+	local guid = UnitGUID(unit)
+	return guid and self.inspectCache and self.inspectCache[guid] or ""
+end
+
+function Target:UpdateSpec(frame)
+	if not frame.specText then
+		return
+	end
+
+	frame.specText:SetText(self:GetInspectSpecName(frame.unit))
+end
+
+function Target:QueueInspect(unit)
+	if not NotifyInspect or not CanInspect or not UnitExists(unit) or not UnitIsPlayer(unit) then
+		return
+	end
+
+	local guid = UnitGUID(unit)
+	if not guid then
+		return
+	end
+
+	self.inspectCache = self.inspectCache or {}
+	self.inspectQueue = self.inspectQueue or {}
+	self.inspectQueued = self.inspectQueued or {}
+
+	if self.inspectCache[guid] or self.inspectPendingGUID == guid or self.inspectQueued[guid] then
+		return
+	end
+
+	self.inspectQueue[#self.inspectQueue + 1] = {guid = guid, unit = unit}
+	self.inspectQueued[guid] = true
+	self:ProcessInspectQueue()
+end
+
+function Target:ProcessInspectQueue()
+	if self.inspectPendingGUID or (InCombatLockdown and InCombatLockdown()) then
+		return
+	end
+
+	while self.inspectQueue and #self.inspectQueue > 0 do
+		local item = table.remove(self.inspectQueue, 1)
+		self.inspectQueued[item.guid] = nil
+
+		if UnitExists(item.unit) and UnitGUID(item.unit) == item.guid and UnitIsPlayer(item.unit) and CanInspect(item.unit, false) then
+			NotifyInspect(item.unit)
+			self.inspectPendingGUID = item.guid
+			return
+		end
+	end
+end
+
+function Target:HandleInspectReady(inspectGUID)
+	if not inspectGUID or not GetInspectSpecialization then
+		return
+	end
+
+	for _, unit in ipairs({"target", "focus"}) do
+		if UnitExists(unit) and UnitGUID(unit) == inspectGUID then
+			local specID = GetInspectSpecialization(unit)
+			if specID and specID > 0 and GetSpecializationInfoByID then
+				local _, name = GetSpecializationInfoByID(specID)
+				if name then
+					self.inspectCache = self.inspectCache or {}
+					self.inspectCache[inspectGUID] = name
+				end
+			end
+		end
+	end
+
+	if ClearInspectPlayer then
+		ClearInspectPlayer()
+	end
+
+	if self.inspectPendingGUID == inspectGUID then
+		self.inspectPendingGUID = nil
+	end
+
+	self:RefreshFrame(self.targetFrame)
+	self:RefreshFrame(self.focusFrame)
+	self:ProcessInspectQueue()
+end
+
 function Target:UpdateLevel(frame)
 	if not UnitExists(frame.unit) then
 		frame.levelText:SetText("")
@@ -296,6 +392,7 @@ function Target:RefreshFrame(frame)
 			self:UpdateName(frame)
 			self:UpdateLevel(frame)
 			self:UpdateStatus(frame)
+			self:UpdateSpec(frame)
 			self:UpdatePortrait(frame)
 			self:UpdateHealth(frame)
 			self:UpdatePower(frame)
@@ -310,9 +407,14 @@ function Target:RefreshFrame(frame)
 	self:UpdateName(frame)
 	self:UpdateLevel(frame)
 	self:UpdateStatus(frame)
+	self:UpdateSpec(frame)
 	self:UpdatePortrait(frame)
 	self:UpdateHealth(frame)
 	self:UpdatePower(frame)
+
+	if frame.specText then
+		self:QueueInspect(frame.unit)
+	end
 end
 
 function Target:RefreshAll()
@@ -323,6 +425,16 @@ function Target:RefreshAll()
 end
 
 function Target:OnEvent(event, unit)
+	if event == "INSPECT_READY" then
+		self:HandleInspectReady(unit)
+		return
+	end
+
+	if event == "PLAYER_REGEN_ENABLED" then
+		self:ProcessInspectQueue()
+		return
+	end
+
 	if event == "PLAYER_TARGET_CHANGED" then
 		self:RefreshFrame(self.targetFrame)
 		self:RefreshFrame(self.targetTargetFrame)
@@ -372,8 +484,10 @@ end
 function Target:RegisterEvents()
 	local frame = self.eventFrame
 	frame:RegisterEvent("PLAYER_ENTERING_WORLD")
+	frame:RegisterEvent("INSPECT_READY")
 	frame:RegisterEvent("PLAYER_TARGET_CHANGED")
 	frame:RegisterEvent("PLAYER_FOCUS_CHANGED")
+	frame:RegisterEvent("PLAYER_REGEN_ENABLED")
 	frame:RegisterUnitEvent("UNIT_TARGET", "target", "focus")
 	frame:RegisterUnitEvent("UNIT_HEALTH", "target", "focus", "targettarget", "focustarget")
 	frame:RegisterUnitEvent("UNIT_MAXHEALTH", "target", "focus", "targettarget", "focustarget")
