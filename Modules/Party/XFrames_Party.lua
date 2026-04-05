@@ -10,6 +10,7 @@ local GetTexCoordsForRole = GetTexCoordsForRole
 local InCombatLockdown = InCombatLockdown
 local SetPortraitTexture = SetPortraitTexture
 local UnitClass = UnitClass
+local UnitCreatureType = UnitCreatureType
 local UnitExists = UnitExists
 local UnitGroupRolesAssigned = UnitGroupRolesAssigned
 local UnitHealth = UnitHealth
@@ -89,7 +90,22 @@ local function getStatusText(unit, fallbackLabel)
 	end
 
 	local className = UnitClass(unit)
-	return className or fallbackLabel
+	if className then
+		return className
+	end
+
+	local role = UnitGroupRolesAssigned and UnitGroupRolesAssigned(unit)
+	if role == "TANK" then
+		return "Tank"
+	end
+	if role == "HEALER" then
+		return "Healer"
+	end
+	if role == "DAMAGER" then
+		return "Damage"
+	end
+
+	return UnitCreatureType(unit) or "Party Member"
 end
 
 local ROLE_ICON_TEXTURE = "Interface\\LFGFrame\\UI-LFG-ICON-PORTRAITROLES"
