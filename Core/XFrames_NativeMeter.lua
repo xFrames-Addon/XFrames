@@ -13,9 +13,6 @@ local InCombatLockdown = InCombatLockdown
 local UnitExists = UnitExists
 local UnitGroupRolesAssigned = UnitGroupRolesAssigned
 local UnitGUID = UnitGUID
-local UnitName = UnitName
-local ipairs = ipairs
-local pairs = pairs
 local pcall = pcall
 local string = string
 local tonumber = tonumber
@@ -37,30 +34,6 @@ local function getCreatureIDFromGUID(guid)
 	end
 
 	return creatureID
-end
-
-local function getSourceGUID(source)
-	if type(source) ~= "table" then
-		return nil
-	end
-
-	return source.sourceGUID or source.guid or source.unitToken
-end
-
-local function getSourceName(source)
-	if type(source) ~= "table" then
-		return nil
-	end
-
-	return source.name or source.unitName or source.sourceName
-end
-
-local function getSourceCreatureID(source)
-	if type(source) ~= "table" then
-		return nil
-	end
-
-	return tonumber(source.sourceCreatureID or source.creatureID or source.npcID)
 end
 
 local function getSourceRate(source)
@@ -124,8 +97,8 @@ function XFrames:GetMeterSessionType()
 	return DAMAGE_METER_SESSION_TOTAL
 end
 
-function XFrames:GetNativeMeterView(sessionType, meterType)
-	if not (C_DamageMeter and C_DamageMeter.IsDamageMeterAvailable and C_DamageMeter.GetCombatSessionFromType) then
+function XFrames:IsNativeMeterAvailable()
+	if not (C_DamageMeter and C_DamageMeter.IsDamageMeterAvailable) then
 		return nil
 	end
 
@@ -134,71 +107,46 @@ function XFrames:GetNativeMeterView(sessionType, meterType)
 	if not cache or now >= (cache.expiresAt or 0) then
 		cache = {
 			expiresAt = now + METER_CACHE_TTL,
-			views = {},
 			available = C_DamageMeter.IsDamageMeterAvailable(),
 		}
 		self.nativeMeterCache = cache
 	end
 
-	if not cache.available then
-		return nil
-	end
-
-	local cacheKey = tostring(sessionType) .. ":" .. tostring(meterType)
-	if cache.views[cacheKey] ~= nil then
-		return cache.views[cacheKey] or nil
-	end
-
-	local ok, view = pcall(C_DamageMeter.GetCombatSessionFromType, sessionType, meterType)
-	cache.views[cacheKey] = ok and view or false
-	return cache.views[cacheKey] or nil
+	return cache.available
 end
 
 function XFrames:GetNativeMeterSourceForUnit(unit, meterType)
-	if not unit or not meterType or not UnitExists(unit) then
+	if not unit or not meterType or not UnitExists(unit) or not self:IsNativeMeterAvailable() then
+		return nil
+	end
+
+	if InCombatLockdown and InCombatLockdown() and C_DamageMeter.GetCurrentCombatSessionSource then
+		local ok, source = pcall(C_DamageMeter.GetCurrentCombatSessionSource, meterType, unit)
+		if ok and type(source) == "table" then
+			return source
+		end
+	end
+
+	local unitGUID = UnitGUID(unit)
+	local unitCreatureID = getCreatureIDFromGUID(unitGUID)
+	if not unitGUID or not C_DamageMeter.GetCombatSessionSourceFromType then
 		return nil
 	end
 
 	local sessionType = self:GetMeterSessionType()
-	local view = self:GetNativeMeterView(sessionType, meterType)
-	if not view and sessionType ~= DAMAGE_METER_SESSION_CURRENT then
-		view = self:GetNativeMeterView(DAMAGE_METER_SESSION_CURRENT, meterType)
-	end
-	if not view or type(view) ~= "table" then
-		return nil
+	local ok, source = pcall(C_DamageMeter.GetCombatSessionSourceFromType, sessionType, meterType, unitGUID, unitCreatureID)
+	if ok and type(source) == "table" then
+		return source
 	end
 
-	local sources = view.combatSources
-	if type(sources) ~= "table" then
-		return nil
-	end
-
-	local unitGUID = UnitGUID(unit)
-	local unitName = UnitName(unit)
-	local unitCreatureID = getCreatureIDFromGUID(unitGUID)
-	local creatureMatch
-	local nameMatch
-
-	for _, source in pairs(sources) do
-		if type(source) == "table" then
-			local sourceGUID = getSourceGUID(source)
-			if unitGUID and sourceGUID and sourceGUID == unitGUID then
-				return source
-			end
-
-			local sourceCreatureID = getSourceCreatureID(source)
-			if not creatureMatch and unitCreatureID and sourceCreatureID and sourceCreatureID == unitCreatureID then
-				creatureMatch = source
-			end
-
-			local sourceName = getSourceName(source)
-			if not nameMatch and unitName and sourceName and sourceName == unitName then
-				nameMatch = source
-			end
+	if sessionType ~= DAMAGE_METER_SESSION_CURRENT then
+		ok, source = pcall(C_DamageMeter.GetCombatSessionSourceFromType, DAMAGE_METER_SESSION_CURRENT, meterType, unitGUID, unitCreatureID)
+		if ok and type(source) == "table" then
+			return source
 		end
 	end
 
-	return creatureMatch or nameMatch
+	return nil
 end
 
 function XFrames:FormatNativeMeterText(value, label)
