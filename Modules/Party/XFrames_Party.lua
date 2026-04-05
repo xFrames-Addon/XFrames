@@ -6,7 +6,6 @@ local Party = {}
 local RAID_CLASS_COLORS = RAID_CLASS_COLORS
 
 local CreateFrame = CreateFrame
-local GetTexCoordsForRole = GetTexCoordsForRole
 local InCombatLockdown = InCombatLockdown
 local SetPortraitTexture = SetPortraitTexture
 local UnitClass = UnitClass
@@ -15,6 +14,7 @@ local UnitExists = UnitExists
 local UnitGroupRolesAssigned = UnitGroupRolesAssigned
 local UnitHealth = UnitHealth
 local UnitHealthMax = UnitHealthMax
+local UnitIsPlayer = UnitIsPlayer
 local UnitLevel = UnitLevel
 local UnitName = UnitName
 local UnitPower = UnitPower
@@ -89,9 +89,11 @@ local function getStatusText(unit, fallbackLabel)
 		return fallbackLabel
 	end
 
-	local className = UnitClass(unit)
-	if className then
-		return className
+	if UnitIsPlayer(unit) then
+		local className = UnitClass(unit)
+		if className then
+			return className
+		end
 	end
 
 	local role = UnitGroupRolesAssigned and UnitGroupRolesAssigned(unit)
@@ -108,8 +110,6 @@ local function getStatusText(unit, fallbackLabel)
 	return UnitCreatureType(unit) or "Party Member"
 end
 
-local ROLE_ICON_TEXTURE = "Interface\\LFGFrame\\UI-LFG-ICON-PORTRAITROLES"
-
 local function getRoleInfo(unit)
 	local role = UnitGroupRolesAssigned and UnitGroupRolesAssigned(unit)
 	if role == "TANK" then
@@ -123,6 +123,30 @@ local function getRoleInfo(unit)
 	end
 
 	return nil
+end
+
+local function setRoleIcon(texture, role)
+	if not texture then
+		return
+	end
+
+	if role == "TANK" then
+		texture:SetAtlas("groupfinder-icon-role-large-tank", true)
+		texture:Show()
+		return
+	end
+	if role == "HEALER" then
+		texture:SetAtlas("groupfinder-icon-role-large-heal", true)
+		texture:Show()
+		return
+	end
+	if role == "DAMAGER" then
+		texture:SetAtlas("groupfinder-icon-role-large-dps", true)
+		texture:Show()
+		return
+	end
+
+	texture:Hide()
 end
 
 function Party:CreateAnchorFrame()
@@ -181,7 +205,7 @@ function Party:CreateUnitFrame(index)
 	frame.nameText = createText(frame, "OVERLAY", "GameFontNormalLarge", 13, "TOPLEFT", frame, "TOPLEFT", 64, -10, "LEFT")
 	frame.levelText = createText(frame, "OVERLAY", "GameFontHighlight", 12, "TOPRIGHT", frame, "TOPRIGHT", -10, -10, "RIGHT")
 	frame.roleIcon = frame:CreateTexture(nil, "OVERLAY")
-	frame.roleIcon:SetSize(16, 16)
+	frame.roleIcon:SetSize(18, 18)
 	frame.roleIcon:SetPoint("RIGHT", frame.levelText, "LEFT", -6, 0)
 	frame.roleIcon:Hide()
 	frame.statusText = createText(frame, "OVERLAY", "GameFontHighlightSmall", 10, "TOPLEFT", frame.nameText, "BOTTOMLEFT", 0, -2, "LEFT")
@@ -244,16 +268,7 @@ end
 
 function Party:UpdateRole(frame)
 	local role = getRoleInfo(frame.unit)
-	if not role then
-		frame.roleIcon:Hide()
-		return
-	end
-
-	frame.roleIcon:SetTexture(ROLE_ICON_TEXTURE)
-	if GetTexCoordsForRole then
-		frame.roleIcon:SetTexCoord(GetTexCoordsForRole(role))
-	end
-	frame.roleIcon:Show()
+	setRoleIcon(frame.roleIcon, role)
 end
 
 function Party:UpdateStatus(frame)
