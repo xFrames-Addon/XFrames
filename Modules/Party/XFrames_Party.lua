@@ -138,31 +138,22 @@ local function setRoleIcon(texture, role)
 
 	if role == "TANK" then
 		texture:SetTexture(ROLE_ICON_TEXTURE)
-		if GetTexCoordsForRole then
-			texture:SetTexCoord(GetTexCoordsForRole(role))
-		else
-			texture:SetTexCoord(0, 19 / 64, 22 / 64, 41 / 64)
-		end
+		texture:SetTexCoord(0, 19 / 64, 22 / 64, 41 / 64)
+		texture:SetVertexColor(1, 1, 1, 1)
 		texture:Show()
 		return
 	end
 	if role == "HEALER" then
 		texture:SetTexture(ROLE_ICON_TEXTURE)
-		if GetTexCoordsForRole then
-			texture:SetTexCoord(GetTexCoordsForRole(role))
-		else
-			texture:SetTexCoord(20 / 64, 39 / 64, 1 / 64, 20 / 64)
-		end
+		texture:SetTexCoord(20 / 64, 39 / 64, 1 / 64, 20 / 64)
+		texture:SetVertexColor(1, 1, 1, 1)
 		texture:Show()
 		return
 	end
 	if role == "DAMAGER" then
 		texture:SetTexture(ROLE_ICON_TEXTURE)
-		if GetTexCoordsForRole then
-			texture:SetTexCoord(GetTexCoordsForRole(role))
-		else
-			texture:SetTexCoord(20 / 64, 39 / 64, 22 / 64, 41 / 64)
-		end
+		texture:SetTexCoord(20 / 64, 39 / 64, 22 / 64, 41 / 64)
+		texture:SetVertexColor(1, 1, 1, 1)
 		texture:Show()
 		return
 	end

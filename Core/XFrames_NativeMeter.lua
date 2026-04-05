@@ -78,6 +78,22 @@ local function canCompareValue(value)
 	return true
 end
 
+local function getSafeSourceField(source, ...)
+	if type(source) ~= "table" then
+		return nil
+	end
+
+	for index = 1, select("#", ...) do
+		local key = select(index, ...)
+		local value = source[key]
+		if value ~= nil and canCompareValue(value) then
+			return value
+		end
+	end
+
+	return nil
+end
+
 local function getComparableNumber(value)
 	if not canCompareValue(value) then
 		return nil
@@ -284,7 +300,9 @@ function XFrames:GetPerformanceRankForUnit(unit)
 	local unitName = UnitName(unit)
 	local unitCreatureID = getCreatureIDFromGUID(unitGUID)
 	local sourceRate = getComparableNumber(getSourceRate(source))
-	local sourceClass = canCompareValue(source.classFilename) and source.classFilename or nil
+	local sourceClass = getSafeSourceField(source, "classFilename", "class")
+	local sourceClassification = getSafeSourceField(source, "classification")
+	local sourceRecapID = getComparableNumber(getSafeSourceField(source, "deathRecapID"))
 	local sourceIsLocalPlayer = source.isLocalPlayer == true
 
 	for index, candidate in ipairs(view.combatSources) do
@@ -321,6 +339,20 @@ function XFrames:GetPerformanceRankForUnit(unit)
 
 				if sourceClass and candidateClass and sourceClass == candidateClass then
 					return index
+				end
+			end
+
+			local candidateClassification = getSafeSourceField(candidate, "classification")
+			local candidateRecapID = getComparableNumber(getSafeSourceField(candidate, "deathRecapID"))
+			if sourceClass and candidateClass and sourceClass == candidateClass then
+				if sourceIsLocalPlayer == (candidate.isLocalPlayer == true) then
+					if sourceClassification and candidateClassification and sourceClassification == candidateClassification then
+						return index
+					end
+
+					if sourceRecapID and candidateRecapID and sourceRecapID == candidateRecapID then
+						return index
+					end
 				end
 			end
 		end
