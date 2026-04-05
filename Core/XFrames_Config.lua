@@ -95,6 +95,19 @@ local defaults = {
 				},
 			},
 		},
+		party = {
+			enabled = true,
+			width = 232,
+			height = 58,
+			spacing = 8,
+			scale = 0.92,
+			position = {
+				point = "CENTER",
+				relativePoint = "CENTER",
+				x = -610,
+				y = -70,
+			},
+		},
 		raid = {
 			enabled = false,
 		},
