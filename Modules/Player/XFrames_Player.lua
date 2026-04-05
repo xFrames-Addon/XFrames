@@ -184,11 +184,21 @@ function Player:UpdateLevel()
 end
 
 function Player:UpdateStatus()
-	self.frame.statusText:SetText(XFrames:GetPerformanceTextForUnit("player") or getStatusText())
+	if XFrames:GetPartySubtitleMode() == "performance" then
+		self.frame.statusText:SetText(XFrames:GetPerformanceTextForUnit("player") or getStatusText())
+		return
+	end
+
+	self.frame.statusText:SetText(getStatusText())
 end
 
 function Player:UpdateRank()
-	self.frame.rankText:SetText(XFrames:GetPerformanceRankText("player"))
+	if XFrames:GetPartySubtitleMode() == "performance" then
+		self.frame.rankText:SetText(XFrames:GetPerformanceRankText("player"))
+		return
+	end
+
+	self.frame.rankText:SetText("")
 end
 
 function Player:UpdateSpec()

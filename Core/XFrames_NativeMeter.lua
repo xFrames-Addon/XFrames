@@ -91,6 +91,11 @@ function XFrames:SetPartySubtitleMode(mode)
 		party:RefreshPerformanceMode()
 	end
 
+	local player = self:GetModule("Player")
+	if player and type(player.Refresh) == "function" then
+		player:Refresh()
+	end
+
 	self:RefreshSettingsPanel()
 end
 
