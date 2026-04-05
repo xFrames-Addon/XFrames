@@ -99,7 +99,7 @@ local defaults = {
 			enabled = true,
 			width = 266,
 			height = 96,
-			spacing = 8,
+			spacing = 10,
 			scale = 1,
 			position = {
 				point = "CENTER",
@@ -142,6 +142,9 @@ function XFrames:InitializeDatabase()
 		end
 		if self.db.profile.party.scale == 0.92 then
 			self.db.profile.party.scale = 1
+		end
+		if self.db.profile.party.spacing == 8 then
+			self.db.profile.party.spacing = 10
 		end
 	end
 end

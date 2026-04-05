@@ -24,6 +24,9 @@ local HEALTH_BAR_COLOR = {r = 0.18, g = 0.62, b = 0.32}
 local BACKDROP_COLOR = {0.08, 0.09, 0.11, 0.92}
 local BORDER_COLOR = {0.24, 0.27, 0.31, 0.95}
 local PORTRAIT_BG_COLOR = {0.10, 0.11, 0.14, 0.98}
+local SECONDARY_TEXT_COLOR = {0.72, 0.77, 0.84}
+local LEVEL_TEXT_COLOR = {0.90, 0.92, 0.96}
+local ROLE_BG_COLOR = {0.12, 0.14, 0.18, 0.96}
 
 local function getPartyAccentColor(unit)
 	if not UnitExists(unit) then
@@ -203,12 +206,19 @@ function Party:CreateUnitFrame(index)
 	frame.portraitTexture:SetTexCoord(0.08, 0.92, 0.08, 0.92)
 
 	frame.nameText = createText(frame, "OVERLAY", "GameFontNormalLarge", 13, "TOPLEFT", frame, "TOPLEFT", 64, -10, "LEFT")
+	frame.nameText:SetWidth(config.width - 124)
+	frame.nameText:SetWordWrap(false)
 	frame.levelText = createText(frame, "OVERLAY", "GameFontHighlight", 12, "TOPRIGHT", frame, "TOPRIGHT", -10, -10, "RIGHT")
+	frame.levelText:SetTextColor(unpack(LEVEL_TEXT_COLOR))
+	frame.roleFrame = createBackdropFrame(nil, frame, 20, 20, "RIGHT", frame.levelText, "LEFT", -8, 0, ROLE_BG_COLOR)
 	frame.roleIcon = frame:CreateTexture(nil, "OVERLAY")
 	frame.roleIcon:SetSize(18, 18)
-	frame.roleIcon:SetPoint("RIGHT", frame.levelText, "LEFT", -6, 0)
+	frame.roleIcon:SetPoint("CENTER", frame.roleFrame, "CENTER")
 	frame.roleIcon:Hide()
 	frame.statusText = createText(frame, "OVERLAY", "GameFontHighlightSmall", 10, "TOPLEFT", frame.nameText, "BOTTOMLEFT", 0, -2, "LEFT")
+	frame.statusText:SetWidth(config.width - 124)
+	frame.statusText:SetWordWrap(false)
+	frame.statusText:SetTextColor(unpack(SECONDARY_TEXT_COLOR))
 
 	frame.healthBar = createBar(frame, 14, "TOPLEFT", frame, "TOPLEFT", 64, -40)
 	frame.powerBar = createBar(frame, 12, "TOPLEFT", frame.healthBar, "BOTTOMLEFT", 0, -6)
@@ -263,6 +273,7 @@ function Party:UpdateLevel(frame)
 		return
 	end
 
+	frame.levelText:SetTextColor(unpack(LEVEL_TEXT_COLOR))
 	XFrames:SetValueText(frame.levelText, UnitLevel(frame.unit))
 end
 
@@ -273,6 +284,7 @@ end
 
 function Party:UpdateStatus(frame)
 	frame.statusText:SetText(getStatusText(frame.unit, frame.fallbackLabel))
+	frame.statusText:SetTextColor(unpack(SECONDARY_TEXT_COLOR))
 end
 
 function Party:UpdatePortrait(frame)
