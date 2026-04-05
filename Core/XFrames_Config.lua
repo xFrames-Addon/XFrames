@@ -7,6 +7,7 @@ local defaults = {
 		debug = false,
 		ui = {
 			unlocked = false,
+			hideBlizzard = true,
 			minimap = {
 				hide = false,
 			},

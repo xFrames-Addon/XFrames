@@ -273,6 +273,24 @@ function XFrames:RegisterSlashCommands()
 			return
 		end
 
+		if command == "blizzard" then
+			arg = trim(arg)
+			if arg == "" or arg == "toggle" then
+				self:ToggleBlizzardFrames()
+				return
+			end
+			if arg == "hide" or arg == "off" then
+				self:SetBlizzardFramesHidden(true)
+				return
+			end
+			if arg == "show" or arg == "on" then
+				self:SetBlizzardFramesHidden(false)
+				return
+			end
+			printf("|cff33ff99XFrames|r blizzard commands: hide, show, toggle")
+			return
+		end
+
 		if command == "reload" then
 			ReloadUI()
 			return
@@ -312,7 +330,7 @@ function XFrames:RegisterSlashCommands()
 			return
 		end
 
-		printf("|cff33ff99XFrames|r commands: status, settings, lock, unlock, toggle, reload, debug")
+		printf("|cff33ff99XFrames|r commands: status, settings, lock, unlock, toggle, blizzard, reload, debug")
 	end
 end
 

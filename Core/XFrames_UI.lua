@@ -4,14 +4,28 @@ local XFrames = ns.XFrames
 
 local CreateFrame = CreateFrame
 local InCombatLockdown = InCombatLockdown
+local RegisterStateDriver = RegisterStateDriver
 local ReloadUI = ReloadUI
 local UIParent = UIParent
 local RegisterUnitWatch = RegisterUnitWatch
 local UnregisterUnitWatch = UnregisterUnitWatch
+local UnregisterStateDriver = UnregisterStateDriver
 
 local PANEL_BG = {0.08, 0.09, 0.11, 0.96}
 local PANEL_BORDER = {0.24, 0.27, 0.31, 0.95}
 local MINIMAP_BUTTON_BG = {0.12, 0.14, 0.18, 0.95}
+local BLIZZARD_UNIT_FRAME_NAMES = {
+	"PlayerFrame",
+	"TargetFrame",
+	"FocusFrame",
+	"PetFrame",
+	"TargetFrameToT",
+	"FocusFrameToT",
+	"CastingBarFrame",
+	"PetCastingBarFrame",
+	"TargetFrameSpellBar",
+	"FocusFrameSpellBar",
+}
 
 local function createPanel(parent, width, height, anchorPoint, relativeTo, relativePoint, x, y)
 	local frame = CreateFrame("Frame", nil, parent, "BackdropTemplate")
@@ -52,6 +66,23 @@ end
 
 function XFrames:GetUISettings()
 	return self.db and self.db.profile and self.db.profile.ui
+end
+
+function XFrames:GetBlizzardUnitFrames()
+	if self.blizzardUnitFrames then
+		return self.blizzardUnitFrames
+	end
+
+	local frames = {}
+	for _, frameName in ipairs(BLIZZARD_UNIT_FRAME_NAMES) do
+		local frame = _G[frameName]
+		if frame then
+			frames[#frames + 1] = frame
+		end
+	end
+
+	self.blizzardUnitFrames = frames
+	return frames
 end
 
 function XFrames:IsFramesUnlocked()
@@ -195,6 +226,48 @@ function XFrames:SetFramesUnlocked(unlocked)
 	self:RefreshAllFrameLocks()
 end
 
+function XFrames:ApplyBlizzardFrameVisibility()
+	local ui = self:GetUISettings()
+	if not ui then
+		return
+	end
+
+	local hidden = ui.hideBlizzard ~= false
+	for _, frame in ipairs(self:GetBlizzardUnitFrames()) do
+		if hidden then
+			RegisterStateDriver(frame, "visibility", "hide")
+		else
+			UnregisterStateDriver(frame, "visibility")
+			if not (InCombatLockdown and InCombatLockdown()) then
+				frame:Show()
+			end
+		end
+	end
+
+	self:RefreshSettingsPanel()
+end
+
+function XFrames:SetBlizzardFramesHidden(hidden)
+	local ui = self:GetUISettings()
+	if not ui then
+		return
+	end
+
+	if InCombatLockdown and InCombatLockdown() then
+		self:Warn("Blizzard frame visibility cannot change in combat")
+		return
+	end
+
+	ui.hideBlizzard = not not hidden
+	self:Info(string.format("Blizzard unit frames %s", ui.hideBlizzard and "hidden" or "shown"))
+	self:ApplyBlizzardFrameVisibility()
+end
+
+function XFrames:ToggleBlizzardFrames()
+	local ui = self:GetUISettings()
+	self:SetBlizzardFramesHidden(not (ui and ui.hideBlizzard ~= false))
+end
+
 function XFrames:ToggleFrameLocks()
 	self:SetFramesUnlocked(not self:IsFramesUnlocked())
 end
@@ -218,6 +291,9 @@ function XFrames:CreateSettingsPanel()
 	frame.lockButton = createButton(frame, "Unlock Frames", 118, "BOTTOMLEFT", frame, "BOTTOMLEFT", 12, 12, function()
 		XFrames:ToggleFrameLocks()
 	end)
+	frame.blizzardButton = createButton(frame, "Hide Blizzard", 118, "TOPLEFT", frame.helpText, "BOTTOMLEFT", 0, -12, function()
+		XFrames:ToggleBlizzardFrames()
+	end)
 	frame.reloadButton = createButton(frame, "Reload UI", 78, "LEFT", frame.lockButton, "RIGHT", 8, 0, function()
 		ReloadUI()
 	end)
@@ -236,8 +312,10 @@ function XFrames:RefreshSettingsPanel()
 	end
 
 	local unlocked = self:IsFramesUnlocked()
+	local ui = self:GetUISettings()
 	self.settingsFrame.statusText:SetText(unlocked and "Frames are unlocked" or "Frames are locked")
 	self.settingsFrame.lockButton:SetText(unlocked and "Lock Frames" or "Unlock Frames")
+	self.settingsFrame.blizzardButton:SetText(ui and ui.hideBlizzard ~= false and "Show Blizzard" or "Hide Blizzard")
 end
 
 function XFrames:ToggleSettings()
@@ -302,5 +380,6 @@ end
 function XFrames:InitializeUI()
 	self:CreateSettingsPanel()
 	self:CreateMinimapButton()
+	self:ApplyBlizzardFrameVisibility()
 	self:RefreshAllFrameLocks()
 end
