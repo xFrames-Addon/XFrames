@@ -4,8 +4,8 @@ local XFrames = ns.XFrames
 
 local DAMAGE_METER_SESSION_TOTAL = 0
 local DAMAGE_METER_SESSION_CURRENT = 1
-local DAMAGE_METER_TYPE_DAMAGE_DONE = 0
-local DAMAGE_METER_TYPE_HEALING_DONE = 2
+local DAMAGE_METER_TYPE_DPS = 1
+local DAMAGE_METER_TYPE_HPS = 3
 local METER_CACHE_TTL = 0.5
 
 local GetTime = GetTime
@@ -13,6 +13,8 @@ local InCombatLockdown = InCombatLockdown
 local UnitExists = UnitExists
 local UnitGroupRolesAssigned = UnitGroupRolesAssigned
 local UnitGUID = UnitGUID
+local GetSpecialization = GetSpecialization
+local GetSpecializationRole = GetSpecializationRole
 local pcall = pcall
 local string = string
 local tonumber = tonumber
@@ -41,7 +43,7 @@ local function getSourceRate(source)
 		return nil
 	end
 
-	return source.amountPerSecond or source.rate
+	return source.amountPerSecond or source.rate or source.totalAmount
 end
 
 function XFrames:InvalidateMeterCache()
@@ -79,11 +81,14 @@ function XFrames:GetPerformanceMetricForUnit(unit)
 	end
 
 	local role = UnitGroupRolesAssigned and UnitGroupRolesAssigned(unit)
+	if (not role or role == "NONE") and unit == "player" and GetSpecializationRole and GetSpecialization then
+		role = GetSpecializationRole(GetSpecialization())
+	end
 	if role == "HEALER" then
-		return DAMAGE_METER_TYPE_HEALING_DONE, "HPS"
+		return DAMAGE_METER_TYPE_HPS, "HPS"
 	end
 	if role == "TANK" or role == "DAMAGER" then
-		return DAMAGE_METER_TYPE_DAMAGE_DONE, "DPS"
+		return DAMAGE_METER_TYPE_DPS, "DPS"
 	end
 
 	return nil, nil
@@ -122,10 +127,10 @@ function XFrames:GetNativeMeterSourceForUnit(unit, meterType)
 
 	local enumMeterType = meterType
 	if Enum and Enum.DamageMeterType then
-		if meterType == DAMAGE_METER_TYPE_DAMAGE_DONE and Enum.DamageMeterType.DamageDone then
-			enumMeterType = Enum.DamageMeterType.DamageDone
-		elseif meterType == DAMAGE_METER_TYPE_HEALING_DONE and Enum.DamageMeterType.HealingDone then
-			enumMeterType = Enum.DamageMeterType.HealingDone
+		if meterType == DAMAGE_METER_TYPE_DPS and Enum.DamageMeterType.Dps then
+			enumMeterType = Enum.DamageMeterType.Dps
+		elseif meterType == DAMAGE_METER_TYPE_HPS and Enum.DamageMeterType.Hps then
+			enumMeterType = Enum.DamageMeterType.Hps
 		end
 	end
 
