@@ -2,6 +2,11 @@
 
 This repo can be used as a shared mailbox between Codex chats on different machines.
 
+Current working agreement:
+
+- Windows testing chat posts artifacts and notes directly to `main`.
+- Mac chat is the primary coding workspace and should pull `main` for new test artifacts.
+
 ## Shared Files
 
 - `SESSION_HANDOFF.md`: the current project snapshot and first file to read.
@@ -12,7 +17,7 @@ This repo can be used as a shared mailbox between Codex chats on different machi
 
 1. Paste notes, errors, or observations into whichever Codex chat you are using.
 2. Ask that chat to record the note in the appropriate handoff file.
-3. Commit and push the change so the other machine can pull it.
+3. Commit and push the change to `main` so the other machine can pull it.
 4. The other chat reads `SESSION_HANDOFF.md` first, then the detailed handoff files.
 
 ## What Goes Where

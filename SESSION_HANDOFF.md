@@ -44,7 +44,7 @@ Raid frames come later after the core patterns are proven.
 
 ## Latest Shared Note
 
-The Windows testing chat initialized a repo-backed handoff workflow so pasted test output, bug notes, and questions can be committed and pulled by the Mac implementation chat.
+The Windows testing chat is now acting as a testing-artifact publisher on `main`, while the Mac chat remains the primary coding workspace.
 
 ## Debugging
 
