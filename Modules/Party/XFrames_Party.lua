@@ -29,6 +29,13 @@ local SECONDARY_TEXT_COLOR = {0.72, 0.77, 0.84}
 local LEVEL_TEXT_COLOR = {0.90, 0.92, 0.96}
 local ROLE_BG_COLOR = {0.12, 0.14, 0.18, 0.96}
 local ROLE_ICON_TEXTURE = "Interface\\LFGFrame\\UI-LFG-ICON-ROLES"
+local DEMO_MEMBERS = {
+	{className = "Warrior", classToken = "WARRIOR", role = "TANK", name = "Tankard", level = 80, health = 920000, healthMax = 1000000, power = 35, powerMax = 100, powerColor = {r = 0.78, g = 0.24, b = 0.18}},
+	{className = "Priest", classToken = "PRIEST", role = "HEALER", name = "Mendra", level = 80, health = 760000, healthMax = 820000, power = 220000, powerMax = 250000, powerColor = {r = 0.20, g = 0.44, b = 0.86}},
+	{className = "Rogue", classToken = "ROGUE", role = "DAMAGER", name = "Shade", level = 80, health = 710000, healthMax = 760000, power = 82, powerMax = 100, powerColor = {r = 0.95, g = 0.78, b = 0.20}},
+	{className = "Mage", classToken = "MAGE", role = "DAMAGER", name = "Ember", level = 80, health = 640000, healthMax = 700000, power = 180000, powerMax = 200000, powerColor = {r = 0.20, g = 0.44, b = 0.86}},
+}
+
 local function getPartyAccentColor(unit)
 	if not UnitExists(unit) then
 		return {r = BORDER_COLOR[1], g = BORDER_COLOR[2], b = BORDER_COLOR[3]}
@@ -190,6 +197,7 @@ function Party:CreateUnitFrame(index)
 	local fallbackLabel = "Party " .. index
 	local frame = CreateFrame("Button", "XFramesPartyMemberFrame" .. index, anchor, "SecureUnitButtonTemplate,BackdropTemplate")
 	frame.unit = unit
+	frame.demoIndex = index
 	frame.fallbackLabel = fallbackLabel
 	frame:SetSize(config.width, config.height)
 	frame:SetPoint("TOPLEFT", anchor, "TOPLEFT", 0, -((index - 1) * (config.height + config.spacing)))
@@ -254,16 +262,62 @@ function Party:CreateUnitFrame(index)
 end
 
 function Party:UpdateFrameBorder(frame)
-	local color = getPartyAccentColor(frame.unit)
+	local demoData = self:GetDemoData(frame)
+	local color
+	if demoData and RAID_CLASS_COLORS and RAID_CLASS_COLORS[demoData.classToken] then
+		color = RAID_CLASS_COLORS[demoData.classToken]
+	else
+		color = getPartyAccentColor(frame.unit)
+	end
 	frame.accentFrame:SetBackdropBorderColor(color.r, color.g, color.b, 1)
 end
 
 function Party:UpdatePortraitBorder(frame)
-	local color = getPartyAccentColor(frame.unit)
+	local demoData = self:GetDemoData(frame)
+	local color
+	if demoData and RAID_CLASS_COLORS and RAID_CLASS_COLORS[demoData.classToken] then
+		color = RAID_CLASS_COLORS[demoData.classToken]
+	else
+		color = getPartyAccentColor(frame.unit)
+	end
 	frame.portraitFrame:SetBackdropBorderColor(color.r, color.g, color.b, 1)
 end
 
+function Party:IsDemoModeActive()
+	if not XFrames:IsFramesUnlocked() then
+		return false
+	end
+
+	for index = 1, 4 do
+		if UnitExists("party" .. index) then
+			return false
+		end
+	end
+
+	return true
+end
+
+function Party:GetDemoData(frame)
+	if not frame or not frame.demoIndex or not self:IsDemoModeActive() then
+		return nil
+	end
+
+	return DEMO_MEMBERS[frame.demoIndex]
+end
+
 function Party:UpdateName(frame)
+	local demoData = self:GetDemoData(frame)
+	if demoData then
+		local color = RAID_CLASS_COLORS and RAID_CLASS_COLORS[demoData.classToken]
+		frame.nameText:SetText(demoData.name)
+		if color then
+			frame.nameText:SetTextColor(color.r, color.g, color.b)
+		else
+			frame.nameText:SetTextColor(1, 1, 1)
+		end
+		return
+	end
+
 	if not UnitExists(frame.unit) then
 		frame.nameText:SetText(frame.fallbackLabel)
 		frame.nameText:SetTextColor(1, 1, 1)
@@ -277,6 +331,13 @@ function Party:UpdateName(frame)
 end
 
 function Party:UpdateLevel(frame)
+	local demoData = self:GetDemoData(frame)
+	if demoData then
+		frame.levelText:SetTextColor(unpack(LEVEL_TEXT_COLOR))
+		XFrames:SetValueText(frame.levelText, demoData.level)
+		return
+	end
+
 	if not UnitExists(frame.unit) then
 		frame.levelText:SetText("")
 		return
@@ -287,7 +348,8 @@ function Party:UpdateLevel(frame)
 end
 
 function Party:UpdateRole(frame)
-	local role = getRoleInfo(frame.unit)
+	local demoData = self:GetDemoData(frame)
+	local role = demoData and demoData.role or getRoleInfo(frame.unit)
 	if role then
 		frame.roleFrame:Show()
 	else
@@ -297,16 +359,24 @@ function Party:UpdateRole(frame)
 end
 
 function Party:UpdateStatus(frame)
-	if XFrames:GetPartySubtitleMode() == "performance" and UnitExists(frame.unit) then
-		frame.statusText:SetText(XFrames:GetPerformanceTextForUnit(frame.unit) or "")
+	local demoData = self:GetDemoData(frame)
+	if demoData then
+		frame.statusText:SetText(demoData.className)
 	else
-		frame.statusText:SetText(getStatusText(frame.unit, frame.fallbackLabel))
+		if XFrames:GetPartySubtitleMode() == "performance" and UnitExists(frame.unit) then
+			frame.statusText:SetText(XFrames:GetPerformanceTextForUnit(frame.unit) or "")
+		else
+			frame.statusText:SetText(getStatusText(frame.unit, frame.fallbackLabel))
+		end
 	end
 	frame.statusText:SetTextColor(unpack(SECONDARY_TEXT_COLOR))
 end
 
 function Party:UpdateRank(frame)
-	if XFrames:GetPartySubtitleMode() == "performance" and UnitExists(frame.unit) then
+	local demoData = self:GetDemoData(frame)
+	if demoData then
+		frame.rankText:SetText("")
+	elseif XFrames:GetPartySubtitleMode() == "performance" and UnitExists(frame.unit) then
 		frame.rankText:SetText(XFrames:GetPerformanceRankText(frame.unit))
 	else
 		frame.rankText:SetText("")
@@ -315,6 +385,13 @@ function Party:UpdateRank(frame)
 end
 
 function Party:UpdatePortrait(frame)
+	local demoData = self:GetDemoData(frame)
+	if demoData then
+		XFrames:ApplyClassIcon(frame.portraitTexture, demoData.classToken, "Interface\\Icons\\INV_Misc_QuestionMark")
+		self:UpdatePortraitBorder(frame)
+		return
+	end
+
 	if not UnitExists(frame.unit) then
 		frame.portraitTexture:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
 		frame.portraitTexture:SetTexCoord(0.08, 0.92, 0.08, 0.92)
@@ -328,6 +405,13 @@ end
 
 function Party:UpdateHealth(frame)
 	local bar = frame.healthBar
+	local demoData = self:GetDemoData(frame)
+	if demoData then
+		bar:SetStatusBarColor(HEALTH_BAR_COLOR.r, HEALTH_BAR_COLOR.g, HEALTH_BAR_COLOR.b)
+		XFrames:SetBarValues(bar, demoData.health, demoData.healthMax)
+		return
+	end
+
 	if not UnitExists(frame.unit) then
 		bar:SetStatusBarColor(HEALTH_BAR_COLOR.r, HEALTH_BAR_COLOR.g, HEALTH_BAR_COLOR.b)
 		bar:SetMinMaxValues(0, 1)
@@ -342,6 +426,13 @@ end
 
 function Party:UpdatePower(frame)
 	local bar = frame.powerBar
+	local demoData = self:GetDemoData(frame)
+	if demoData then
+		bar:SetStatusBarColor(demoData.powerColor.r, demoData.powerColor.g, demoData.powerColor.b)
+		XFrames:SetBarValues(bar, demoData.power, demoData.powerMax)
+		return
+	end
+
 	local _, color = XFrames:GetUnitPowerPresentation(frame.unit, true)
 	if not UnitExists(frame.unit) then
 		bar:SetStatusBarColor(color.r, color.g, color.b)

@@ -513,6 +513,23 @@ function XFrames:TogglePortraitStyle()
 	self:SetPortraitStyle("class")
 end
 
+function XFrames:ApplyClassIcon(texture, classToken, fallbackTexture)
+	if not texture then
+		return false
+	end
+
+	local coords = classToken and CLASS_ICON_TCOORDS and CLASS_ICON_TCOORDS[classToken]
+	if coords then
+		texture:SetTexture(CLASS_ICON_TEXTURE)
+		texture:SetTexCoord(coords[1], coords[2], coords[3], coords[4])
+		return true
+	end
+
+	texture:SetTexture(fallbackTexture or "Interface\\Icons\\INV_Misc_QuestionMark")
+	texture:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+	return false
+end
+
 function XFrames:ApplyUnitPortrait(texture, unit, fallbackTexture)
 	if not texture then
 		return
@@ -526,10 +543,7 @@ function XFrames:ApplyUnitPortrait(texture, unit, fallbackTexture)
 
 	if self:GetPortraitStyle() == "class" and UnitIsPlayer(unit) then
 		local _, classToken = UnitClass(unit)
-		local coords = classToken and CLASS_ICON_TCOORDS and CLASS_ICON_TCOORDS[classToken]
-		if coords then
-			texture:SetTexture(CLASS_ICON_TEXTURE)
-			texture:SetTexCoord(coords[1], coords[2], coords[3], coords[4])
+		if self:ApplyClassIcon(texture, classToken, fallbackTexture) then
 			return
 		end
 	end
