@@ -100,8 +100,8 @@ local function getCastInfo(unit)
 	if name then
 		return {
 			name = name,
-			startTime = (startTimeMS or 0) / 1000,
-			endTime = (endTimeMS or 0) / 1000,
+			startTime = startTimeMS or 0,
+			endTime = endTimeMS or 0,
 			notInterruptible = notInterruptible,
 			channel = false,
 		}
@@ -111,8 +111,8 @@ local function getCastInfo(unit)
 	if channelName then
 		return {
 			name = channelName,
-			startTime = (channelStartMS or 0) / 1000,
-			endTime = (channelEndMS or 0) / 1000,
+			startTime = channelStartMS or 0,
+			endTime = channelEndMS or 0,
 			notInterruptible = channelNotInterruptible,
 			channel = true,
 		}
@@ -338,7 +338,7 @@ function Player:RefreshCastState()
 		if active.channel then
 			castFrame.bar:SetValue(active.endTime)
 		else
-			castFrame.bar:SetValue(GetTime())
+			castFrame.bar:SetValue(active.startTime)
 		end
 
 		castFrame.spellText:SetText(active.name or "")
