@@ -362,16 +362,22 @@ function XFrames:CreateSettingsPanel()
 	end
 
 	local frame = createPanel(UIParent, 280, 458, "CENTER", UIParent, "CENTER", 0, 0)
+	local ui = self:GetUISettings()
 	frame:SetFrameStrata("DIALOG")
 	frame:SetMovable(true)
 	frame:SetClampedToScreen(true)
 	frame:EnableMouse(true)
 	frame:RegisterForDrag("LeftButton")
+	frame.xfPosition = ui and ui.settingsPosition or nil
+	if frame.xfPosition then
+		self:ApplyStoredPosition(frame, frame.xfPosition)
+	end
 	frame:SetScript("OnDragStart", function(panel)
 		panel:StartMoving()
 	end)
 	frame:SetScript("OnDragStop", function(panel)
 		panel:StopMovingOrSizing()
+		XFrames:SaveFramePosition(panel)
 	end)
 	frame:Hide()
 

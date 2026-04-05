@@ -102,6 +102,14 @@ local function getComparableNumber(value)
 	return tonumber(value)
 end
 
+local function getSourceIdentity(source)
+	if type(source) ~= "table" then
+		return nil
+	end
+
+	return getSafeSourceField(source, "sourceGUID", "guid", "unitGUID", "id", "unitToken")
+end
+
 function XFrames:InvalidateMeterCache()
 	self.nativeMeterCache = nil
 end
@@ -299,6 +307,7 @@ function XFrames:GetPerformanceRankForUnit(unit)
 	local unitGUID = UnitGUID(unit)
 	local unitName = UnitName(unit)
 	local unitCreatureID = getCreatureIDFromGUID(unitGUID)
+	local sourceIdentity = getSourceIdentity(source)
 	local sourceRate = getComparableNumber(getSourceRate(source))
 	local sourceClass = getSafeSourceField(source, "classFilename", "class")
 	local sourceClassification = getSafeSourceField(source, "classification")
@@ -311,14 +320,19 @@ function XFrames:GetPerformanceRankForUnit(unit)
 				return index
 			end
 
-			if rawequal(candidate, source) then
-				return index
-			end
+				if rawequal(candidate, source) then
+					return index
+				end
 
-			local candidateGUID = candidate.sourceGUID or candidate.guid or candidate.unitToken
-			if unitGUID and canCompareValue(candidateGUID) and candidateGUID == unitGUID then
-				return index
-			end
+				local candidateIdentity = getSourceIdentity(candidate)
+				if sourceIdentity and canCompareValue(candidateIdentity) and candidateIdentity == sourceIdentity then
+					return index
+				end
+
+				local candidateGUID = getSafeSourceField(candidate, "sourceGUID", "guid", "unitGUID", "unitToken")
+				if unitGUID and canCompareValue(candidateGUID) and candidateGUID == unitGUID then
+					return index
+				end
 
 			local candidateCreatureID = candidate.sourceCreatureID or candidate.creatureID or candidate.npcID
 			if unitCreatureID and canCompareValue(candidateCreatureID) and tonumber(candidateCreatureID) == unitCreatureID then

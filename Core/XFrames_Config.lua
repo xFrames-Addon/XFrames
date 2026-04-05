@@ -10,6 +10,12 @@ local defaults = {
 			hideBlizzard = true,
 			hideBlizzardCastBars = true,
 			portraitStyle = "portrait",
+			settingsPosition = {
+				point = "CENTER",
+				relativePoint = "CENTER",
+				x = 0,
+				y = 0,
+			},
 			minimap = {
 				hide = false,
 			},
