@@ -4,88 +4,18 @@ local XFrames = ns.XFrames
 local Player = {}
 
 local RAID_CLASS_COLORS = RAID_CLASS_COLORS
-local PowerBarColor = PowerBarColor
 
 local CreateFrame = CreateFrame
 local SetPortraitTexture = SetPortraitTexture
-local UnitCastingInfo = UnitCastingInfo
 local UnitClass = UnitClass
-local UnitChannelInfo = UnitChannelInfo
-local UnitHealth = UnitHealth
-local UnitHealthMax = UnitHealthMax
-local UnitIsAFK = UnitIsAFK
-local UnitIsDND = UnitIsDND
-local UnitIsDead = UnitIsDead
-local UnitIsGhost = UnitIsGhost
-local UnitIsConnected = UnitIsConnected
-local UnitLevel = UnitLevel
 local UnitName = UnitName
-local UnitPower = UnitPower
-local UnitPowerMax = UnitPowerMax
-local UnitPowerType = UnitPowerType
-local GetTime = GetTime
 
-local HEALTH_BAR_COLOR = {r = 0.18, g = 0.78, b = 0.35}
-local CAST_BAR_COLOR = {r = 0.87, g = 0.68, b = 0.21}
-local CHANNEL_BAR_COLOR = {r = 0.35, g = 0.71, b = 0.92}
+local HEALTH_BAR_COLOR = {r = 0.24, g = 0.32, b = 0.28}
 local BACKDROP_COLOR = {0.08, 0.09, 0.11, 0.92}
 local BORDER_COLOR = {0.24, 0.27, 0.31, 0.95}
-local POWER_BAR_COLORS = {
-	[0] = {r = 0.18, g = 0.48, b = 0.90}, -- mana
-	[1] = {r = 0.86, g = 0.26, b = 0.20}, -- rage
-	[2] = {r = 0.96, g = 0.78, b = 0.18}, -- focus
-	[3] = {r = 0.96, g = 0.78, b = 0.18}, -- energy
-	[6] = {r = 0.00, g = 0.82, b = 1.00}, -- runic power
-}
-local POWER_LABELS = {
-	[0] = "Mana",
-	[1] = "Rage",
-	[2] = "Focus",
-	[3] = "Energy",
-	[6] = "Runic Power",
-}
-
-local function shortValue(value)
-	if not value then
-		return "0"
-	end
-
-	if value >= 1000000 then
-		return string.format("%.1fm", value / 1000000)
-	end
-
-	if value >= 1000 then
-		return string.format("%.1fk", value / 1000)
-	end
-
-	return tostring(value)
-end
-
-local function percentText(current, maximum)
-	if not maximum or maximum <= 0 then
-		return "0%"
-	end
-
-	return string.format("%d%%", (current / maximum) * 100)
-end
+local POWER_BAR_COLOR = {r = 0.24, g = 0.28, b = 0.36}
 
 local function getStatusText()
-	if not UnitIsConnected("player") then
-		return "Offline"
-	end
-	if UnitIsDead("player") then
-		return "Dead"
-	end
-	if UnitIsGhost("player") then
-		return "Ghost"
-	end
-	if UnitIsAFK("player") then
-		return "AFK"
-	end
-	if UnitIsDND("player") then
-		return "DND"
-	end
-
 	local className = UnitClass("player")
 	return className or "Player"
 end
@@ -117,6 +47,8 @@ local function createBar(parent, height, anchorPoint, relativeTo, relativePoint,
 
 	bar.valueText = createText(bar, "OVERLAY", "GameFontHighlightSmall", 11, "RIGHT", bar, "RIGHT", -4, 0, "RIGHT")
 	bar.percentText = createText(bar, "OVERLAY", "GameFontDisableSmall", 10, "RIGHT", bar.valueText, "LEFT", -10, 0, "RIGHT")
+	bar.valueText:SetText("")
+	bar.percentText:SetText("")
 
 	return bar
 end
@@ -180,6 +112,8 @@ function Player:CreateFrame()
 		frame.castBar.percentText:Hide()
 		frame.castSpellText = createText(frame.castFrame, "OVERLAY", "GameFontHighlightSmall", 11, "LEFT", frame.castBar, "LEFT", 6, 0, "LEFT")
 		frame.castTimeText = createText(frame.castFrame, "OVERLAY", "GameFontHighlightSmall", 10, "RIGHT", frame.castBar, "RIGHT", -6, 0, "RIGHT")
+		frame.castSpellText:SetText("")
+		frame.castTimeText:SetText("")
 		frame.castFrame:Hide()
 	end
 
@@ -202,9 +136,7 @@ function Player:UpdateName()
 end
 
 function Player:UpdateLevel()
-	local frame = self.frame
-	local level = UnitLevel("player") or 0
-	frame.levelText:SetText(string.format("Lv %d", level > 0 and level or 0))
+	self.frame.levelText:SetText("")
 end
 
 function Player:UpdateStatus()
@@ -216,38 +148,24 @@ function Player:UpdatePortrait()
 end
 
 function Player:UpdateHealth()
-	local current = UnitHealth("player") or 0
-	local maximum = UnitHealthMax("player") or 0
 	local bar = self.frame.healthBar
 
-	if maximum <= 0 then
-		maximum = 1
-	end
-
 	bar:SetStatusBarColor(HEALTH_BAR_COLOR.r, HEALTH_BAR_COLOR.g, HEALTH_BAR_COLOR.b)
-	bar:SetMinMaxValues(0, maximum)
-	bar:SetValue(current)
-	bar.valueText:SetText(string.format("%s / %s", shortValue(current), shortValue(maximum)))
-	bar.percentText:SetText(percentText(current, maximum))
+	bar:SetMinMaxValues(0, 1)
+	bar:SetValue(0)
+	bar.valueText:SetText("")
+	bar.percentText:SetText("")
 end
 
 function Player:UpdatePower()
-	local powerType = UnitPowerType("player")
-	local current = UnitPower("player", powerType) or 0
-	local maximum = UnitPowerMax("player", powerType) or 0
-	local color = POWER_BAR_COLORS[powerType] or PowerBarColor[powerType] or POWER_BAR_COLORS[0]
 	local bar = self.frame.powerBar
 
-	if maximum <= 0 then
-		maximum = 1
-	end
-
-	self.frame.powerLabel:SetText(POWER_LABELS[powerType] or "Power")
-	bar:SetStatusBarColor(color.r, color.g, color.b)
-	bar:SetMinMaxValues(0, maximum)
-	bar:SetValue(current)
-	bar.valueText:SetText(string.format("%s / %s", shortValue(current), shortValue(maximum)))
-	bar.percentText:SetText(percentText(current, maximum))
+	self.frame.powerLabel:SetText("Power")
+	bar:SetStatusBarColor(POWER_BAR_COLOR.r, POWER_BAR_COLOR.g, POWER_BAR_COLOR.b)
+	bar:SetMinMaxValues(0, 1)
+	bar:SetValue(0)
+	bar.valueText:SetText("")
+	bar.percentText:SetText("")
 end
 
 function Player:StopCastBar()
@@ -256,79 +174,13 @@ function Player:StopCastBar()
 	end
 
 	self.castState = nil
-	self.frame.castFrame:Hide()
-	self.frame.castFrame:SetScript("OnUpdate", nil)
-end
-
-function Player:UpdateCastBarVisual()
-	local state = self.castState
-	local frame = self.frame
-	if not state or not frame or not frame.castBar then
-		return
+	if self.frame.castFrame then
+		self.frame.castFrame:Hide()
+		self.frame.castFrame:SetScript("OnUpdate", nil)
 	end
-
-	local now = GetTime()
-	local duration
-	if state.channeling then
-		duration = state.endTime - now
-	else
-		duration = now - state.startTime
-	end
-
-	if duration < 0 then
-		duration = 0
-	end
-
-	local total = state.endTime - state.startTime
-	if total <= 0 then
-		total = 0.1
-	end
-
-	if now >= state.endTime then
-		self:StopCastBar()
-		return
-	end
-
-	frame.castFrame:Show()
-	frame.castBar:SetMinMaxValues(0, total)
-	frame.castBar:SetValue(duration)
-	frame.castSpellText:SetText(state.spellName or "")
-	frame.castTimeText:SetText(string.format("%.1f", state.endTime - now))
-end
-
-function Player:StartCastBar(spellName, startMS, endMS, channeling)
-	if not self.frame or not self.frame.castFrame then
-		return
-	end
-
-	local color = channeling and CHANNEL_BAR_COLOR or CAST_BAR_COLOR
-	self.castState = {
-		spellName = spellName,
-		startTime = startMS / 1000,
-		endTime = endMS / 1000,
-		channeling = channeling,
-	}
-
-	self.frame.castBar:SetStatusBarColor(color.r, color.g, color.b)
-	self.frame.castFrame:SetScript("OnUpdate", function()
-		self:UpdateCastBarVisual()
-	end)
-	self:UpdateCastBarVisual()
 end
 
 function Player:RefreshCastState()
-	local spellName, _, _, startMS, endMS = UnitCastingInfo("player")
-	if spellName then
-		self:StartCastBar(spellName, startMS, endMS, false)
-		return
-	end
-
-	spellName, _, _, startMS, endMS = UnitChannelInfo("player")
-	if spellName then
-		self:StartCastBar(spellName, startMS, endMS, true)
-		return
-	end
-
 	self:StopCastBar()
 end
 
@@ -381,39 +233,14 @@ function Player:OnEvent(event, unit)
 		return
 	end
 
-	if event == "UNIT_SPELLCAST_START" or event == "UNIT_SPELLCAST_CHANNEL_START" or event == "UNIT_SPELLCAST_CHANNEL_UPDATE" or event == "UNIT_SPELLCAST_DELAYED" then
-		self:RefreshCastState()
-		return
-	end
-
-	if event == "UNIT_SPELLCAST_STOP" or event == "UNIT_SPELLCAST_CHANNEL_STOP" or event == "UNIT_SPELLCAST_INTERRUPTED" or event == "UNIT_SPELLCAST_FAILED" then
-		self:StopCastBar()
-		return
-	end
-
 	self:Refresh()
 end
 
 function Player:RegisterEvents()
 	local frame = self.frame
 	frame:RegisterEvent("PLAYER_ENTERING_WORLD")
-	frame:RegisterEvent("PLAYER_LEVEL_UP")
-	frame:RegisterEvent("PLAYER_FLAGS_CHANGED")
-	frame:RegisterUnitEvent("UNIT_HEALTH", "player")
-	frame:RegisterUnitEvent("UNIT_MAXHEALTH", "player")
-	frame:RegisterUnitEvent("UNIT_POWER_UPDATE", "player")
-	frame:RegisterUnitEvent("UNIT_MAXPOWER", "player")
-	frame:RegisterUnitEvent("UNIT_DISPLAYPOWER", "player")
 	frame:RegisterUnitEvent("UNIT_NAME_UPDATE", "player")
 	frame:RegisterUnitEvent("UNIT_PORTRAIT_UPDATE", "player")
-	frame:RegisterUnitEvent("UNIT_SPELLCAST_START", "player")
-	frame:RegisterUnitEvent("UNIT_SPELLCAST_STOP", "player")
-	frame:RegisterUnitEvent("UNIT_SPELLCAST_INTERRUPTED", "player")
-	frame:RegisterUnitEvent("UNIT_SPELLCAST_FAILED", "player")
-	frame:RegisterUnitEvent("UNIT_SPELLCAST_DELAYED", "player")
-	frame:RegisterUnitEvent("UNIT_SPELLCAST_CHANNEL_START", "player")
-	frame:RegisterUnitEvent("UNIT_SPELLCAST_CHANNEL_STOP", "player")
-	frame:RegisterUnitEvent("UNIT_SPELLCAST_CHANNEL_UPDATE", "player")
 	frame:SetScript("OnEvent", function(_, event, ...)
 		XFrames:SafeCall("module Player:OnEvent", self.OnEvent, self, event, ...)
 	end)

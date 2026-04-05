@@ -3,55 +3,15 @@ local _, ns = ...
 local XFrames = ns.XFrames
 local PlayerPet = {}
 
-local PowerBarColor = PowerBarColor
-
 local CreateFrame = CreateFrame
 local SetPortraitTexture = SetPortraitTexture
 local UnitExists = UnitExists
-local UnitHealth = UnitHealth
-local UnitHealthMax = UnitHealthMax
-local UnitIsConnected = UnitIsConnected
-local UnitIsDead = UnitIsDead
-local UnitIsGhost = UnitIsGhost
 local UnitName = UnitName
-local UnitPower = UnitPower
-local UnitPowerMax = UnitPowerMax
-local UnitPowerType = UnitPowerType
 
 local BACKDROP_COLOR = {0.08, 0.09, 0.11, 0.92}
 local BORDER_COLOR = {0.24, 0.27, 0.31, 0.95}
-local HEALTH_BAR_COLOR = {r = 0.52, g = 0.76, b = 0.29}
-local POWER_BAR_COLORS = {
-	[0] = {r = 0.18, g = 0.48, b = 0.90},
-	[1] = {r = 0.86, g = 0.26, b = 0.20},
-	[2] = {r = 0.96, g = 0.78, b = 0.18},
-	[3] = {r = 0.96, g = 0.78, b = 0.18},
-	[6] = {r = 0.00, g = 0.82, b = 1.00},
-}
-
-local function shortValue(value)
-	if not value then
-		return "0"
-	end
-
-	if value >= 1000000 then
-		return string.format("%.1fm", value / 1000000)
-	end
-
-	if value >= 1000 then
-		return string.format("%.1fk", value / 1000)
-	end
-
-	return tostring(value)
-end
-
-local function percentText(current, maximum)
-	if not maximum or maximum <= 0 then
-		return "0%"
-	end
-
-	return string.format("%d%%", (current / maximum) * 100)
-end
+local HEALTH_BAR_COLOR = {r = 0.26, g = 0.34, b = 0.24}
+local POWER_BAR_COLOR = {r = 0.23, g = 0.27, b = 0.35}
 
 local function createText(parent, layer, template, size, anchorPoint, relativeTo, relativePoint, x, y, justify)
 	local text = parent:CreateFontString(nil, layer, template)
@@ -81,6 +41,8 @@ local function createBar(parent, height, anchorPoint, relativeTo, relativePoint,
 
 	bar.valueText = createText(bar, "OVERLAY", "GameFontHighlightSmall", 10, "RIGHT", bar, "RIGHT", -4, 0, "RIGHT")
 	bar.percentText = createText(bar, "OVERLAY", "GameFontDisableSmall", 9, "RIGHT", bar.valueText, "LEFT", -8, 0, "RIGHT")
+	bar.valueText:SetText("")
+	bar.percentText:SetText("")
 
 	return bar
 end
@@ -132,25 +94,7 @@ function PlayerPet:UpdateName()
 end
 
 function PlayerPet:UpdateStatus()
-	local frame = self.frame
-	if not UnitExists("pet") then
-		frame.statusText:SetText("")
-		return
-	end
-	if not UnitIsConnected("pet") then
-		frame.statusText:SetText("Offline")
-		return
-	end
-	if UnitIsDead("pet") then
-		frame.statusText:SetText("Dead")
-		return
-	end
-	if UnitIsGhost("pet") then
-		frame.statusText:SetText("Ghost")
-		return
-	end
-
-	frame.statusText:SetText("Pet")
+	self.frame.statusText:SetText("Pet")
 end
 
 function PlayerPet:UpdatePortrait()
@@ -163,37 +107,23 @@ function PlayerPet:UpdatePortrait()
 end
 
 function PlayerPet:UpdateHealth()
-	local current = UnitHealth("pet") or 0
-	local maximum = UnitHealthMax("pet") or 0
 	local bar = self.frame.healthBar
 
-	if maximum <= 0 then
-		maximum = 1
-	end
-
 	bar:SetStatusBarColor(HEALTH_BAR_COLOR.r, HEALTH_BAR_COLOR.g, HEALTH_BAR_COLOR.b)
-	bar:SetMinMaxValues(0, maximum)
-	bar:SetValue(current)
-	bar.valueText:SetText(string.format("%s / %s", shortValue(current), shortValue(maximum)))
-	bar.percentText:SetText(percentText(current, maximum))
+	bar:SetMinMaxValues(0, 1)
+	bar:SetValue(0)
+	bar.valueText:SetText("")
+	bar.percentText:SetText("")
 end
 
 function PlayerPet:UpdatePower()
-	local powerType = UnitPowerType("pet")
-	local current = UnitPower("pet", powerType) or 0
-	local maximum = UnitPowerMax("pet", powerType) or 0
-	local color = POWER_BAR_COLORS[powerType] or (PowerBarColor and PowerBarColor[powerType]) or POWER_BAR_COLORS[0]
 	local bar = self.frame.powerBar
 
-	if maximum <= 0 then
-		maximum = 1
-	end
-
-	bar:SetStatusBarColor(color.r, color.g, color.b)
-	bar:SetMinMaxValues(0, maximum)
-	bar:SetValue(current)
-	bar.valueText:SetText(string.format("%s / %s", shortValue(current), shortValue(maximum)))
-	bar.percentText:SetText(percentText(current, maximum))
+	bar:SetStatusBarColor(POWER_BAR_COLOR.r, POWER_BAR_COLOR.g, POWER_BAR_COLOR.b)
+	bar:SetMinMaxValues(0, 1)
+	bar:SetValue(0)
+	bar.valueText:SetText("")
+	bar.percentText:SetText("")
 end
 
 function PlayerPet:Refresh()
@@ -231,11 +161,6 @@ function PlayerPet:RegisterEvents()
 	local frame = self.frame
 	frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 	frame:RegisterUnitEvent("UNIT_PET", "player")
-	frame:RegisterUnitEvent("UNIT_HEALTH", "pet")
-	frame:RegisterUnitEvent("UNIT_MAXHEALTH", "pet")
-	frame:RegisterUnitEvent("UNIT_POWER_UPDATE", "pet")
-	frame:RegisterUnitEvent("UNIT_MAXPOWER", "pet")
-	frame:RegisterUnitEvent("UNIT_DISPLAYPOWER", "pet")
 	frame:RegisterUnitEvent("UNIT_NAME_UPDATE", "pet")
 	frame:RegisterUnitEvent("UNIT_PORTRAIT_UPDATE", "pet")
 	frame:SetScript("OnEvent", function(_, event, ...)

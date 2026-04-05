@@ -4,71 +4,22 @@ local XFrames = ns.XFrames
 local Target = {}
 
 local RAID_CLASS_COLORS = RAID_CLASS_COLORS
-local PowerBarColor = PowerBarColor
 
 local CreateFrame = CreateFrame
 local SetPortraitTexture = SetPortraitTexture
 local UnitClass = UnitClass
 local UnitCreatureType = UnitCreatureType
 local UnitExists = UnitExists
-local UnitHealth = UnitHealth
-local UnitHealthMax = UnitHealthMax
-local UnitIsAFK = UnitIsAFK
-local UnitIsConnected = UnitIsConnected
-local UnitIsDND = UnitIsDND
-local UnitIsDead = UnitIsDead
-local UnitIsGhost = UnitIsGhost
 local UnitIsPlayer = UnitIsPlayer
-local UnitLevel = UnitLevel
 local UnitName = UnitName
-local UnitPower = UnitPower
-local UnitPowerMax = UnitPowerMax
-local UnitPowerType = UnitPowerType
 
-local HEALTH_BAR_COLOR = {r = 0.72, g = 0.22, b = 0.22}
-local FOCUS_HEALTH_BAR_COLOR = {r = 0.72, g = 0.58, b = 0.22}
-local TARGET_TARGET_HEALTH_BAR_COLOR = {r = 0.68, g = 0.32, b = 0.32}
-local FOCUS_TARGET_HEALTH_BAR_COLOR = {r = 0.68, g = 0.52, b = 0.28}
+local HEALTH_BAR_COLOR = {r = 0.33, g = 0.24, b = 0.24}
+local FOCUS_HEALTH_BAR_COLOR = {r = 0.33, g = 0.30, b = 0.22}
+local TARGET_TARGET_HEALTH_BAR_COLOR = {r = 0.31, g = 0.24, b = 0.24}
+local FOCUS_TARGET_HEALTH_BAR_COLOR = {r = 0.31, g = 0.28, b = 0.22}
 local BACKDROP_COLOR = {0.08, 0.09, 0.11, 0.92}
 local BORDER_COLOR = {0.24, 0.27, 0.31, 0.95}
-local POWER_BAR_COLORS = {
-	[0] = {r = 0.18, g = 0.48, b = 0.90},
-	[1] = {r = 0.86, g = 0.26, b = 0.20},
-	[2] = {r = 0.96, g = 0.78, b = 0.18},
-	[3] = {r = 0.96, g = 0.78, b = 0.18},
-	[6] = {r = 0.00, g = 0.82, b = 1.00},
-}
-local POWER_LABELS = {
-	[0] = "Mana",
-	[1] = "Rage",
-	[2] = "Focus",
-	[3] = "Energy",
-	[6] = "Runic Power",
-}
-
-local function shortValue(value)
-	if not value then
-		return "0"
-	end
-
-	if value >= 1000000 then
-		return string.format("%.1fm", value / 1000000)
-	end
-
-	if value >= 1000 then
-		return string.format("%.1fk", value / 1000)
-	end
-
-	return tostring(value)
-end
-
-local function percentText(current, maximum)
-	if not maximum or maximum <= 0 then
-		return "0%"
-	end
-
-	return string.format("%d%%", (current / maximum) * 100)
-end
+local POWER_BAR_COLOR = {r = 0.24, g = 0.28, b = 0.36}
 
 local function createText(parent, layer, template, size, anchorPoint, relativeTo, relativePoint, x, y, justify)
 	local text = parent:CreateFontString(nil, layer, template)
@@ -98,6 +49,8 @@ local function createBar(parent, height, anchorPoint, relativeTo, relativePoint,
 
 	bar.valueText = createText(bar, "OVERLAY", "GameFontHighlightSmall", 11, "RIGHT", bar, "RIGHT", -4, 0, "RIGHT")
 	bar.percentText = createText(bar, "OVERLAY", "GameFontDisableSmall", 10, "RIGHT", bar.valueText, "LEFT", -10, 0, "RIGHT")
+	bar.valueText:SetText("")
+	bar.percentText:SetText("")
 
 	return bar
 end
@@ -105,21 +58,6 @@ end
 local function getStatusText(unit, fallbackLabel)
 	if not UnitExists(unit) then
 		return fallbackLabel
-	end
-	if not UnitIsConnected(unit) then
-		return "Offline"
-	end
-	if UnitIsDead(unit) then
-		return "Dead"
-	end
-	if UnitIsGhost(unit) then
-		return "Ghost"
-	end
-	if UnitIsAFK(unit) then
-		return "AFK"
-	end
-	if UnitIsDND(unit) then
-		return "DND"
 	end
 	if UnitIsPlayer(unit) then
 		local className = UnitClass(unit)
@@ -232,17 +170,7 @@ function Target:UpdateName(frame)
 end
 
 function Target:UpdateLevel(frame)
-	if not UnitExists(frame.unit) then
-		frame.levelText:SetText("")
-		return
-	end
-
-	local level = UnitLevel(frame.unit) or 0
-	if level > 0 then
-		frame.levelText:SetText(string.format("Lv %d", level))
-	else
-		frame.levelText:SetText("??")
-	end
+	frame.levelText:SetText("")
 end
 
 function Target:UpdateStatus(frame)
@@ -265,41 +193,27 @@ function Target:UpdatePortrait(frame)
 end
 
 function Target:UpdateHealth(frame)
-	local current = UnitHealth(frame.unit) or 0
-	local maximum = UnitHealthMax(frame.unit) or 0
 	local bar = frame.healthBar
 	local accent = frame.healthAccent or HEALTH_BAR_COLOR
 
-	if maximum <= 0 then
-		maximum = 1
-	end
-
 	bar:SetStatusBarColor(accent.r, accent.g, accent.b)
-	bar:SetMinMaxValues(0, maximum)
-	bar:SetValue(current)
-	bar.valueText:SetText(string.format("%s / %s", shortValue(current), shortValue(maximum)))
-	bar.percentText:SetText(percentText(current, maximum))
+	bar:SetMinMaxValues(0, 1)
+	bar:SetValue(0)
+	bar.valueText:SetText("")
+	bar.percentText:SetText("")
 end
 
 function Target:UpdatePower(frame)
-	local powerType = UnitPowerType(frame.unit)
-	local current = UnitPower(frame.unit, powerType) or 0
-	local maximum = UnitPowerMax(frame.unit, powerType) or 0
-	local color = POWER_BAR_COLORS[powerType] or (PowerBarColor and PowerBarColor[powerType]) or POWER_BAR_COLORS[0]
 	local bar = frame.powerBar
 
-	if maximum <= 0 then
-		maximum = 1
-	end
-
 	if frame.powerLabel then
-		frame.powerLabel:SetText(POWER_LABELS[powerType] or "Power")
+		frame.powerLabel:SetText("Power")
 	end
-	bar:SetStatusBarColor(color.r, color.g, color.b)
-	bar:SetMinMaxValues(0, maximum)
-	bar:SetValue(current)
-	bar.valueText:SetText(string.format("%s / %s", shortValue(current), shortValue(maximum)))
-	bar.percentText:SetText(percentText(current, maximum))
+	bar:SetStatusBarColor(POWER_BAR_COLOR.r, POWER_BAR_COLOR.g, POWER_BAR_COLOR.b)
+	bar:SetMinMaxValues(0, 1)
+	bar:SetValue(0)
+	bar.valueText:SetText("")
+	bar.percentText:SetText("")
 end
 
 function Target:RefreshFrame(frame)
@@ -380,13 +294,7 @@ function Target:RegisterEvents()
 	frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 	frame:RegisterEvent("PLAYER_TARGET_CHANGED")
 	frame:RegisterEvent("PLAYER_FOCUS_CHANGED")
-	frame:RegisterEvent("PLAYER_FLAGS_CHANGED")
 	frame:RegisterUnitEvent("UNIT_TARGET", "target", "focus")
-	frame:RegisterUnitEvent("UNIT_HEALTH", "target", "focus", "targettarget", "focustarget")
-	frame:RegisterUnitEvent("UNIT_MAXHEALTH", "target", "focus", "targettarget", "focustarget")
-	frame:RegisterUnitEvent("UNIT_POWER_UPDATE", "target", "focus", "targettarget", "focustarget")
-	frame:RegisterUnitEvent("UNIT_MAXPOWER", "target", "focus", "targettarget", "focustarget")
-	frame:RegisterUnitEvent("UNIT_DISPLAYPOWER", "target", "focus", "targettarget", "focustarget")
 	frame:RegisterUnitEvent("UNIT_NAME_UPDATE", "target", "focus", "targettarget", "focustarget")
 	frame:RegisterUnitEvent("UNIT_PORTRAIT_UPDATE", "target", "focus", "targettarget", "focustarget")
 	frame:SetScript("OnEvent", function(_, event, ...)
