@@ -13,9 +13,12 @@ local InCombatLockdown = InCombatLockdown
 local UnitExists = UnitExists
 local UnitGroupRolesAssigned = UnitGroupRolesAssigned
 local UnitGUID = UnitGUID
+local UnitName = UnitName
 local GetSpecialization = GetSpecialization
 local GetSpecializationRole = GetSpecializationRole
+local ipairs = ipairs
 local pcall = pcall
+local rawequal = rawequal
 local string = string
 local tonumber = tonumber
 local type = type
@@ -44,6 +47,22 @@ local function getSourceRate(source)
 	end
 
 	return source.amountPerSecond or source.rate or source.totalAmount
+end
+
+local function canCompareValue(value)
+	if value == nil then
+		return false
+	end
+
+	if canaccessvalue then
+		return canaccessvalue(value)
+	end
+
+	if issecretvalue then
+		return not issecretvalue(value)
+	end
+
+	return true
 end
 
 function XFrames:InvalidateMeterCache()
@@ -120,11 +139,7 @@ function XFrames:IsNativeMeterAvailable()
 	return cache.available
 end
 
-function XFrames:GetNativeMeterSourceForUnit(unit, meterType)
-	if not unit or not meterType or not UnitExists(unit) or not self:IsNativeMeterAvailable() then
-		return nil
-	end
-
+function XFrames:GetNativeMeterContext(meterType)
 	local enumMeterType = meterType
 	if Enum and Enum.DamageMeterType then
 		if meterType == DAMAGE_METER_TYPE_DPS and Enum.DamageMeterType.Dps then
@@ -140,6 +155,44 @@ function XFrames:GetNativeMeterSourceForUnit(unit, meterType)
 		currentSessionType = Enum.DamageMeterSessionType.Current or currentSessionType
 		totalSessionType = Enum.DamageMeterSessionType.Overall or totalSessionType
 	end
+
+	return enumMeterType, currentSessionType, totalSessionType
+end
+
+function XFrames:GetNativeMeterView(sessionType, meterType)
+	if not self:IsNativeMeterAvailable() or not (C_DamageMeter and C_DamageMeter.GetCombatSessionFromType) then
+		return nil
+	end
+
+	local cache = self.nativeMeterCache or {}
+	cache.views = cache.views or {}
+	self.nativeMeterCache = cache
+
+	local enumMeterType = meterType
+	local currentSessionType, totalSessionType
+	enumMeterType, currentSessionType, totalSessionType = self:GetNativeMeterContext(meterType)
+	if sessionType == DAMAGE_METER_SESSION_CURRENT then
+		sessionType = currentSessionType
+	elseif sessionType == DAMAGE_METER_SESSION_TOTAL then
+		sessionType = totalSessionType
+	end
+
+	local cacheKey = tostring(sessionType) .. ":" .. tostring(enumMeterType)
+	if cache.views[cacheKey] ~= nil then
+		return cache.views[cacheKey] or nil
+	end
+
+	local ok, view = pcall(C_DamageMeter.GetCombatSessionFromType, sessionType, enumMeterType)
+	cache.views[cacheKey] = ok and view or false
+	return cache.views[cacheKey] or nil
+end
+
+function XFrames:GetNativeMeterSourceForUnit(unit, meterType)
+	if not unit or not meterType or not UnitExists(unit) or not self:IsNativeMeterAvailable() then
+		return nil
+	end
+
+	local enumMeterType, currentSessionType, totalSessionType = self:GetNativeMeterContext(meterType)
 
 	if InCombatLockdown and InCombatLockdown() and C_DamageMeter.GetCurrentCombatSessionSource then
 		local ok, source = pcall(C_DamageMeter.GetCurrentCombatSessionSource, enumMeterType, unit)
@@ -174,6 +227,69 @@ function XFrames:GetNativeMeterSourceForUnit(unit, meterType)
 	end
 
 	return nil
+end
+
+function XFrames:GetPerformanceRankForUnit(unit)
+	local meterType = self:GetPerformanceMetricForUnit(unit)
+	if not meterType then
+		return nil
+	end
+
+	local source = self:GetNativeMeterSourceForUnit(unit, meterType)
+	if not source then
+		return nil
+	end
+
+	local sessionType = self:GetMeterSessionType()
+	local view = self:GetNativeMeterView(sessionType, meterType)
+	if not view and sessionType ~= DAMAGE_METER_SESSION_CURRENT then
+		view = self:GetNativeMeterView(DAMAGE_METER_SESSION_CURRENT, meterType)
+	end
+	if not view or type(view) ~= "table" or type(view.combatSources) ~= "table" then
+		return nil
+	end
+
+	local unitGUID = UnitGUID(unit)
+	local unitName = UnitName(unit)
+	local unitCreatureID = getCreatureIDFromGUID(unitGUID)
+
+	for index, candidate in ipairs(view.combatSources) do
+		if type(candidate) == "table" then
+			if unit == "player" and candidate.isLocalPlayer then
+				return index
+			end
+
+			if rawequal(candidate, source) then
+				return index
+			end
+
+			local candidateGUID = candidate.sourceGUID or candidate.guid or candidate.unitToken
+			if unitGUID and canCompareValue(candidateGUID) and candidateGUID == unitGUID then
+				return index
+			end
+
+			local candidateCreatureID = candidate.sourceCreatureID or candidate.creatureID or candidate.npcID
+			if unitCreatureID and canCompareValue(candidateCreatureID) and tonumber(candidateCreatureID) == unitCreatureID then
+				return index
+			end
+
+			local candidateName = candidate.name or candidate.unitName or candidate.sourceName
+			if unitName and canCompareValue(candidateName) and candidateName == unitName then
+				return index
+			end
+		end
+	end
+
+	return nil
+end
+
+function XFrames:GetPerformanceRankText(unit)
+	local rank = self:GetPerformanceRankForUnit(unit)
+	if not rank then
+		return ""
+	end
+
+	return string.format("#%d", rank)
 end
 
 function XFrames:FormatNativeMeterText(value, label)

@@ -17,6 +17,7 @@ local UnitPower = UnitPower
 local UnitPowerMax = UnitPowerMax
 local UnitLevel = UnitLevel
 
+local PERFORMANCE_UPDATE_INTERVAL = 0.5
 local HEALTH_BAR_COLOR = {r = 0.18, g = 0.62, b = 0.32}
 local BACKDROP_COLOR = {0.08, 0.09, 0.11, 0.92}
 local BORDER_COLOR = {0.24, 0.27, 0.31, 0.95}
@@ -121,6 +122,9 @@ function Player:CreateFrame()
 	frame.nameText = createText(frame, "OVERLAY", "GameFontNormalLarge", 13, "TOPLEFT", frame, "TOPLEFT", 64, -10, "LEFT")
 	frame.levelText = createText(frame, "OVERLAY", "GameFontHighlight", 12, "TOPRIGHT", frame, "TOPRIGHT", -10, -10, "RIGHT")
 	frame.statusText = createText(frame, "OVERLAY", "GameFontHighlightSmall", 10, "TOPLEFT", frame.nameText, "BOTTOMLEFT", 0, -2, "LEFT")
+	frame.statusText:SetWidth(config.width - 148)
+	frame.statusText:SetWordWrap(false)
+	frame.rankText = createText(frame, "OVERLAY", "GameFontHighlightSmall", 10, "RIGHT", frame, "RIGHT", -10, -24, "RIGHT")
 
 	frame.healthBar = createBar(frame, 14, "TOPLEFT", frame, "TOPLEFT", 64, -40)
 	frame.healthBar:SetPoint("RIGHT", frame, "RIGHT", -10, 0)
@@ -183,6 +187,10 @@ function Player:UpdateStatus()
 	self.frame.statusText:SetText(XFrames:GetPerformanceTextForUnit("player") or getStatusText())
 end
 
+function Player:UpdateRank()
+	self.frame.rankText:SetText(XFrames:GetPerformanceRankText("player"))
+end
+
 function Player:UpdateSpec()
 	self.frame.specText:SetText(getSpecText())
 end
@@ -236,11 +244,31 @@ function Player:Refresh()
 	self:UpdateName()
 	self:UpdateLevel()
 	self:UpdateStatus()
+	self:UpdateRank()
 	self:UpdateSpec()
 	self:UpdatePortrait()
 	self:UpdateHealth()
 	self:UpdatePower()
 	self:RefreshCastState()
+end
+
+function Player:RefreshPerformanceMode()
+	self.performanceElapsed = 0
+
+	if not self.frame then
+		return
+	end
+
+	self.frame:SetScript("OnUpdate", function(_, elapsed)
+		self.performanceElapsed = (self.performanceElapsed or 0) + elapsed
+		if self.performanceElapsed < PERFORMANCE_UPDATE_INTERVAL then
+			return
+		end
+
+		self.performanceElapsed = 0
+		self:UpdateStatus()
+		self:UpdateRank()
+	end)
 end
 
 function Player:OnEvent(event, unit)
@@ -255,6 +283,8 @@ function Player:OnEvent(event, unit)
 
 	if event == "PLAYER_SPECIALIZATION_CHANGED" or event == "ACTIVE_TALENT_GROUP_CHANGED" then
 		self:UpdateSpec()
+		self:UpdateStatus()
+		self:UpdateRank()
 		return
 	end
 
@@ -280,6 +310,7 @@ function Player:OnEvent(event, unit)
 
 	if event == "PLAYER_FLAGS_CHANGED" then
 		self:UpdateStatus()
+		self:UpdateRank()
 		return
 	end
 
@@ -316,6 +347,7 @@ function Player:Enable()
 
 	self:CreateFrame()
 	self:RegisterEvents()
+	self:RefreshPerformanceMode()
 	self:Refresh()
 	self.frame:Show()
 	XFrames:Info("Player shell enabled")

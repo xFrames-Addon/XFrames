@@ -234,9 +234,11 @@ function Party:CreateUnitFrame(index)
 	frame.roleIcon:SetPoint("CENTER", frame.roleFrame, "CENTER")
 	frame.roleIcon:Hide()
 	frame.statusText = createText(frame, "OVERLAY", "GameFontHighlightSmall", 10, "TOPLEFT", frame.nameText, "BOTTOMLEFT", 0, -2, "LEFT")
-	frame.statusText:SetWidth(config.width - 124)
+	frame.statusText:SetWidth(config.width - 154)
 	frame.statusText:SetWordWrap(false)
 	frame.statusText:SetTextColor(unpack(SECONDARY_TEXT_COLOR))
+	frame.rankText = createText(frame, "OVERLAY", "GameFontHighlightSmall", 10, "RIGHT", frame, "RIGHT", -10, -24, "RIGHT")
+	frame.rankText:SetTextColor(unpack(SECONDARY_TEXT_COLOR))
 
 	frame.healthBar = createBar(frame, 14, "TOPLEFT", frame, "TOPLEFT", 64, -40)
 	frame.powerBar = createBar(frame, 12, "TOPLEFT", frame.healthBar, "BOTTOMLEFT", 0, -6)
@@ -309,6 +311,15 @@ function Party:UpdateStatus(frame)
 	frame.statusText:SetTextColor(unpack(SECONDARY_TEXT_COLOR))
 end
 
+function Party:UpdateRank(frame)
+	if XFrames:GetPartySubtitleMode() == "performance" and UnitExists(frame.unit) then
+		frame.rankText:SetText(XFrames:GetPerformanceRankText(frame.unit))
+	else
+		frame.rankText:SetText("")
+	end
+	frame.rankText:SetTextColor(unpack(SECONDARY_TEXT_COLOR))
+end
+
 function Party:UpdatePortrait(frame)
 	if not UnitExists(frame.unit) then
 		frame.portraitTexture:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
@@ -362,6 +373,7 @@ function Party:RefreshFrame(frame)
 			self:UpdateLevel(frame)
 			self:UpdateRole(frame)
 			self:UpdateStatus(frame)
+			self:UpdateRank(frame)
 			self:UpdatePortrait(frame)
 			self:UpdateHealth(frame)
 			self:UpdatePower(frame)
@@ -377,6 +389,7 @@ function Party:RefreshFrame(frame)
 	self:UpdateLevel(frame)
 	self:UpdateRole(frame)
 	self:UpdateStatus(frame)
+	self:UpdateRank(frame)
 	self:UpdatePortrait(frame)
 	self:UpdateHealth(frame)
 	self:UpdatePower(frame)
