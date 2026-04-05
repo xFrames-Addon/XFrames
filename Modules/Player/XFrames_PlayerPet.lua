@@ -12,6 +12,9 @@ local BACKDROP_COLOR = {0.08, 0.09, 0.11, 0.92}
 local BORDER_COLOR = {0.24, 0.27, 0.31, 0.95}
 local HEALTH_BAR_COLOR = {r = 0.26, g = 0.34, b = 0.24}
 local POWER_BAR_COLOR = {r = 0.23, g = 0.27, b = 0.35}
+local PLACEHOLDER_BAR_VALUE = 0.6
+local PLACEHOLDER_VALUE_TEXT = "Restricted"
+local PLACEHOLDER_PERCENT_TEXT = "--"
 
 local function createText(parent, layer, template, size, anchorPoint, relativeTo, relativePoint, x, y, justify)
 	local text = parent:CreateFontString(nil, layer, template)
@@ -111,9 +114,9 @@ function PlayerPet:UpdateHealth()
 
 	bar:SetStatusBarColor(HEALTH_BAR_COLOR.r, HEALTH_BAR_COLOR.g, HEALTH_BAR_COLOR.b)
 	bar:SetMinMaxValues(0, 1)
-	bar:SetValue(0)
-	bar.valueText:SetText("")
-	bar.percentText:SetText("")
+	bar:SetValue(PLACEHOLDER_BAR_VALUE)
+	bar.valueText:SetText(PLACEHOLDER_VALUE_TEXT)
+	bar.percentText:SetText(PLACEHOLDER_PERCENT_TEXT)
 end
 
 function PlayerPet:UpdatePower()
@@ -121,9 +124,9 @@ function PlayerPet:UpdatePower()
 
 	bar:SetStatusBarColor(POWER_BAR_COLOR.r, POWER_BAR_COLOR.g, POWER_BAR_COLOR.b)
 	bar:SetMinMaxValues(0, 1)
-	bar:SetValue(0)
-	bar.valueText:SetText("")
-	bar.percentText:SetText("")
+	bar:SetValue(PLACEHOLDER_BAR_VALUE)
+	bar.valueText:SetText(PLACEHOLDER_VALUE_TEXT)
+	bar.percentText:SetText(PLACEHOLDER_PERCENT_TEXT)
 end
 
 function PlayerPet:Refresh()
