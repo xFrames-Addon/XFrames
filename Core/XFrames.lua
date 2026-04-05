@@ -601,13 +601,13 @@ function XFrames:FormatMeterValue(value, allowCompact)
 
 	if allowCompact then
 		local ok, compactValue = pcall(self.FormatCompactNumber, self, value)
-		if ok and compactValue and compactValue ~= "" then
+		if ok then
 			return compactValue
 		end
 	end
 
 	local ok, rawValue = pcall(string.format, "%d", value)
-	if ok and rawValue and rawValue ~= "" then
+	if ok then
 		return rawValue
 	end
 
@@ -630,7 +630,7 @@ function XFrames:GetMeterTextForUnit(unit, meterType, label)
 	end
 
 	local formattedValue = self:FormatMeterValue(value, allowCompact)
-	if not formattedValue or formattedValue == "" then
+	if formattedValue == nil then
 		return nil
 	end
 
