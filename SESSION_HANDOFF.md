@@ -1,5 +1,17 @@
 # XFrames Session Handoff
 
+Last updated: 2026-04-05 on the Windows testing machine.
+
+## Shared Chat Workflow
+
+This repo now doubles as a simple handoff bridge between Codex chats on different machines.
+
+Start here, then check:
+
+- `HANDOFF_PROTOCOL.md`
+- `handoff/TESTING_LOG.md`
+- `handoff/QUESTIONS_FOR_OTHER_CHAT.md`
+
 ## Current State
 
 `XFrames` is a brand-new Retail-only addon scaffold created to replace the failing ZPerl salvage effort.
@@ -29,6 +41,10 @@ Build the first real frame path:
 4. player pet shell
 
 Raid frames come later after the core patterns are proven.
+
+## Latest Shared Note
+
+The Windows testing chat initialized a repo-backed handoff workflow so pasted test output, bug notes, and questions can be committed and pulled by the Mac implementation chat.
 
 ## Debugging
 
