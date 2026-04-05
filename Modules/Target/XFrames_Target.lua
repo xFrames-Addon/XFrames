@@ -18,10 +18,10 @@ local UnitName = UnitName
 local UnitPower = UnitPower
 local UnitPowerMax = UnitPowerMax
 
-local HEALTH_BAR_COLOR = {r = 0.33, g = 0.24, b = 0.24}
-local FOCUS_HEALTH_BAR_COLOR = {r = 0.33, g = 0.30, b = 0.22}
-local TARGET_TARGET_HEALTH_BAR_COLOR = {r = 0.31, g = 0.24, b = 0.24}
-local FOCUS_TARGET_HEALTH_BAR_COLOR = {r = 0.31, g = 0.28, b = 0.22}
+local HEALTH_BAR_COLOR = {r = 0.18, g = 0.62, b = 0.32}
+local FOCUS_HEALTH_BAR_COLOR = {r = 0.18, g = 0.58, b = 0.34}
+local TARGET_TARGET_HEALTH_BAR_COLOR = {r = 0.18, g = 0.55, b = 0.31}
+local FOCUS_TARGET_HEALTH_BAR_COLOR = {r = 0.18, g = 0.52, b = 0.30}
 local BACKDROP_COLOR = {0.08, 0.09, 0.11, 0.92}
 local BORDER_COLOR = {0.24, 0.27, 0.31, 0.95}
 local POWER_BAR_COLOR = {r = 0.24, g = 0.28, b = 0.36}
@@ -58,6 +58,7 @@ local function createBar(parent, height, anchorPoint, relativeTo, relativePoint,
 	bar.percentText = createText(bar, "OVERLAY", "GameFontDisableSmall", 10, "RIGHT", bar.valueText, "LEFT", -10, 0, "RIGHT")
 	bar.valueText:SetText("")
 	bar.percentText:SetText("")
+	bar.labelText:Hide()
 	bar.percentText:Hide()
 
 	return bar
@@ -122,12 +123,10 @@ function Target:CreateUnitFrame(key, unit, config, accent)
 
 	frame.healthBar = createBar(frame, 14, "TOPLEFT", frame, "TOPLEFT", 64, -40)
 	frame.healthBar:SetPoint("RIGHT", frame, "RIGHT", -10, 0)
-	frame.healthBar.labelText:SetText("Health")
 	frame.healthAccent = accent
 
 	frame.powerBar = createBar(frame, 12, "TOPLEFT", frame.healthBar, "BOTTOMLEFT", 0, -6)
 	frame.powerBar:SetPoint("RIGHT", frame, "RIGHT", -10, 0)
-	frame.powerBar.labelText:SetText("Power")
 
 	return frame
 end
@@ -180,12 +179,10 @@ function Target:CreateCompactUnitFrame(key, unit, config, accent)
 
 	frame.healthBar = createBar(frame, 10, "TOPLEFT", frame, "TOPLEFT", 8, -22)
 	frame.healthBar:SetPoint("RIGHT", frame, "RIGHT", -8, 0)
-	frame.healthBar.labelText:SetText("HP")
 	frame.healthAccent = accent
 
 	frame.powerBar = createBar(frame, 8, "TOPLEFT", frame.healthBar, "BOTTOMLEFT", 0, -4)
 	frame.powerBar:SetPoint("RIGHT", frame, "RIGHT", -8, 0)
-	frame.powerBar.labelText:SetText("PW")
 
 	return frame
 end
@@ -241,11 +238,6 @@ function Target:UpdateHealth(frame)
 	local maxValue = UnitHealthMax(frame.unit)
 
 	bar:SetStatusBarColor(accent.r, accent.g, accent.b)
-	if frame.isCompact then
-		bar.labelText:SetText("HP")
-	else
-		bar.labelText:SetText("Health")
-	end
 	XFrames:SetBarValues(bar, value, maxValue)
 end
 
@@ -253,9 +245,8 @@ function Target:UpdatePower(frame)
 	local bar = frame.powerBar
 	local value = UnitPower(frame.unit)
 	local maxValue = UnitPowerMax(frame.unit)
-	local label, color = XFrames:GetUnitPowerPresentation(frame.unit, frame.isCompact)
+	local _, color = XFrames:GetUnitPowerPresentation(frame.unit, frame.isCompact)
 
-	bar.labelText:SetText(label)
 	bar:SetStatusBarColor(color.r, color.g, color.b)
 	XFrames:SetBarValues(bar, value, maxValue)
 end

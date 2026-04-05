@@ -14,7 +14,7 @@ local UnitPowerMax = UnitPowerMax
 
 local BACKDROP_COLOR = {0.08, 0.09, 0.11, 0.92}
 local BORDER_COLOR = {0.24, 0.27, 0.31, 0.95}
-local HEALTH_BAR_COLOR = {r = 0.26, g = 0.34, b = 0.24}
+local HEALTH_BAR_COLOR = {r = 0.18, g = 0.62, b = 0.32}
 local POWER_BAR_COLOR = {r = 0.23, g = 0.27, b = 0.35}
 local PORTRAIT_BG_COLOR = {0.10, 0.11, 0.14, 0.98}
 
@@ -49,6 +49,7 @@ local function createBar(parent, height, anchorPoint, relativeTo, relativePoint,
 	bar.percentText = createText(bar, "OVERLAY", "GameFontDisableSmall", 9, "RIGHT", bar.valueText, "LEFT", -8, 0, "RIGHT")
 	bar.valueText:SetText("")
 	bar.percentText:SetText("")
+	bar.labelText:Hide()
 	bar.percentText:Hide()
 
 	return bar
@@ -100,9 +101,7 @@ function PlayerPet:CreateFrame()
 	frame.statusText = createText(frame, "OVERLAY", "GameFontHighlightSmall", 10, "TOPLEFT", frame.nameText, "BOTTOMLEFT", 0, -2, "LEFT")
 
 	frame.healthBar = createBar(frame, 11, "TOPLEFT", frame, "TOPLEFT", 50, -28)
-	frame.healthBar.labelText:SetText("HP")
 	frame.powerBar = createBar(frame, 9, "TOPLEFT", frame.healthBar, "BOTTOMLEFT", 0, -5)
-	frame.powerBar.labelText:SetText("PW")
 
 	self.frame = frame
 	return frame
@@ -137,7 +136,6 @@ function PlayerPet:UpdateHealth()
 	local maxValue = UnitHealthMax("pet")
 
 	bar:SetStatusBarColor(HEALTH_BAR_COLOR.r, HEALTH_BAR_COLOR.g, HEALTH_BAR_COLOR.b)
-	bar.labelText:SetText("HP")
 	XFrames:SetBarValues(bar, value, maxValue)
 end
 
@@ -148,7 +146,6 @@ function PlayerPet:UpdatePower()
 	local _, color = XFrames:GetUnitPowerPresentation("pet", true)
 
 	bar:SetStatusBarColor(color.r, color.g, color.b)
-	bar.labelText:SetText("PW")
 	XFrames:SetBarValues(bar, value, maxValue)
 end
 

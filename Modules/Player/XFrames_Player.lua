@@ -15,7 +15,7 @@ local UnitPower = UnitPower
 local UnitPowerMax = UnitPowerMax
 local UnitLevel = UnitLevel
 
-local HEALTH_BAR_COLOR = {r = 0.24, g = 0.32, b = 0.28}
+local HEALTH_BAR_COLOR = {r = 0.18, g = 0.62, b = 0.32}
 local BACKDROP_COLOR = {0.08, 0.09, 0.11, 0.92}
 local BORDER_COLOR = {0.24, 0.27, 0.31, 0.95}
 local POWER_BAR_COLOR = {r = 0.24, g = 0.28, b = 0.36}
@@ -56,6 +56,7 @@ local function createBar(parent, height, anchorPoint, relativeTo, relativePoint,
 	bar.percentText = createText(bar, "OVERLAY", "GameFontDisableSmall", 10, "RIGHT", bar.valueText, "LEFT", -10, 0, "RIGHT")
 	bar.valueText:SetText("")
 	bar.percentText:SetText("")
+	bar.labelText:Hide()
 	bar.percentText:Hide()
 
 	return bar
@@ -109,11 +110,8 @@ function Player:CreateFrame()
 
 	frame.healthBar = createBar(frame, 14, "TOPLEFT", frame, "TOPLEFT", 64, -40)
 	frame.healthBar:SetPoint("RIGHT", frame, "RIGHT", -10, 0)
-	frame.healthBar.labelText:SetText("Health")
-
 	frame.powerBar = createBar(frame, 12, "TOPLEFT", frame.healthBar, "BOTTOMLEFT", 0, -6)
 	frame.powerBar:SetPoint("RIGHT", frame, "RIGHT", -10, 0)
-	frame.powerBar.labelText:SetText("Power")
 
 	if config.castBar and config.castBar.enabled then
 		frame.castFrame = createBackdropFrame(nil, frame, config.castBar.width, config.castBar.height, "TOPLEFT", frame, "BOTTOMLEFT", 0, -8)
@@ -176,7 +174,6 @@ function Player:UpdateHealth()
 	local maxValue = UnitHealthMax("player")
 
 	bar:SetStatusBarColor(HEALTH_BAR_COLOR.r, HEALTH_BAR_COLOR.g, HEALTH_BAR_COLOR.b)
-	bar.labelText:SetText("Health")
 	XFrames:SetBarValues(bar, value, maxValue)
 end
 
@@ -184,9 +181,8 @@ function Player:UpdatePower()
 	local bar = self.frame.powerBar
 	local value = UnitPower("player")
 	local maxValue = UnitPowerMax("player")
-	local label, color = XFrames:GetUnitPowerPresentation("player")
+	local _, color = XFrames:GetUnitPowerPresentation("player")
 
-	bar.labelText:SetText(label)
 	bar:SetStatusBarColor(color.r, color.g, color.b)
 	XFrames:SetBarValues(bar, value, maxValue)
 end
