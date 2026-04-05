@@ -164,4 +164,36 @@ args = <table> {
  5 = <no value>
  6 = 1
 }
+Message: module Target:OnEvent failed: ...ace/AddOns/XFrames/Modules/Target/XFrames_Target.lua:187: attempt to perform boolean test on field 'notInterruptible' (a secret boolean value tainted by 'XFrames')
+Time: Sun Apr  5 16:29:46 2026
+Count: 85
+Stack:
+[Interface/AddOns/XFrames/Core/XFrames.lua]:174: in function 'SafeCall'
+[Interface/AddOns/XFrames/Modules/Target/XFrames_Target.lua]:624: in function <...ace/AddOns/XFrames/Modules/Target/XFrames_Target.lua:623>
+
+Locals:
+self = Frame {
+ modules = <table> {
+ }
+ db = <table> {
+ }
+ events = <table> {
+ }
+ minimapButton = XFramesMinimapButton {
+ }
+ settingsFrame = Frame {
+ }
+ initialized = true
+ name = "XFrames"
+}
+scope = "module Target:OnEvent"
+args = <table> {
+ 1 = <table> {
+ }
+ 2 = "UNIT_SPELLCAST_START"
+ 3 = "target"
+ 4 = <no value>
+ 5 = <no value>
+ 6 = 1
+}
 
