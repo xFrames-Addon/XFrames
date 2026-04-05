@@ -71,7 +71,7 @@ local function createBackdropFrame(name, parent, width, height, anchorPoint, rel
 	frame:SetBackdrop({
 		bgFile = "Interface\\Buttons\\WHITE8x8",
 		edgeFile = "Interface\\Buttons\\WHITE8x8",
-		edgeSize = 1,
+		edgeSize = 2,
 		insets = {left = 1, right = 1, top = 1, bottom = 1},
 	})
 	frame:SetBackdropColor(unpack(PORTRAIT_BG_COLOR))
@@ -109,6 +109,7 @@ function Target:CreateUnitFrame(key, unit, config, accent)
 	})
 	frame:SetBackdropColor(unpack(BACKDROP_COLOR))
 	frame:SetBackdropBorderColor(unpack(BORDER_COLOR))
+	frame.accentFrame = XFrames:CreateAccentFrame(frame, 2, 3)
 	frame:Hide()
 
 	frame.portraitFrame = createBackdropFrame(nil, frame, 52, 52, "TOPLEFT", frame, "TOPLEFT", 6, -6)
@@ -138,14 +139,18 @@ function Target:UpdatePortraitBorder(frame)
 		return
 	end
 
-	local _, class = UnitClass(frame.unit)
-	local color = UnitExists(frame.unit) and UnitIsPlayer(frame.unit) and class and RAID_CLASS_COLORS and RAID_CLASS_COLORS[class]
+	local color = XFrames:GetUnitAccentColor(frame.unit)
 
 	if color then
 		frame.portraitFrame:SetBackdropBorderColor(color.r, color.g, color.b, 1)
 	else
 		frame.portraitFrame:SetBackdropBorderColor(unpack(BORDER_COLOR))
 	end
+end
+
+function Target:UpdateFrameBorder(frame)
+	local color = XFrames:GetUnitAccentColor(frame.unit)
+	frame.accentFrame:SetBackdropBorderColor(color.r, color.g, color.b, 1)
 end
 
 function Target:CreateCompactUnitFrame(key, unit, config, accent)
@@ -173,6 +178,7 @@ function Target:CreateCompactUnitFrame(key, unit, config, accent)
 	})
 	frame:SetBackdropColor(unpack(BACKDROP_COLOR))
 	frame:SetBackdropBorderColor(unpack(BORDER_COLOR))
+	frame.accentFrame = XFrames:CreateAccentFrame(frame, 2, 3)
 	frame:Hide()
 
 	frame.nameText = createText(frame, "OVERLAY", "GameFontNormal", 12, "TOPLEFT", frame, "TOPLEFT", 8, -8, "LEFT")
@@ -286,6 +292,7 @@ function Target:RefreshFrame(frame)
 	if not UnitExists(frame.unit) then
 		if XFrames:IsFramesUnlocked() then
 			frame:Show()
+			self:UpdateFrameBorder(frame)
 			self:UpdateName(frame)
 			self:UpdateLevel(frame)
 			self:UpdateStatus(frame)
@@ -299,6 +306,7 @@ function Target:RefreshFrame(frame)
 	if XFrames:IsFramesUnlocked() then
 		frame:Show()
 	end
+	self:UpdateFrameBorder(frame)
 	self:UpdateName(frame)
 	self:UpdateLevel(frame)
 	self:UpdateStatus(frame)

@@ -69,7 +69,7 @@ local function createBackdropFrame(name, parent, width, height, anchorPoint, rel
 	frame:SetBackdrop({
 		bgFile = "Interface\\Buttons\\WHITE8x8",
 		edgeFile = "Interface\\Buttons\\WHITE8x8",
-		edgeSize = 1,
+		edgeSize = 2,
 		insets = {left = 1, right = 1, top = 1, bottom = 1},
 	})
 	frame:SetBackdropColor(unpack(BACKDROP_COLOR))
@@ -96,6 +96,7 @@ function Player:CreateFrame()
 	})
 	frame:SetBackdropColor(unpack(BACKDROP_COLOR))
 	frame:SetBackdropBorderColor(unpack(BORDER_COLOR))
+	frame.accentFrame = XFrames:CreateAccentFrame(frame, 2, 3)
 
 	frame.portraitFrame = createBackdropFrame(nil, frame, 52, 52, "TOPLEFT", frame, "TOPLEFT", 6, -6)
 	frame.portraitFrame:SetBackdropColor(unpack(PORTRAIT_BG_COLOR))
@@ -133,14 +134,18 @@ function Player:CreateFrame()
 end
 
 function Player:UpdatePortraitBorder()
-	local _, class = UnitClass("player")
-	local color = class and RAID_CLASS_COLORS and RAID_CLASS_COLORS[class]
+	local color = XFrames:GetUnitAccentColor("player")
 
 	if color then
 		self.frame.portraitFrame:SetBackdropBorderColor(color.r, color.g, color.b, 1)
 	else
 		self.frame.portraitFrame:SetBackdropBorderColor(unpack(BORDER_COLOR))
 	end
+end
+
+function Player:UpdateFrameBorder()
+	local color = XFrames:GetUnitAccentColor("player")
+	self.frame.accentFrame:SetBackdropBorderColor(color.r, color.g, color.b, 1)
 end
 
 function Player:UpdateName()
@@ -210,6 +215,7 @@ function Player:Refresh()
 		return
 	end
 
+	self:UpdateFrameBorder()
 	self:UpdateName()
 	self:UpdateLevel()
 	self:UpdateStatus()

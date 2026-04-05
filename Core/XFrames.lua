@@ -16,9 +16,14 @@ local select = select
 local string = string
 local tostring = tostring
 local tinsert = table.insert
+local UnitClass = UnitClass
+local UnitExists = UnitExists
+local UnitIsPlayer = UnitIsPlayer
 local UnitPowerType = UnitPowerType
+local UnitSelectionColor = UnitSelectionColor
 
 local DEFAULT_POWER_BAR_COLOR = {r = 0.24, g = 0.28, b = 0.36}
+local DEFAULT_UNIT_ACCENT_COLOR = {r = 0.24, g = 0.27, b = 0.31}
 local POWER_LABELS = {
 	MANA = "Mana",
 	RAGE = "Rage",
@@ -365,6 +370,46 @@ function XFrames:GetUnitPowerPresentation(unit, compact)
 	end
 
 	return label or "Power", color or DEFAULT_POWER_BAR_COLOR
+end
+
+function XFrames:GetUnitAccentColor(unit)
+	if not unit or not UnitExists(unit) then
+		return DEFAULT_UNIT_ACCENT_COLOR
+	end
+
+	if UnitIsPlayer(unit) then
+		local _, class = UnitClass(unit)
+		local classColor = class and RAID_CLASS_COLORS and RAID_CLASS_COLORS[class]
+		if classColor then
+			return classColor
+		end
+	end
+
+	local r, g, b = UnitSelectionColor(unit, true)
+	if r and g and b then
+		return {r = r, g = g, b = b}
+	end
+
+	return DEFAULT_UNIT_ACCENT_COLOR
+end
+
+function XFrames:CreateAccentFrame(parent, inset, edgeSize)
+	if not parent then
+		return nil
+	end
+
+	local frame = CreateFrame("Frame", nil, parent, "BackdropTemplate")
+	frame:SetPoint("TOPLEFT", parent, "TOPLEFT", -(inset or 2), inset or 2)
+	frame:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", inset or 2, -(inset or 2))
+	frame:SetFrameLevel(parent:GetFrameLevel() + 3)
+	frame:SetBackdrop({
+		edgeFile = "Interface\\Buttons\\WHITE8x8",
+		edgeSize = edgeSize or 3,
+	})
+	frame:SetBackdropBorderColor(1, 1, 1, 1)
+	frame:SetBackdropColor(0, 0, 0, 0)
+	frame:EnableMouse(false)
+	return frame
 end
 
 function XFrames.events:ADDON_LOADED(loadedAddon)

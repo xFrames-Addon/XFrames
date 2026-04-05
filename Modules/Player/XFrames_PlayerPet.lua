@@ -62,7 +62,7 @@ local function createBackdropFrame(name, parent, width, height, anchorPoint, rel
 	frame:SetBackdrop({
 		bgFile = "Interface\\Buttons\\WHITE8x8",
 		edgeFile = "Interface\\Buttons\\WHITE8x8",
-		edgeSize = 1,
+		edgeSize = 2,
 		insets = {left = 1, right = 1, top = 1, bottom = 1},
 	})
 	frame:SetBackdropColor(unpack(PORTRAIT_BG_COLOR))
@@ -89,6 +89,7 @@ function PlayerPet:CreateFrame()
 	})
 	frame:SetBackdropColor(unpack(BACKDROP_COLOR))
 	frame:SetBackdropBorderColor(unpack(BORDER_COLOR))
+	frame.accentFrame = XFrames:CreateAccentFrame(frame, 2, 3)
 	frame:Hide()
 
 	frame.portraitFrame = createBackdropFrame(nil, frame, 42, 42, "TOPLEFT", frame, "TOPLEFT", 4, -4)
@@ -117,6 +118,11 @@ function PlayerPet:UpdateName()
 	end
 
 	frame.nameText:SetText(UnitName("pet") or "Pet")
+end
+
+function PlayerPet:UpdateFrameBorder()
+	local color = XFrames:GetUnitAccentColor("pet")
+	self.frame.accentFrame:SetBackdropBorderColor(color.r, color.g, color.b, 1)
 end
 
 function PlayerPet:UpdateStatus()
@@ -173,6 +179,7 @@ function PlayerPet:Refresh()
 	if not UnitExists("pet") then
 		if XFrames:IsFramesUnlocked() then
 			self.frame:Show()
+			self:UpdateFrameBorder()
 			self:UpdateName()
 			self:UpdateStatus()
 			self:UpdatePortrait()
@@ -185,6 +192,7 @@ function PlayerPet:Refresh()
 	if XFrames:IsFramesUnlocked() then
 		self.frame:Show()
 	end
+	self:UpdateFrameBorder()
 	self:UpdateName()
 	self:UpdateStatus()
 	self:UpdatePortrait()
