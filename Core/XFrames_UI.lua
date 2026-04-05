@@ -353,7 +353,7 @@ function XFrames:CreateSettingsPanel()
 		return self.settingsFrame
 	end
 
-	local frame = createPanel(UIParent, 280, 242, "CENTER", UIParent, "CENTER", 0, 0)
+	local frame = createPanel(UIParent, 280, 458, "CENTER", UIParent, "CENTER", 0, 0)
 	frame:SetFrameStrata("DIALOG")
 	frame:Hide()
 
@@ -365,7 +365,7 @@ function XFrames:CreateSettingsPanel()
 	frame.helpText:SetText("Unlock to drag frames and cast bars with the left mouse button.")
 	frame.partyModeText = createText(frame, "GameFontHighlightSmall", 10, "TOPLEFT", frame.helpText, "BOTTOMLEFT", 0, -12, "LEFT")
 
-	frame.lockButton = createButton(frame, "Unlock Frames", 118, "BOTTOMLEFT", frame, "BOTTOMLEFT", 12, 12, function()
+	frame.lockButton = createButton(frame, "Unlock Frames", 118, "BOTTOMLEFT", frame, "BOTTOMLEFT", 12, 18, function()
 		XFrames:ToggleFrameLocks()
 	end)
 	frame.partyModeButton = createButton(frame, "Party: Status", 118, "TOPLEFT", frame.partyModeText, "BOTTOMLEFT", 0, -10, function()
