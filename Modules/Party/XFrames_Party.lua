@@ -91,7 +91,7 @@ local function getStatusText(unit, fallbackLabel)
 	return className or fallbackLabel
 end
 
-local ROLE_ICON_TEXTURE = "Interface\\LFGFrame\\UI-LFG-ICON-ROLES"
+local ROLE_ICON_TEXTURE = "Interface\\LFGFrame\\UI-LFG-ICON-PORTRAITROLES"
 
 local function getRoleInfo(unit)
 	local role = UnitGroupRolesAssigned and UnitGroupRolesAssigned(unit)
@@ -164,7 +164,7 @@ function Party:CreateUnitFrame(index)
 	frame.nameText = createText(frame, "OVERLAY", "GameFontNormalLarge", 13, "TOPLEFT", frame, "TOPLEFT", 64, -10, "LEFT")
 	frame.levelText = createText(frame, "OVERLAY", "GameFontHighlight", 12, "TOPRIGHT", frame, "TOPRIGHT", -10, -10, "RIGHT")
 	frame.roleIcon = frame:CreateTexture(nil, "OVERLAY")
-	frame.roleIcon:SetSize(14, 14)
+	frame.roleIcon:SetSize(16, 16)
 	frame.roleIcon:SetPoint("RIGHT", frame.levelText, "LEFT", -6, 0)
 	frame.roleIcon:Hide()
 	frame.statusText = createText(frame, "OVERLAY", "GameFontHighlightSmall", 10, "TOPLEFT", frame.nameText, "BOTTOMLEFT", 0, -2, "LEFT")
@@ -372,6 +372,12 @@ function Party:RegisterEvents()
 end
 
 function Party:Initialize()
+	local playerConfig = XFrames.db.profile.player
+	local partyConfig = XFrames.db.profile.party
+
+	partyConfig.width = playerConfig.width
+	partyConfig.height = playerConfig.height
+	partyConfig.scale = playerConfig.scale
 	self.enabled = XFrames.db.profile.party.enabled
 end
 
