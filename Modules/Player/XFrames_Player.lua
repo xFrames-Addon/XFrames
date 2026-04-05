@@ -6,6 +6,8 @@ local Player = {}
 local RAID_CLASS_COLORS = RAID_CLASS_COLORS
 
 local CreateFrame = CreateFrame
+local GetSpecialization = GetSpecialization
+local GetSpecializationInfo = GetSpecializationInfo
 local SetPortraitTexture = SetPortraitTexture
 local UnitClass = UnitClass
 local UnitHealth = UnitHealth
@@ -15,7 +17,6 @@ local UnitPower = UnitPower
 local UnitPowerMax = UnitPowerMax
 local UnitLevel = UnitLevel
 
-local PERFORMANCE_UPDATE_INTERVAL = 0.5
 local HEALTH_BAR_COLOR = {r = 0.18, g = 0.62, b = 0.32}
 local BACKDROP_COLOR = {0.08, 0.09, 0.11, 0.92}
 local BORDER_COLOR = {0.24, 0.27, 0.31, 0.95}
@@ -25,6 +26,16 @@ local PORTRAIT_BG_COLOR = {0.10, 0.11, 0.14, 0.98}
 local function getStatusText()
 	local className = UnitClass("player")
 	return className or "Player"
+end
+
+local function getSpecText()
+	local specIndex = GetSpecialization and GetSpecialization()
+	if not specIndex or not GetSpecializationInfo then
+		return getStatusText()
+	end
+
+	local _, name = GetSpecializationInfo(specIndex)
+	return XFrames:FormatSpecLabel(name)
 end
 
 local function createText(parent, layer, template, size, anchorPoint, relativeTo, relativePoint, x, y, justify)
@@ -169,11 +180,11 @@ function Player:UpdateLevel()
 end
 
 function Player:UpdateStatus()
-	self.frame.statusText:SetText(getStatusText())
+	self.frame.statusText:SetText(XFrames:GetPerformanceTextForUnit("player") or getStatusText())
 end
 
 function Player:UpdateSpec()
-	self.frame.specText:SetText(XFrames:GetPerformanceTextForUnit("player") or "")
+	self.frame.specText:SetText(getSpecText())
 end
 
 function Player:UpdatePortrait()
@@ -230,24 +241,6 @@ function Player:Refresh()
 	self:UpdateHealth()
 	self:UpdatePower()
 	self:RefreshCastState()
-end
-
-function Player:RefreshPerformanceMode()
-	self.performanceElapsed = 0
-
-	if not self.frame then
-		return
-	end
-
-	self.frame:SetScript("OnUpdate", function(_, elapsed)
-		self.performanceElapsed = (self.performanceElapsed or 0) + elapsed
-		if self.performanceElapsed < PERFORMANCE_UPDATE_INTERVAL then
-			return
-		end
-
-		self.performanceElapsed = 0
-		self:UpdateSpec()
-	end)
 end
 
 function Player:OnEvent(event, unit)
@@ -323,7 +316,6 @@ function Player:Enable()
 
 	self:CreateFrame()
 	self:RegisterEvents()
-	self:RefreshPerformanceMode()
 	self:Refresh()
 	self.frame:Show()
 	XFrames:Info("Player shell enabled")
