@@ -135,12 +135,11 @@ function XFrames:SaveFramePosition(frame)
 end
 
 function XFrames:RefreshDragState(frame)
-	if not frame or not frame.xfMovable then
+	if not frame then
 		return
 	end
 
 	local unlocked = self:IsFramesUnlocked()
-	frame:EnableMouse(true)
 
 	if frame.xfUnitWatch then
 		if unlocked then
@@ -153,6 +152,12 @@ function XFrames:RefreshDragState(frame)
 			frame.xfUnitWatchActive = true
 		end
 	end
+
+	if not frame.xfMovable then
+		return
+	end
+
+	frame:EnableMouse(true)
 
 	if frame.xfDragOverlay then
 		frame.xfDragOverlay:SetShown(unlocked)
@@ -374,9 +379,15 @@ function XFrames:CreateSettingsPanel()
 	frame.titleText:SetText("XFrames")
 
 	frame.statusText = createText(frame, "GameFontHighlight", 11, "TOPLEFT", frame.titleText, "BOTTOMLEFT", 0, -12, "LEFT")
+	frame.statusText:SetWidth(256)
+	frame.statusText:SetWordWrap(true)
 	frame.helpText = createText(frame, "GameFontHighlightSmall", 10, "TOPLEFT", frame.statusText, "BOTTOMLEFT", 0, -8, "LEFT")
+	frame.helpText:SetWidth(256)
+	frame.helpText:SetWordWrap(true)
 	frame.helpText:SetText("Unlock to drag frames and cast bars with the left mouse button. Drag this panel to move it.")
 	frame.partyModeText = createText(frame, "GameFontHighlightSmall", 10, "TOPLEFT", frame.helpText, "BOTTOMLEFT", 0, -12, "LEFT")
+	frame.partyModeText:SetWidth(256)
+	frame.partyModeText:SetWordWrap(true)
 
 	frame.lockButton = createButton(frame, "Unlock Frames", 118, "BOTTOMLEFT", frame, "BOTTOMLEFT", 12, 18, function()
 		XFrames:ToggleFrameLocks()
