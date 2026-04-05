@@ -22,7 +22,6 @@ local BORDER_COLOR = {0.24, 0.27, 0.31, 0.95}
 local POWER_BAR_COLOR = {r = 0.24, g = 0.28, b = 0.36}
 local PLACEHOLDER_BAR_VALUE = 0.62
 local PLACEHOLDER_VALUE_TEXT = "Restricted"
-local PLACEHOLDER_PERCENT_TEXT = "--"
 
 local function createText(parent, layer, template, size, anchorPoint, relativeTo, relativePoint, x, y, justify)
 	local text = parent:CreateFontString(nil, layer, template)
@@ -50,10 +49,12 @@ local function createBar(parent, height, anchorPoint, relativeTo, relativePoint,
 	bar.bg:SetAllPoints()
 	bar.bg:SetColorTexture(0.12, 0.13, 0.16, 0.95)
 
+	bar.labelText = createText(bar, "OVERLAY", "GameFontNormalSmall", 10, "LEFT", bar, "LEFT", 6, 0, "LEFT")
 	bar.valueText = createText(bar, "OVERLAY", "GameFontHighlightSmall", 11, "RIGHT", bar, "RIGHT", -4, 0, "RIGHT")
 	bar.percentText = createText(bar, "OVERLAY", "GameFontDisableSmall", 10, "RIGHT", bar.valueText, "LEFT", -10, 0, "RIGHT")
 	bar.valueText:SetText("")
 	bar.percentText:SetText("")
+	bar.percentText:Hide()
 
 	return bar
 end
@@ -97,15 +98,16 @@ function Target:CreateUnitFrame(key, unit, config, accent)
 
 	frame.nameText = createText(frame, "OVERLAY", "GameFontNormalLarge", 13, "TOPLEFT", frame, "TOPLEFT", 64, -10, "LEFT")
 	frame.levelText = createText(frame, "OVERLAY", "GameFontHighlight", 12, "TOPRIGHT", frame, "TOPRIGHT", -10, -10, "RIGHT")
-	frame.statusText = createText(frame, "OVERLAY", "GameFontHighlightSmall", 10, "TOPLEFT", frame.nameText, "BOTTOMLEFT", 0, -4, "LEFT")
+	frame.statusText = createText(frame, "OVERLAY", "GameFontHighlightSmall", 10, "TOPLEFT", frame.nameText, "BOTTOMLEFT", 0, -2, "LEFT")
 
-	frame.healthLabel = createText(frame, "OVERLAY", "GameFontNormalSmall", 11, "TOPLEFT", frame, "TOPLEFT", 64, -34, "LEFT")
-	frame.healthLabel:SetText("Health")
-	frame.healthBar = createBar(frame, 16, "TOPLEFT", frame.healthLabel, "BOTTOMLEFT", 0, -2)
+	frame.healthBar = createBar(frame, 14, "TOPLEFT", frame, "TOPLEFT", 64, -40)
+	frame.healthBar:SetPoint("RIGHT", frame, "RIGHT", -10, 0)
+	frame.healthBar.labelText:SetText("Health")
 	frame.healthAccent = accent
 
-	frame.powerLabel = createText(frame, "OVERLAY", "GameFontNormalSmall", 11, "TOPLEFT", frame.healthBar, "BOTTOMLEFT", 0, -6, "LEFT")
-	frame.powerBar = createBar(frame, 14, "TOPLEFT", frame.powerLabel, "BOTTOMLEFT", 0, -2)
+	frame.powerBar = createBar(frame, 12, "TOPLEFT", frame.healthBar, "BOTTOMLEFT", 0, -6)
+	frame.powerBar:SetPoint("RIGHT", frame, "RIGHT", -10, 0)
+	frame.powerBar.labelText:SetText("Power")
 
 	return frame
 end
@@ -143,12 +145,12 @@ function Target:CreateCompactUnitFrame(key, unit, config, accent)
 
 	frame.healthBar = createBar(frame, 10, "TOPLEFT", frame, "TOPLEFT", 8, -22)
 	frame.healthBar:SetPoint("RIGHT", frame, "RIGHT", -8, 0)
+	frame.healthBar.labelText:SetText("HP")
 	frame.healthAccent = accent
 
 	frame.powerBar = createBar(frame, 8, "TOPLEFT", frame.healthBar, "BOTTOMLEFT", 0, -4)
 	frame.powerBar:SetPoint("RIGHT", frame, "RIGHT", -8, 0)
-	frame.powerLabel = nil
-	frame.healthLabel = nil
+	frame.powerBar.labelText:SetText("PW")
 
 	return frame
 end
@@ -202,21 +204,26 @@ function Target:UpdateHealth(frame)
 	bar:SetStatusBarColor(accent.r, accent.g, accent.b)
 	bar:SetMinMaxValues(0, 1)
 	bar:SetValue(PLACEHOLDER_BAR_VALUE)
+	if frame.isCompact then
+		bar.labelText:SetText("HP")
+	else
+		bar.labelText:SetText("Health")
+	end
 	bar.valueText:SetText(PLACEHOLDER_VALUE_TEXT)
-	bar.percentText:SetText(PLACEHOLDER_PERCENT_TEXT)
 end
 
 function Target:UpdatePower(frame)
 	local bar = frame.powerBar
 
-	if frame.powerLabel then
-		frame.powerLabel:SetText("Power")
+	if frame.isCompact then
+		bar.labelText:SetText("PW")
+	else
+		bar.labelText:SetText("Power")
 	end
 	bar:SetStatusBarColor(POWER_BAR_COLOR.r, POWER_BAR_COLOR.g, POWER_BAR_COLOR.b)
 	bar:SetMinMaxValues(0, 1)
 	bar:SetValue(PLACEHOLDER_BAR_VALUE)
 	bar.valueText:SetText(PLACEHOLDER_VALUE_TEXT)
-	bar.percentText:SetText(PLACEHOLDER_PERCENT_TEXT)
 end
 
 function Target:RefreshFrame(frame)

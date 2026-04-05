@@ -14,7 +14,6 @@ local HEALTH_BAR_COLOR = {r = 0.26, g = 0.34, b = 0.24}
 local POWER_BAR_COLOR = {r = 0.23, g = 0.27, b = 0.35}
 local PLACEHOLDER_BAR_VALUE = 0.6
 local PLACEHOLDER_VALUE_TEXT = "Restricted"
-local PLACEHOLDER_PERCENT_TEXT = "--"
 
 local function createText(parent, layer, template, size, anchorPoint, relativeTo, relativePoint, x, y, justify)
 	local text = parent:CreateFontString(nil, layer, template)
@@ -42,10 +41,12 @@ local function createBar(parent, height, anchorPoint, relativeTo, relativePoint,
 	bar.bg:SetAllPoints()
 	bar.bg:SetColorTexture(0.12, 0.13, 0.16, 0.95)
 
+	bar.labelText = createText(bar, "OVERLAY", "GameFontNormalSmall", 9, "LEFT", bar, "LEFT", 5, 0, "LEFT")
 	bar.valueText = createText(bar, "OVERLAY", "GameFontHighlightSmall", 10, "RIGHT", bar, "RIGHT", -4, 0, "RIGHT")
 	bar.percentText = createText(bar, "OVERLAY", "GameFontDisableSmall", 9, "RIGHT", bar.valueText, "LEFT", -8, 0, "RIGHT")
 	bar.valueText:SetText("")
 	bar.percentText:SetText("")
+	bar.percentText:Hide()
 
 	return bar
 end
@@ -77,10 +78,12 @@ function PlayerPet:CreateFrame()
 	frame.portraitTexture:SetTexCoord(0.08, 0.92, 0.08, 0.92)
 
 	frame.nameText = createText(frame, "OVERLAY", "GameFontNormal", 12, "TOPLEFT", frame, "TOPLEFT", 50, -8, "LEFT")
-	frame.statusText = createText(frame, "OVERLAY", "GameFontHighlightSmall", 10, "TOPLEFT", frame.nameText, "BOTTOMLEFT", 0, -4, "LEFT")
+	frame.statusText = createText(frame, "OVERLAY", "GameFontHighlightSmall", 10, "TOPLEFT", frame.nameText, "BOTTOMLEFT", 0, -2, "LEFT")
 
-	frame.healthBar = createBar(frame, 12, "TOPLEFT", frame, "TOPLEFT", 50, -26)
-	frame.powerBar = createBar(frame, 10, "TOPLEFT", frame.healthBar, "BOTTOMLEFT", 0, -6)
+	frame.healthBar = createBar(frame, 11, "TOPLEFT", frame, "TOPLEFT", 50, -28)
+	frame.healthBar.labelText:SetText("HP")
+	frame.powerBar = createBar(frame, 9, "TOPLEFT", frame.healthBar, "BOTTOMLEFT", 0, -5)
+	frame.powerBar.labelText:SetText("PW")
 
 	self.frame = frame
 	return frame
@@ -115,8 +118,8 @@ function PlayerPet:UpdateHealth()
 	bar:SetStatusBarColor(HEALTH_BAR_COLOR.r, HEALTH_BAR_COLOR.g, HEALTH_BAR_COLOR.b)
 	bar:SetMinMaxValues(0, 1)
 	bar:SetValue(PLACEHOLDER_BAR_VALUE)
+	bar.labelText:SetText("HP")
 	bar.valueText:SetText(PLACEHOLDER_VALUE_TEXT)
-	bar.percentText:SetText(PLACEHOLDER_PERCENT_TEXT)
 end
 
 function PlayerPet:UpdatePower()
@@ -125,8 +128,8 @@ function PlayerPet:UpdatePower()
 	bar:SetStatusBarColor(POWER_BAR_COLOR.r, POWER_BAR_COLOR.g, POWER_BAR_COLOR.b)
 	bar:SetMinMaxValues(0, 1)
 	bar:SetValue(PLACEHOLDER_BAR_VALUE)
+	bar.labelText:SetText("PW")
 	bar.valueText:SetText(PLACEHOLDER_VALUE_TEXT)
-	bar.percentText:SetText(PLACEHOLDER_PERCENT_TEXT)
 end
 
 function PlayerPet:Refresh()
