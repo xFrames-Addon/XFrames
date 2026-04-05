@@ -9,6 +9,7 @@ local defaults = {
 			unlocked = false,
 			hideBlizzard = true,
 			hideBlizzardCastBars = true,
+			portraitStyle = "portrait",
 			minimap = {
 				hide = false,
 			},

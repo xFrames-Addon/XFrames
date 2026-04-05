@@ -353,7 +353,7 @@ function XFrames:CreateSettingsPanel()
 		return self.settingsFrame
 	end
 
-	local frame = createPanel(UIParent, 280, 214, "CENTER", UIParent, "CENTER", 0, 0)
+	local frame = createPanel(UIParent, 280, 242, "CENTER", UIParent, "CENTER", 0, 0)
 	frame:SetFrameStrata("DIALOG")
 	frame:Hide()
 
@@ -382,6 +382,9 @@ function XFrames:CreateSettingsPanel()
 	frame.castBarsButton = createButton(frame, "Hide Cast Bars", 118, "TOPLEFT", frame.blizzardButton, "BOTTOMLEFT", 0, -10, function()
 		XFrames:ToggleBlizzardCastBars()
 	end)
+	frame.portraitsButton = createButton(frame, "Portraits: Live", 118, "TOPLEFT", frame.castBarsButton, "BOTTOMLEFT", 0, -10, function()
+		XFrames:TogglePortraitStyle()
+	end)
 	frame.reloadButton = createButton(frame, "Reload UI", 78, "LEFT", frame.lockButton, "RIGHT", 8, 0, function()
 		ReloadUI()
 	end)
@@ -407,6 +410,7 @@ function XFrames:RefreshSettingsPanel()
 	self.settingsFrame.partyModeButton:SetText(self:GetPartySubtitleMode() == "performance" and "Party: Performance" or "Party: Status")
 	self.settingsFrame.blizzardButton:SetText(ui and ui.hideBlizzard ~= false and "Show Blizzard" or "Hide Blizzard")
 	self.settingsFrame.castBarsButton:SetText(ui and ui.hideBlizzardCastBars ~= false and "Show Cast Bars" or "Hide Cast Bars")
+	self.settingsFrame.portraitsButton:SetText(self:GetPortraitStyle() == "class" and "Portraits: Class" or "Portraits: Live")
 end
 
 function XFrames:ToggleSettings()

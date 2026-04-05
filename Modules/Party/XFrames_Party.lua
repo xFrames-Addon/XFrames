@@ -6,9 +6,7 @@ local Party = {}
 local RAID_CLASS_COLORS = RAID_CLASS_COLORS
 
 local CreateFrame = CreateFrame
-local GetTexCoordsForRole = GetTexCoordsForRole
 local InCombatLockdown = InCombatLockdown
-local SetPortraitTexture = SetPortraitTexture
 local UnitClass = UnitClass
 local UnitCreatureType = UnitCreatureType
 local UnitExists = UnitExists
@@ -319,11 +317,12 @@ end
 function Party:UpdatePortrait(frame)
 	if not UnitExists(frame.unit) then
 		frame.portraitTexture:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
+		frame.portraitTexture:SetTexCoord(0.08, 0.92, 0.08, 0.92)
 		self:UpdatePortraitBorder(frame)
 		return
 	end
 
-	SetPortraitTexture(frame.portraitTexture, frame.unit)
+	XFrames:ApplyUnitPortrait(frame.portraitTexture, frame.unit)
 	self:UpdatePortraitBorder(frame)
 end
 

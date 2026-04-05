@@ -26,11 +26,13 @@ local UnitGUID = UnitGUID
 local UnitIsPlayer = UnitIsPlayer
 local UnitPowerType = UnitPowerType
 local UnitSelectionColor = UnitSelectionColor
+local SetPortraitTexture = SetPortraitTexture
 
 local DEFAULT_POWER_BAR_COLOR = {r = 0.24, g = 0.28, b = 0.36}
 local DEFAULT_UNIT_ACCENT_COLOR = {r = 0.24, g = 0.27, b = 0.31}
 local DAMAGE_METER_TYPE_DPS = 1
 local DAMAGE_METER_TYPE_HPS = 3
+local CLASS_ICON_TEXTURE = "Interface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES"
 local POWER_LABELS = {
 	MANA = "Mana",
 	RAGE = "Rage",
@@ -338,6 +340,24 @@ function XFrames:RegisterSlashCommands()
 			return
 		end
 
+		if command == "portraits" or command == "portrait" then
+			arg = trim(arg)
+			if arg == "" or arg == "toggle" then
+				self:TogglePortraitStyle()
+				return
+			end
+			if arg == "class" or arg == "icons" then
+				self:SetPortraitStyle("class")
+				return
+			end
+			if arg == "portrait" or arg == "live" then
+				self:SetPortraitStyle("portrait")
+				return
+			end
+			printf("|cff33ff99XFrames|r portrait commands: portrait, class, toggle")
+			return
+		end
+
 		if command == "reload" then
 			ReloadUI()
 			return
@@ -456,6 +476,66 @@ function XFrames:SetBarValues(bar, value, maxValue)
 
 	bar:SetValue(value or 0)
 	self:SetValueText(bar.valueText, value, maxValue)
+end
+
+function XFrames:GetPortraitStyle()
+	local ui = self:GetUISettings()
+	if ui and ui.portraitStyle == "class" then
+		return "class"
+	end
+
+	return "portrait"
+end
+
+function XFrames:SetPortraitStyle(style)
+	style = trim(style):lower()
+	if style ~= "portrait" and style ~= "class" then
+		self:Warn(string.format("Unknown portrait style: %s", safeToString(style)))
+		return
+	end
+
+	local ui = self:GetUISettings()
+	if not ui then
+		return
+	end
+
+	ui.portraitStyle = style
+	self:Info(string.format("Portrait style set to %s", style))
+	self:RefreshAllFrameLocks()
+end
+
+function XFrames:TogglePortraitStyle()
+	if self:GetPortraitStyle() == "class" then
+		self:SetPortraitStyle("portrait")
+		return
+	end
+
+	self:SetPortraitStyle("class")
+end
+
+function XFrames:ApplyUnitPortrait(texture, unit, fallbackTexture)
+	if not texture then
+		return
+	end
+
+	if not unit or not UnitExists(unit) then
+		texture:SetTexture(fallbackTexture or "Interface\\Icons\\INV_Misc_QuestionMark")
+		texture:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+		return
+	end
+
+	if self:GetPortraitStyle() == "class" and UnitIsPlayer(unit) then
+		local _, classToken = UnitClass(unit)
+		local coords = classToken and CLASS_ICON_TCOORDS and CLASS_ICON_TCOORDS[classToken]
+		if coords then
+			texture:SetTexture(CLASS_ICON_TEXTURE)
+			texture:SetTexCoord(coords[1], coords[2], coords[3], coords[4])
+			return
+		end
+	end
+
+	SetPortraitTexture(texture, unit)
+	texture:SetTexCoord(0.08, 0.92, 0.08, 0.92)
 end
 
 function XFrames:GetUnitPowerPresentation(unit, compact)

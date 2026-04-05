@@ -9,7 +9,6 @@ local CreateFrame = CreateFrame
 local GetSpecialization = GetSpecialization
 local GetSpecializationInfo = GetSpecializationInfo
 local GetTime = GetTime
-local SetPortraitTexture = SetPortraitTexture
 local UnitClass = UnitClass
 local UnitCastingInfo = UnitCastingInfo
 local UnitChannelInfo = UnitChannelInfo
@@ -257,7 +256,7 @@ function Player:UpdateSpec()
 end
 
 function Player:UpdatePortrait()
-	SetPortraitTexture(self.frame.portraitTexture, "player")
+	XFrames:ApplyUnitPortrait(self.frame.portraitTexture, "player")
 	self:UpdatePortraitBorder()
 end
 

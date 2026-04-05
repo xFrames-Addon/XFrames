@@ -13,7 +13,6 @@ local GetSpecializationInfoByID = GetSpecializationInfoByID
 local GetTime = GetTime
 local InCombatLockdown = InCombatLockdown
 local NotifyInspect = NotifyInspect
-local SetPortraitTexture = SetPortraitTexture
 local UnitClass = UnitClass
 local UnitCastingInfo = UnitCastingInfo
 local UnitChannelInfo = UnitChannelInfo
@@ -404,11 +403,12 @@ function Target:UpdatePortrait(frame)
 
 	if not UnitExists(frame.unit) then
 		frame.portraitTexture:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
+		frame.portraitTexture:SetTexCoord(0.08, 0.92, 0.08, 0.92)
 		self:UpdatePortraitBorder(frame)
 		return
 	end
 
-	SetPortraitTexture(frame.portraitTexture, frame.unit)
+	XFrames:ApplyUnitPortrait(frame.portraitTexture, frame.unit)
 	self:UpdatePortraitBorder(frame)
 end
 

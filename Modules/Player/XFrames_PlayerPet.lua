@@ -4,7 +4,6 @@ local XFrames = ns.XFrames
 local PlayerPet = {}
 
 local CreateFrame = CreateFrame
-local SetPortraitTexture = SetPortraitTexture
 local UnitExists = UnitExists
 local UnitHealth = UnitHealth
 local UnitHealthMax = UnitHealthMax
@@ -132,10 +131,11 @@ end
 function PlayerPet:UpdatePortrait()
 	if not UnitExists("pet") then
 		self.frame.portraitTexture:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
+		self.frame.portraitTexture:SetTexCoord(0.08, 0.92, 0.08, 0.92)
 		return
 	end
 
-	SetPortraitTexture(self.frame.portraitTexture, "pet")
+	XFrames:ApplyUnitPortrait(self.frame.portraitTexture, "pet")
 end
 
 function PlayerPet:UpdateHealth()
