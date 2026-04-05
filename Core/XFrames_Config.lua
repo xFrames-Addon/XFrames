@@ -97,8 +97,8 @@ local defaults = {
 		},
 		party = {
 			enabled = true,
-			width = 232,
-			height = 58,
+			width = 266,
+			height = 62,
 			spacing = 8,
 			scale = 0.92,
 			position = {
@@ -132,4 +132,13 @@ function XFrames:InitializeDatabase()
 	copyDefaults(defaults, XFramesDB)
 	self.db = XFramesDB
 	self.db.profile.diagnostics.logs = self.db.profile.diagnostics.logs or {}
+
+	if self.db.profile.party then
+		if self.db.profile.party.width == 232 then
+			self.db.profile.party.width = 266
+		end
+		if self.db.profile.party.height == 58 then
+			self.db.profile.party.height = 62
+		end
+	end
 end

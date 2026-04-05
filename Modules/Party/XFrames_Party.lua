@@ -3,6 +3,8 @@ local _, ns = ...
 local XFrames = ns.XFrames
 local Party = {}
 
+local RAID_CLASS_COLORS = RAID_CLASS_COLORS
+
 local CreateFrame = CreateFrame
 local SetPortraitTexture = SetPortraitTexture
 local UnitClass = UnitClass
@@ -18,6 +20,20 @@ local HEALTH_BAR_COLOR = {r = 0.18, g = 0.62, b = 0.32}
 local BACKDROP_COLOR = {0.08, 0.09, 0.11, 0.92}
 local BORDER_COLOR = {0.24, 0.27, 0.31, 0.95}
 local PORTRAIT_BG_COLOR = {0.10, 0.11, 0.14, 0.98}
+
+local function getPartyAccentColor(unit)
+	if not UnitExists(unit) then
+		return {r = BORDER_COLOR[1], g = BORDER_COLOR[2], b = BORDER_COLOR[3]}
+	end
+
+	local _, class = UnitClass(unit)
+	local classColor = class and RAID_CLASS_COLORS and RAID_CLASS_COLORS[class]
+	if classColor then
+		return classColor
+	end
+
+	return {r = BORDER_COLOR[1], g = BORDER_COLOR[2], b = BORDER_COLOR[3]}
+end
 
 local function createText(parent, layer, template, size, anchorPoint, relativeTo, relativePoint, x, y, justify)
 	local text = parent:CreateFontString(nil, layer, template)
@@ -139,22 +155,26 @@ function Party:CreateUnitFrame(index)
 end
 
 function Party:UpdateFrameBorder(frame)
-	local color = XFrames:GetUnitAccentColor(frame.unit)
+	local color = getPartyAccentColor(frame.unit)
 	frame.accentFrame:SetBackdropBorderColor(color.r, color.g, color.b, 1)
 end
 
 function Party:UpdatePortraitBorder(frame)
-	local color = XFrames:GetUnitAccentColor(frame.unit)
+	local color = getPartyAccentColor(frame.unit)
 	frame.portraitFrame:SetBackdropBorderColor(color.r, color.g, color.b, 1)
 end
 
 function Party:UpdateName(frame)
 	if not UnitExists(frame.unit) then
 		frame.nameText:SetText(frame.fallbackLabel)
+		frame.nameText:SetTextColor(1, 1, 1)
 		return
 	end
 
-	frame.nameText:SetText(UnitName(frame.unit) or frame.fallbackLabel)
+	local name = UnitName(frame.unit) or frame.fallbackLabel
+	local color = getPartyAccentColor(frame.unit)
+	frame.nameText:SetText(name)
+	frame.nameText:SetTextColor(color.r, color.g, color.b)
 end
 
 function Party:UpdateLevel(frame)
