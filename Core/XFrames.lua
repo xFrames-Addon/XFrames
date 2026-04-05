@@ -594,25 +594,47 @@ function XFrames:GetCompletedDamageMeterValue(unit, meterType)
 	return source.totalAmount
 end
 
+function XFrames:FormatMeterValue(value, allowCompact)
+	if value == nil then
+		return nil
+	end
+
+	if allowCompact then
+		local ok, compactValue = pcall(self.FormatCompactNumber, self, value)
+		if ok and compactValue and compactValue ~= "" then
+			return compactValue
+		end
+	end
+
+	local ok, rawValue = pcall(string.format, "%d", value)
+	if ok and rawValue and rawValue ~= "" then
+		return rawValue
+	end
+
+	return nil
+end
+
 function XFrames:GetMeterTextForUnit(unit, meterType, label)
 	if not meterType or not label then
 		return nil
 	end
 
 	local value = self:GetCurrentDamageMeterValue(unit, meterType)
+	local allowCompact = false
 	if value == nil then
 		value = self:GetCompletedDamageMeterValue(unit, meterType)
+		allowCompact = true
 	end
 	if value == nil then
 		return nil
 	end
 
-	local compactValue = self:FormatCompactNumber(value)
-	if compactValue == "" then
+	local formattedValue = self:FormatMeterValue(value, allowCompact)
+	if not formattedValue or formattedValue == "" then
 		return nil
 	end
 
-	return string.format("%s %s", compactValue, label)
+	return string.format("%s %s", formattedValue, label)
 end
 
 function XFrames:GetPerformanceTextForUnit(unit)
