@@ -96,12 +96,12 @@ function Target:CreateUnitFrame(key, unit, config, accent)
 	frame.levelText = createText(frame, "OVERLAY", "GameFontHighlight", 12, "TOPRIGHT", frame, "TOPRIGHT", -10, -10, "RIGHT")
 	frame.statusText = createText(frame, "OVERLAY", "GameFontHighlightSmall", 10, "TOPLEFT", frame.nameText, "BOTTOMLEFT", 0, -4, "LEFT")
 
-	frame.healthLabel = createText(frame, "OVERLAY", "GameFontNormalSmall", 11, "TOPLEFT", frame, "TOPLEFT", 64, -36, "LEFT")
+	frame.healthLabel = createText(frame, "OVERLAY", "GameFontNormalSmall", 11, "TOPLEFT", frame, "TOPLEFT", 64, -34, "LEFT")
 	frame.healthLabel:SetText("Health")
 	frame.healthBar = createBar(frame, 16, "TOPLEFT", frame.healthLabel, "BOTTOMLEFT", 0, -2)
 	frame.healthAccent = accent
 
-	frame.powerLabel = createText(frame, "OVERLAY", "GameFontNormalSmall", 11, "TOPLEFT", frame.healthBar, "BOTTOMLEFT", 0, -10, "LEFT")
+	frame.powerLabel = createText(frame, "OVERLAY", "GameFontNormalSmall", 11, "TOPLEFT", frame.healthBar, "BOTTOMLEFT", 0, -6, "LEFT")
 	frame.powerBar = createBar(frame, 14, "TOPLEFT", frame.powerLabel, "BOTTOMLEFT", 0, -2)
 
 	return frame
@@ -138,11 +138,11 @@ function Target:CreateCompactUnitFrame(key, unit, config, accent)
 	frame.levelText = createText(frame, "OVERLAY", "GameFontHighlightSmall", 10, "TOPRIGHT", frame, "TOPRIGHT", -8, -9, "RIGHT")
 	frame.statusText = nil
 
-	frame.healthBar = createBar(frame, 12, "TOPLEFT", frame, "TOPLEFT", 8, -24)
+	frame.healthBar = createBar(frame, 10, "TOPLEFT", frame, "TOPLEFT", 8, -22)
 	frame.healthBar:SetPoint("RIGHT", frame, "RIGHT", -8, 0)
 	frame.healthAccent = accent
 
-	frame.powerBar = createBar(frame, 10, "TOPLEFT", frame.healthBar, "BOTTOMLEFT", 0, -6)
+	frame.powerBar = createBar(frame, 8, "TOPLEFT", frame.healthBar, "BOTTOMLEFT", 0, -4)
 	frame.powerBar:SetPoint("RIGHT", frame, "RIGHT", -8, 0)
 	frame.powerLabel = nil
 	frame.healthLabel = nil

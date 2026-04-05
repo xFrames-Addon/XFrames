@@ -97,11 +97,11 @@ function Player:CreateFrame()
 	frame.levelText = createText(frame, "OVERLAY", "GameFontHighlight", 12, "TOPRIGHT", frame, "TOPRIGHT", -10, -10, "RIGHT")
 	frame.statusText = createText(frame, "OVERLAY", "GameFontHighlightSmall", 10, "TOPLEFT", frame.nameText, "BOTTOMLEFT", 0, -4, "LEFT")
 
-	frame.healthLabel = createText(frame, "OVERLAY", "GameFontNormalSmall", 11, "TOPLEFT", frame, "TOPLEFT", 64, -36, "LEFT")
+	frame.healthLabel = createText(frame, "OVERLAY", "GameFontNormalSmall", 11, "TOPLEFT", frame, "TOPLEFT", 64, -34, "LEFT")
 	frame.healthLabel:SetText("Health")
 	frame.healthBar = createBar(frame, 16, "TOPLEFT", frame.healthLabel, "BOTTOMLEFT", 0, -2)
 
-	frame.powerLabel = createText(frame, "OVERLAY", "GameFontNormalSmall", 11, "TOPLEFT", frame.healthBar, "BOTTOMLEFT", 0, -10, "LEFT")
+	frame.powerLabel = createText(frame, "OVERLAY", "GameFontNormalSmall", 11, "TOPLEFT", frame.healthBar, "BOTTOMLEFT", 0, -6, "LEFT")
 	frame.powerBar = createBar(frame, 14, "TOPLEFT", frame.powerLabel, "BOTTOMLEFT", 0, -2)
 
 	if config.castBar and config.castBar.enabled then
