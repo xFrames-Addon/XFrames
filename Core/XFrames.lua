@@ -791,6 +791,13 @@ function XFrames.events:PLAYER_LOGIN()
 	XFrames:InitializeUI()
 end
 
+function XFrames.events:PLAYER_ENTERING_WORLD()
+	if XFrames.initialized then
+		XFrames:ApplyBlizzardFrameVisibility()
+		XFrames:ApplyBlizzardCastBarVisibility()
+	end
+end
+
 function XFrames.events:PLAYER_REGEN_ENABLED()
 	if XFrames.pendingDiagnosticCVars then
 		XFrames.pendingDiagnosticCVars = nil
@@ -807,4 +814,5 @@ end)
 
 XFrames:RegisterEvent("ADDON_LOADED")
 XFrames:RegisterEvent("PLAYER_LOGIN")
+XFrames:RegisterEvent("PLAYER_ENTERING_WORLD")
 XFrames:RegisterEvent("PLAYER_REGEN_ENABLED")
