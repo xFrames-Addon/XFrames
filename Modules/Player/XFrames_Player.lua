@@ -100,8 +100,8 @@ local function getCastInfo(unit)
 	if name then
 		return {
 			name = name,
-			startTime = startTimeMS or 0,
-			endTime = endTimeMS or 0,
+			startTime = startTimeMS,
+			endTime = endTimeMS,
 			notInterruptible = notInterruptible,
 			channel = false,
 		}
@@ -111,8 +111,8 @@ local function getCastInfo(unit)
 	if channelName then
 		return {
 			name = channelName,
-			startTime = channelStartMS or 0,
-			endTime = channelEndMS or 0,
+			startTime = channelStartMS,
+			endTime = channelEndMS,
 			notInterruptible = channelNotInterruptible,
 			channel = true,
 		}
