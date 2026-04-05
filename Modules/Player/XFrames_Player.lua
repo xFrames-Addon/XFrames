@@ -83,7 +83,7 @@ function Player:CreateFrame()
 	end
 
 	local config = XFrames.db.profile.player
-	local frame = CreateFrame("Frame", "XFramesPlayerFrame", UIParent, "BackdropTemplate")
+	local frame = CreateFrame("Button", "XFramesPlayerFrame", UIParent, "SecureUnitButtonTemplate,BackdropTemplate")
 	frame:SetSize(config.width, config.height)
 	frame:SetScale(config.scale or 1)
 	frame:SetPoint(config.position.point, UIParent, config.position.relativePoint, config.position.x, config.position.y)
@@ -127,6 +127,7 @@ function Player:CreateFrame()
 	end
 
 	self.frame = frame
+	XFrames:RegisterInteractiveUnitFrame(frame, "player", false)
 	XFrames:RegisterMovableFrame(frame, config.position, "Player")
 	return frame
 end

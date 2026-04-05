@@ -76,7 +76,7 @@ function PlayerPet:CreateFrame()
 	end
 
 	local config = XFrames.db.profile.player.pet
-	local frame = CreateFrame("Frame", "XFramesPlayerPetFrame", UIParent, "BackdropTemplate")
+	local frame = CreateFrame("Button", "XFramesPlayerPetFrame", UIParent, "SecureUnitButtonTemplate,BackdropTemplate")
 	frame:SetSize(config.width, config.height)
 	frame:SetScale(config.scale or 1)
 	frame:SetPoint(config.position.point, UIParent, config.position.relativePoint, config.position.x, config.position.y)
@@ -104,6 +104,7 @@ function PlayerPet:CreateFrame()
 	frame.powerBar = createBar(frame, 9, "TOPLEFT", frame.healthBar, "BOTTOMLEFT", 0, -5)
 
 	self.frame = frame
+	XFrames:RegisterInteractiveUnitFrame(frame, "pet", true)
 	XFrames:RegisterMovableFrame(frame, config.position, "Pet")
 	return frame
 end
@@ -177,13 +178,13 @@ function PlayerPet:Refresh()
 			self:UpdatePortrait()
 			self:UpdateHealth()
 			self:UpdatePower()
-		else
-			self.frame:Hide()
 		end
 		return
 	end
 
-	self.frame:Show()
+	if XFrames:IsFramesUnlocked() then
+		self.frame:Show()
+	end
 	self:UpdateName()
 	self:UpdateStatus()
 	self:UpdatePortrait()

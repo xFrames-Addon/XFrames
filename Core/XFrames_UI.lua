@@ -6,6 +6,8 @@ local CreateFrame = CreateFrame
 local InCombatLockdown = InCombatLockdown
 local ReloadUI = ReloadUI
 local UIParent = UIParent
+local RegisterUnitWatch = RegisterUnitWatch
+local UnregisterUnitWatch = UnregisterUnitWatch
 
 local PANEL_BG = {0.08, 0.09, 0.11, 0.96}
 local PANEL_BORDER = {0.24, 0.27, 0.31, 0.95}
@@ -85,10 +87,42 @@ function XFrames:RefreshDragState(frame)
 	end
 
 	local unlocked = self:IsFramesUnlocked()
-	frame:EnableMouse(unlocked)
+	frame:EnableMouse(true)
+
+	if frame.xfUnitWatch then
+		if unlocked then
+			if frame.xfUnitWatchActive and not (InCombatLockdown and InCombatLockdown()) then
+				UnregisterUnitWatch(frame)
+				frame.xfUnitWatchActive = nil
+			end
+		elseif not frame.xfUnitWatchActive and not (InCombatLockdown and InCombatLockdown()) then
+			RegisterUnitWatch(frame)
+			frame.xfUnitWatchActive = true
+		end
+	end
 
 	if frame.xfDragOverlay then
 		frame.xfDragOverlay:SetShown(unlocked)
+	end
+end
+
+function XFrames:RegisterInteractiveUnitFrame(frame, unit, useUnitWatch)
+	if not frame or not unit or type(frame.SetAttribute) ~= "function" then
+		return
+	end
+
+	frame.unit = unit
+	frame:SetAttribute("unit", unit)
+	frame:SetAttribute("*type1", "target")
+	frame:SetAttribute("*type2", "togglemenu")
+	frame:RegisterForClicks("AnyUp")
+
+	if useUnitWatch then
+		frame.xfUnitWatch = true
+		if not frame.xfUnitWatchActive then
+			RegisterUnitWatch(frame)
+			frame.xfUnitWatchActive = true
+		end
 	end
 end
 
@@ -148,6 +182,11 @@ end
 function XFrames:SetFramesUnlocked(unlocked)
 	local ui = self:GetUISettings()
 	if not ui then
+		return
+	end
+
+	if InCombatLockdown and InCombatLockdown() then
+		self:Warn("Frame lock changes are unavailable in combat")
 		return
 	end
 

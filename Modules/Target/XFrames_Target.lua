@@ -93,7 +93,7 @@ end
 
 function Target:CreateUnitFrame(key, unit, config, accent)
 	local frameName = key == "focus" and "XFramesFocusFrame" or "XFramesTargetFrame"
-	local frame = CreateFrame("Frame", frameName, UIParent, "BackdropTemplate")
+	local frame = CreateFrame("Button", frameName, UIParent, "SecureUnitButtonTemplate,BackdropTemplate")
 	frame.unit = unit
 	frame.unitKey = key
 	frame.fallbackLabel = key == "focus" and "Focus" or "Target"
@@ -128,6 +128,7 @@ function Target:CreateUnitFrame(key, unit, config, accent)
 	frame.powerBar = createBar(frame, 12, "TOPLEFT", frame.healthBar, "BOTTOMLEFT", 0, -6)
 	frame.powerBar:SetPoint("RIGHT", frame, "RIGHT", -10, 0)
 
+	XFrames:RegisterInteractiveUnitFrame(frame, unit, true)
 	XFrames:RegisterMovableFrame(frame, config.position, frame.fallbackLabel)
 	return frame
 end
@@ -155,7 +156,7 @@ function Target:CreateCompactUnitFrame(key, unit, config, accent)
 		frameName = "XFramesFocusTargetFrame"
 	end
 
-	local frame = CreateFrame("Frame", frameName, UIParent, "BackdropTemplate")
+	local frame = CreateFrame("Button", frameName, UIParent, "SecureUnitButtonTemplate,BackdropTemplate")
 	frame.unit = unit
 	frame.unitKey = key
 	frame.fallbackLabel = key == "targettarget" and "ToT" or "FoT"
@@ -185,6 +186,7 @@ function Target:CreateCompactUnitFrame(key, unit, config, accent)
 	frame.powerBar = createBar(frame, 8, "TOPLEFT", frame.healthBar, "BOTTOMLEFT", 0, -4)
 	frame.powerBar:SetPoint("RIGHT", frame, "RIGHT", -8, 0)
 
+	XFrames:RegisterInteractiveUnitFrame(frame, unit, true)
 	XFrames:RegisterMovableFrame(frame, config.position, frame.fallbackLabel)
 	return frame
 end
@@ -290,13 +292,13 @@ function Target:RefreshFrame(frame)
 			self:UpdatePortrait(frame)
 			self:UpdateHealth(frame)
 			self:UpdatePower(frame)
-		else
-			frame:Hide()
 		end
 		return
 	end
 
-	frame:Show()
+	if XFrames:IsFramesUnlocked() then
+		frame:Show()
+	end
 	self:UpdateName(frame)
 	self:UpdateLevel(frame)
 	self:UpdateStatus(frame)
