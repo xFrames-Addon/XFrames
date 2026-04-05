@@ -1,0 +1,37 @@
+Message: module Player:Enable failed: ...ace/AddOns/XFrames/Modules/Player/XFrames_Player.lua:53: attempt to compare local 'value' (a secret number value tainted by 'XFrames')
+Time: Sun Apr  5 10:38:54 2026
+Count: 1
+Stack:
+[C]: in function 'xpcall'
+[Interface/AddOns/XFrames/Core/XFrames.lua]:115: in function 'SafeCall'
+[Interface/AddOns/XFrames/Core/XFrames.lua]:298: in function <Interface/AddOns/XFrames/Core/XFrames.lua:295>
+
+Locals:
+
+
+Message: module Player:OnEvent failed: ...ace/AddOns/XFrames/Modules/Player/XFrames_Player.lua:53: attempt to compare local 'value' (a secret number value tainted by 'XFrames')
+Time: Sun Apr  5 10:38:54 2026
+Count: 1
+Stack:
+[Interface/AddOns/XFrames/Core/XFrames.lua]:115: in function 'SafeCall'
+[Interface/AddOns/XFrames/Modules/Player/XFrames_Player.lua]:418: in function <...ace/AddOns/XFrames/Modules/Player/XFrames_Player.lua:417>
+
+Locals:
+self = Frame {
+ modules = <table> {
+ }
+ db = <table> {
+ }
+ initialized = true
+ name = "XFrames"
+ events = <table> {
+ }
+}
+scope = "module Player:OnEvent"
+args = <table> {
+ 1 = <table> {
+ }
+ 2 = "PLAYER_ENTERING_WORLD"
+ 3 = false
+ 4 = true
+}
