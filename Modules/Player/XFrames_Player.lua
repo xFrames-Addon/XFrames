@@ -8,8 +8,11 @@ local RAID_CLASS_COLORS = RAID_CLASS_COLORS
 local CreateFrame = CreateFrame
 local GetSpecialization = GetSpecialization
 local GetSpecializationInfo = GetSpecializationInfo
+local GetTime = GetTime
 local SetPortraitTexture = SetPortraitTexture
 local UnitClass = UnitClass
+local UnitCastingInfo = UnitCastingInfo
+local UnitChannelInfo = UnitChannelInfo
 local UnitHealth = UnitHealth
 local UnitHealthMax = UnitHealthMax
 local UnitName = UnitName
@@ -23,6 +26,9 @@ local BACKDROP_COLOR = {0.08, 0.09, 0.11, 0.92}
 local BORDER_COLOR = {0.24, 0.27, 0.31, 0.95}
 local POWER_BAR_COLOR = {r = 0.24, g = 0.28, b = 0.36}
 local PORTRAIT_BG_COLOR = {0.10, 0.11, 0.14, 0.98}
+local CAST_BAR_COLOR = {r = 0.86, g = 0.66, b = 0.22}
+local CHANNEL_BAR_COLOR = {r = 0.28, g = 0.56, b = 0.86}
+local LOCKED_BAR_COLOR = {r = 0.55, g = 0.55, b = 0.58}
 
 local function getStatusText()
 	local className = UnitClass("player")
@@ -90,6 +96,36 @@ local function createBackdropFrame(name, parent, width, height, anchorPoint, rel
 	return frame
 end
 
+local function getCastInfo(unit)
+	local name, _, _, startTimeMS, endTimeMS, _, _, notInterruptible = UnitCastingInfo(unit)
+	if name then
+		return {
+			name = name,
+			startTime = (startTimeMS or 0) / 1000,
+			endTime = (endTimeMS or 0) / 1000,
+			notInterruptible = notInterruptible,
+			channel = false,
+		}
+	end
+
+	local channelName, _, _, channelStartMS, channelEndMS, _, channelNotInterruptible = UnitChannelInfo(unit)
+	if channelName then
+		return {
+			name = channelName,
+			startTime = (channelStartMS or 0) / 1000,
+			endTime = (channelEndMS or 0) / 1000,
+			notInterruptible = channelNotInterruptible,
+			channel = true,
+		}
+	end
+
+	return nil
+end
+
+local function formatCastTime(seconds)
+	return string.format("%.1f", math.max(0, seconds or 0))
+end
+
 function Player:CreateFrame()
 	if self.frame then
 		return self.frame
@@ -131,23 +167,38 @@ function Player:CreateFrame()
 	frame.powerBar = createBar(frame, 12, "TOPLEFT", frame.healthBar, "BOTTOMLEFT", 0, -6)
 	frame.powerBar:SetPoint("RIGHT", frame, "RIGHT", -10, 0)
 
-	if config.castBar and config.castBar.enabled then
-		frame.castFrame = createBackdropFrame(nil, frame, config.castBar.width, config.castBar.height, "TOPLEFT", frame, "BOTTOMLEFT", 0, -8)
-		frame.castBar = createBar(frame.castFrame, config.castBar.height - 6, "TOPLEFT", frame.castFrame, "TOPLEFT", 3, -3)
-		frame.castBar:SetPoint("RIGHT", frame.castFrame, "RIGHT", -3, 0)
-		frame.castBar.valueText:Hide()
-		frame.castBar.percentText:Hide()
-		frame.castSpellText = createText(frame.castFrame, "OVERLAY", "GameFontHighlightSmall", 11, "LEFT", frame.castBar, "LEFT", 6, 0, "LEFT")
-		frame.castTimeText = createText(frame.castFrame, "OVERLAY", "GameFontHighlightSmall", 10, "RIGHT", frame.castBar, "RIGHT", -6, 0, "RIGHT")
-		frame.castSpellText:SetText("")
-		frame.castTimeText:SetText("")
-		frame.castFrame:Hide()
-	end
-
 	self.frame = frame
 	XFrames:RegisterInteractiveUnitFrame(frame, "player", false)
 	XFrames:RegisterMovableFrame(frame, config.position, "Player")
 	return frame
+end
+
+function Player:CreateCastFrame()
+	if self.castFrame then
+		return self.castFrame
+	end
+
+	local config = XFrames.db.profile.player.castBar
+	if not config or not config.enabled then
+		return nil
+	end
+
+	local castFrame = createBackdropFrame("XFramesPlayerCastFrame", UIParent, config.width, config.height, config.position.point, UIParent, config.position.relativePoint, config.position.x, config.position.y)
+	castFrame:SetFrameStrata("MEDIUM")
+	castFrame:SetBackdropColor(unpack(BACKDROP_COLOR))
+	castFrame.bar = createBar(castFrame, config.height - 6, "TOPLEFT", castFrame, "TOPLEFT", 3, -3)
+	castFrame.bar:SetPoint("RIGHT", castFrame, "RIGHT", -3, 0)
+	castFrame.bar.valueText:Hide()
+	castFrame.bar.percentText:Hide()
+	castFrame.spellText = createText(castFrame, "OVERLAY", "GameFontHighlightSmall", 11, "LEFT", castFrame.bar, "LEFT", 6, 0, "LEFT")
+	castFrame.timeText = createText(castFrame, "OVERLAY", "GameFontHighlightSmall", 10, "RIGHT", castFrame.bar, "RIGHT", -6, 0, "RIGHT")
+	castFrame.spellText:SetText("")
+	castFrame.timeText:SetText("")
+	castFrame:Hide()
+
+	self.castFrame = castFrame
+	XFrames:RegisterMovableFrame(castFrame, config.position, "Player Cast")
+	return castFrame
 end
 
 function Player:UpdatePortraitBorder()
@@ -230,19 +281,77 @@ function Player:UpdatePower()
 end
 
 function Player:StopCastBar()
-	if not self.frame or not self.frame.castFrame then
+	if not self.castFrame then
 		return
 	end
 
 	self.castState = nil
-	if self.frame.castFrame then
-		self.frame.castFrame:Hide()
-		self.frame.castFrame:SetScript("OnUpdate", nil)
-	end
+	self.castFrame:SetScript("OnUpdate", nil)
+	self:RefreshCastState()
 end
 
 function Player:RefreshCastState()
-	self:StopCastBar()
+	local castFrame = self.castFrame
+	if not castFrame then
+		return
+	end
+
+	local info = getCastInfo("player")
+	local unlocked = XFrames:IsFramesUnlocked()
+
+	if not info then
+		self.castState = nil
+		castFrame:SetScript("OnUpdate", nil)
+
+		if unlocked then
+			castFrame.bar:SetMinMaxValues(0, 1)
+			castFrame.bar:SetValue(0)
+			castFrame.bar:SetStatusBarColor(CAST_BAR_COLOR.r, CAST_BAR_COLOR.g, CAST_BAR_COLOR.b)
+			castFrame.spellText:SetText("Player Cast")
+			castFrame.timeText:SetText("")
+			castFrame:Show()
+		else
+			castFrame:Hide()
+		end
+		return
+	end
+
+	self.castState = info
+	castFrame:Show()
+	castFrame.bar:SetStatusBarColor(
+		(info.notInterruptible and LOCKED_BAR_COLOR or (info.channel and CHANNEL_BAR_COLOR or CAST_BAR_COLOR)).r,
+		(info.notInterruptible and LOCKED_BAR_COLOR or (info.channel and CHANNEL_BAR_COLOR or CAST_BAR_COLOR)).g,
+		(info.notInterruptible and LOCKED_BAR_COLOR or (info.channel and CHANNEL_BAR_COLOR or CAST_BAR_COLOR)).b
+	)
+
+	castFrame:SetScript("OnUpdate", function(_, _)
+		local active = self.castState
+		if not active then
+			self:RefreshCastState()
+			return
+		end
+
+		local now = GetTime()
+		local duration = math.max(0.001, active.endTime - active.startTime)
+		local elapsed = math.max(0, math.min(duration, now - active.startTime))
+		local remaining = math.max(0, active.endTime - now)
+
+		castFrame.bar:SetMinMaxValues(0, duration)
+		if active.channel then
+			castFrame.bar:SetValue(remaining)
+			castFrame.timeText:SetText(formatCastTime(remaining))
+		else
+			castFrame.bar:SetValue(elapsed)
+			castFrame.timeText:SetText(formatCastTime(remaining))
+		end
+
+		castFrame.spellText:SetText(active.name or "")
+
+		if remaining <= 0 then
+			self.castState = nil
+			self:RefreshCastState()
+		end
+	end)
 end
 
 function Player:Refresh()
@@ -318,6 +427,11 @@ function Player:OnEvent(event, unit)
 		return
 	end
 
+	if string.find(event, "^UNIT_SPELLCAST") then
+		self:RefreshCastState()
+		return
+	end
+
 	if event == "PLAYER_FLAGS_CHANGED" then
 		self:UpdateStatus()
 		self:UpdateRank()
@@ -341,6 +455,14 @@ function Player:RegisterEvents()
 	frame:RegisterUnitEvent("UNIT_POWER_UPDATE", "player")
 	frame:RegisterUnitEvent("UNIT_MAXPOWER", "player")
 	frame:RegisterUnitEvent("UNIT_DISPLAYPOWER", "player")
+	frame:RegisterUnitEvent("UNIT_SPELLCAST_START", "player")
+	frame:RegisterUnitEvent("UNIT_SPELLCAST_STOP", "player")
+	frame:RegisterUnitEvent("UNIT_SPELLCAST_FAILED", "player")
+	frame:RegisterUnitEvent("UNIT_SPELLCAST_INTERRUPTED", "player")
+	frame:RegisterUnitEvent("UNIT_SPELLCAST_DELAYED", "player")
+	frame:RegisterUnitEvent("UNIT_SPELLCAST_CHANNEL_START", "player")
+	frame:RegisterUnitEvent("UNIT_SPELLCAST_CHANNEL_UPDATE", "player")
+	frame:RegisterUnitEvent("UNIT_SPELLCAST_CHANNEL_STOP", "player")
 	frame:SetScript("OnEvent", function(_, event, ...)
 		XFrames:SafeCall("module Player:OnEvent", self.OnEvent, self, event, ...)
 	end)
@@ -356,6 +478,7 @@ function Player:Enable()
 	end
 
 	self:CreateFrame()
+	self:CreateCastFrame()
 	self:RegisterEvents()
 	self:RefreshPerformanceMode()
 	self:Refresh()
@@ -366,6 +489,9 @@ end
 function Player:ForEachFrame(callback)
 	if self.frame then
 		callback(self.frame)
+	end
+	if self.castFrame then
+		callback(self.castFrame)
 	end
 end
 

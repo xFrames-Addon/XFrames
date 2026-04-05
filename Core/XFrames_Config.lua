@@ -8,6 +8,7 @@ local defaults = {
 		ui = {
 			unlocked = false,
 			hideBlizzard = true,
+			hideBlizzardCastBars = true,
 			minimap = {
 				hide = false,
 			},
@@ -27,6 +28,12 @@ local defaults = {
 				enabled = true,
 				width = 240,
 				height = 20,
+				position = {
+					point = "CENTER",
+					relativePoint = "CENTER",
+					x = -360,
+					y = -286,
+				},
 			},
 			pet = {
 				enabled = true,
@@ -52,6 +59,17 @@ local defaults = {
 			width = 266,
 			height = 96,
 			scale = 1,
+			castBar = {
+				enabled = true,
+				width = 240,
+				height = 20,
+				position = {
+					point = "CENTER",
+					relativePoint = "CENTER",
+					x = 360,
+					y = -286,
+				},
+			},
 			position = {
 				point = "CENTER",
 				relativePoint = "CENTER",

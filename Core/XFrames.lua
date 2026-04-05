@@ -320,6 +320,24 @@ function XFrames:RegisterSlashCommands()
 			return
 		end
 
+		if command == "castbars" or command == "casts" then
+			arg = trim(arg)
+			if arg == "" or arg == "toggle" then
+				self:ToggleBlizzardCastBars()
+				return
+			end
+			if arg == "hide" or arg == "off" then
+				self:SetBlizzardCastBarsHidden(true)
+				return
+			end
+			if arg == "show" or arg == "on" then
+				self:SetBlizzardCastBarsHidden(false)
+				return
+			end
+			printf("|cff33ff99XFrames|r castbars commands: hide, show, toggle")
+			return
+		end
+
 		if command == "reload" then
 			ReloadUI()
 			return

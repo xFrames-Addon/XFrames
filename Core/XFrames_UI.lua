@@ -33,10 +33,10 @@ local BLIZZARD_UNIT_FRAME_NAMES = {
 	"PartyMemberFrame4",
 	"TargetFrameToT",
 	"FocusFrameToT",
+}
+local BLIZZARD_CAST_BAR_NAMES = {
 	"CastingBarFrame",
-	"PetCastingBarFrame",
 	"TargetFrameSpellBar",
-	"FocusFrameSpellBar",
 }
 
 local function createPanel(parent, width, height, anchorPoint, relativeTo, relativePoint, x, y)
@@ -83,6 +83,18 @@ end
 function XFrames:GetBlizzardUnitFrames()
 	local frames = {}
 	for _, frameName in ipairs(BLIZZARD_UNIT_FRAME_NAMES) do
+		local frame = _G[frameName]
+		if frame then
+			frames[#frames + 1] = frame
+		end
+	end
+
+	return frames
+end
+
+function XFrames:GetBlizzardCastBarFrames()
+	local frames = {}
+	for _, frameName in ipairs(BLIZZARD_CAST_BAR_NAMES) do
 		local frame = _G[frameName]
 		if frame then
 			frames[#frames + 1] = frame
@@ -290,6 +302,48 @@ function XFrames:ToggleBlizzardFrames()
 	self:SetBlizzardFramesHidden(not (ui and ui.hideBlizzard ~= false))
 end
 
+function XFrames:ApplyBlizzardCastBarVisibility()
+	local ui = self:GetUISettings()
+	if not ui then
+		return
+	end
+
+	local hidden = ui.hideBlizzardCastBars ~= false
+	for _, frame in ipairs(self:GetBlizzardCastBarFrames()) do
+		if hidden then
+			RegisterStateDriver(frame, "visibility", "hide")
+		else
+			UnregisterStateDriver(frame, "visibility")
+			if not (InCombatLockdown and InCombatLockdown()) then
+				frame:Show()
+			end
+		end
+	end
+
+	self:RefreshSettingsPanel()
+end
+
+function XFrames:SetBlizzardCastBarsHidden(hidden)
+	local ui = self:GetUISettings()
+	if not ui then
+		return
+	end
+
+	if InCombatLockdown and InCombatLockdown() then
+		self:Warn("Blizzard cast bar visibility cannot change in combat")
+		return
+	end
+
+	ui.hideBlizzardCastBars = not not hidden
+	self:Info(string.format("Blizzard cast bars %s", ui.hideBlizzardCastBars and "hidden" or "shown"))
+	self:ApplyBlizzardCastBarVisibility()
+end
+
+function XFrames:ToggleBlizzardCastBars()
+	local ui = self:GetUISettings()
+	self:SetBlizzardCastBarsHidden(not (ui and ui.hideBlizzardCastBars ~= false))
+end
+
 function XFrames:ToggleFrameLocks()
 	self:SetFramesUnlocked(not self:IsFramesUnlocked())
 end
@@ -299,7 +353,7 @@ function XFrames:CreateSettingsPanel()
 		return self.settingsFrame
 	end
 
-	local frame = createPanel(UIParent, 280, 186, "CENTER", UIParent, "CENTER", 0, 0)
+	local frame = createPanel(UIParent, 280, 214, "CENTER", UIParent, "CENTER", 0, 0)
 	frame:SetFrameStrata("DIALOG")
 	frame:Hide()
 
@@ -308,7 +362,7 @@ function XFrames:CreateSettingsPanel()
 
 	frame.statusText = createText(frame, "GameFontHighlight", 11, "TOPLEFT", frame.titleText, "BOTTOMLEFT", 0, -12, "LEFT")
 	frame.helpText = createText(frame, "GameFontHighlightSmall", 10, "TOPLEFT", frame.statusText, "BOTTOMLEFT", 0, -8, "LEFT")
-	frame.helpText:SetText("Unlock to drag frames with the left mouse button.")
+	frame.helpText:SetText("Unlock to drag frames and cast bars with the left mouse button.")
 	frame.partyModeText = createText(frame, "GameFontHighlightSmall", 10, "TOPLEFT", frame.helpText, "BOTTOMLEFT", 0, -12, "LEFT")
 
 	frame.lockButton = createButton(frame, "Unlock Frames", 118, "BOTTOMLEFT", frame, "BOTTOMLEFT", 12, 12, function()
@@ -324,6 +378,9 @@ function XFrames:CreateSettingsPanel()
 	end)
 	frame.blizzardButton = createButton(frame, "Hide Blizzard", 118, "TOPLEFT", frame.partyModeButton, "BOTTOMLEFT", 0, -10, function()
 		XFrames:ToggleBlizzardFrames()
+	end)
+	frame.castBarsButton = createButton(frame, "Hide Cast Bars", 118, "TOPLEFT", frame.blizzardButton, "BOTTOMLEFT", 0, -10, function()
+		XFrames:ToggleBlizzardCastBars()
 	end)
 	frame.reloadButton = createButton(frame, "Reload UI", 78, "LEFT", frame.lockButton, "RIGHT", 8, 0, function()
 		ReloadUI()
@@ -349,6 +406,7 @@ function XFrames:RefreshSettingsPanel()
 	self.settingsFrame.partyModeText:SetText(string.format("Party subtitles: %s", self:GetPartySubtitleMode()))
 	self.settingsFrame.partyModeButton:SetText(self:GetPartySubtitleMode() == "performance" and "Party: Performance" or "Party: Status")
 	self.settingsFrame.blizzardButton:SetText(ui and ui.hideBlizzard ~= false and "Show Blizzard" or "Hide Blizzard")
+	self.settingsFrame.castBarsButton:SetText(ui and ui.hideBlizzardCastBars ~= false and "Show Cast Bars" or "Hide Cast Bars")
 end
 
 function XFrames:ToggleSettings()
@@ -414,5 +472,6 @@ function XFrames:InitializeUI()
 	self:CreateSettingsPanel()
 	self:CreateMinimapButton()
 	self:ApplyBlizzardFrameVisibility()
+	self:ApplyBlizzardCastBarVisibility()
 	self:RefreshAllFrameLocks()
 end

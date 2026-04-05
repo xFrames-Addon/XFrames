@@ -10,10 +10,13 @@ local CanInspect = CanInspect
 local ClearInspectPlayer = ClearInspectPlayer
 local GetInspectSpecialization = GetInspectSpecialization
 local GetSpecializationInfoByID = GetSpecializationInfoByID
+local GetTime = GetTime
 local InCombatLockdown = InCombatLockdown
 local NotifyInspect = NotifyInspect
 local SetPortraitTexture = SetPortraitTexture
 local UnitClass = UnitClass
+local UnitCastingInfo = UnitCastingInfo
+local UnitChannelInfo = UnitChannelInfo
 local UnitCreatureType = UnitCreatureType
 local UnitExists = UnitExists
 local UnitHealth = UnitHealth
@@ -33,6 +36,10 @@ local BACKDROP_COLOR = {0.08, 0.09, 0.11, 0.92}
 local BORDER_COLOR = {0.24, 0.27, 0.31, 0.95}
 local POWER_BAR_COLOR = {r = 0.24, g = 0.28, b = 0.36}
 local PORTRAIT_BG_COLOR = {0.10, 0.11, 0.14, 0.98}
+local CAST_BAR_COLOR = {r = 0.86, g = 0.66, b = 0.22}
+local CHANNEL_BAR_COLOR = {r = 0.28, g = 0.56, b = 0.86}
+local LOCKED_BAR_COLOR = {r = 0.55, g = 0.55, b = 0.58}
+local INTERRUPT_BORDER_COLOR = {r = 0.90, g = 0.24, b = 0.20}
 
 local function createText(parent, layer, template, size, anchorPoint, relativeTo, relativePoint, x, y, justify)
 	local text = parent:CreateFontString(nil, layer, template)
@@ -84,6 +91,36 @@ local function createBackdropFrame(name, parent, width, height, anchorPoint, rel
 	frame:SetBackdropColor(unpack(PORTRAIT_BG_COLOR))
 	frame:SetBackdropBorderColor(unpack(BORDER_COLOR))
 	return frame
+end
+
+local function getCastInfo(unit)
+	local name, _, _, startTimeMS, endTimeMS, _, _, notInterruptible = UnitCastingInfo(unit)
+	if name then
+		return {
+			name = name,
+			startTime = (startTimeMS or 0) / 1000,
+			endTime = (endTimeMS or 0) / 1000,
+			notInterruptible = notInterruptible,
+			channel = false,
+		}
+	end
+
+	local channelName, _, _, channelStartMS, channelEndMS, _, channelNotInterruptible = UnitChannelInfo(unit)
+	if channelName then
+		return {
+			name = channelName,
+			startTime = (channelStartMS or 0) / 1000,
+			endTime = (channelEndMS or 0) / 1000,
+			notInterruptible = channelNotInterruptible,
+			channel = true,
+		}
+	end
+
+	return nil
+end
+
+local function formatCastTime(seconds)
+	return string.format("%.1f", math.max(0, seconds or 0))
 end
 
 local function getStatusText(unit, fallbackLabel)
@@ -157,8 +194,41 @@ function Target:UpdatePortraitBorder(frame)
 end
 
 function Target:UpdateFrameBorder(frame)
+	if frame == self.targetFrame and self.castState and not self.castState.notInterruptible and UnitExists("target") then
+		frame.accentFrame:SetBackdropBorderColor(INTERRUPT_BORDER_COLOR.r, INTERRUPT_BORDER_COLOR.g, INTERRUPT_BORDER_COLOR.b, 1)
+		return
+	end
+
 	local color = XFrames:GetUnitAccentColor(frame.unit)
 	frame.accentFrame:SetBackdropBorderColor(color.r, color.g, color.b, 1)
+end
+
+function Target:CreateTargetCastFrame()
+	if self.castFrame then
+		return self.castFrame
+	end
+
+	local config = XFrames.db.profile.target.castBar
+	if not config or not config.enabled then
+		return nil
+	end
+
+	local castFrame = createBackdropFrame("XFramesTargetCastFrame", UIParent, config.width, config.height, config.position.point, UIParent, config.position.relativePoint, config.position.x, config.position.y)
+	castFrame:SetFrameStrata("MEDIUM")
+	castFrame:SetBackdropColor(unpack(BACKDROP_COLOR))
+	castFrame.bar = createBar(castFrame, config.height - 6, "TOPLEFT", castFrame, "TOPLEFT", 3, -3)
+	castFrame.bar:SetPoint("RIGHT", castFrame, "RIGHT", -3, 0)
+	castFrame.bar.valueText:Hide()
+	castFrame.bar.percentText:Hide()
+	castFrame.spellText = createText(castFrame, "OVERLAY", "GameFontHighlightSmall", 11, "LEFT", castFrame.bar, "LEFT", 6, 0, "LEFT")
+	castFrame.timeText = createText(castFrame, "OVERLAY", "GameFontHighlightSmall", 10, "RIGHT", castFrame.bar, "RIGHT", -6, 0, "RIGHT")
+	castFrame.spellText:SetText("")
+	castFrame.timeText:SetText("")
+	castFrame:Hide()
+
+	self.castFrame = castFrame
+	XFrames:RegisterMovableFrame(castFrame, config.position, "Target Cast")
+	return castFrame
 end
 
 function Target:CreateCompactUnitFrame(key, unit, config, accent)
@@ -380,6 +450,72 @@ function Target:UpdatePower(frame)
 	XFrames:SetBarValues(bar, value, maxValue)
 end
 
+function Target:RefreshCastState()
+	local castFrame = self.castFrame
+	if not castFrame then
+		return
+	end
+
+	local info = getCastInfo("target")
+	local unlocked = XFrames:IsFramesUnlocked()
+
+	if not info then
+		self.castState = nil
+		castFrame:SetScript("OnUpdate", nil)
+		if self.targetFrame then
+			self:UpdateFrameBorder(self.targetFrame)
+		end
+
+		if unlocked then
+			castFrame.bar:SetMinMaxValues(0, 1)
+			castFrame.bar:SetValue(0)
+			castFrame.bar:SetStatusBarColor(CAST_BAR_COLOR.r, CAST_BAR_COLOR.g, CAST_BAR_COLOR.b)
+			castFrame.spellText:SetText("Target Cast")
+			castFrame.timeText:SetText("")
+			castFrame:Show()
+		else
+			castFrame:Hide()
+		end
+		return
+	end
+
+	self.castState = info
+	castFrame:Show()
+	if self.targetFrame then
+		self:UpdateFrameBorder(self.targetFrame)
+	end
+
+	local color = info.notInterruptible and LOCKED_BAR_COLOR or (info.channel and CHANNEL_BAR_COLOR or CAST_BAR_COLOR)
+	castFrame.bar:SetStatusBarColor(color.r, color.g, color.b)
+	castFrame:SetScript("OnUpdate", function(_, _)
+		local active = self.castState
+		if not active then
+			self:RefreshCastState()
+			return
+		end
+
+		local now = GetTime()
+		local duration = math.max(0.001, active.endTime - active.startTime)
+		local elapsed = math.max(0, math.min(duration, now - active.startTime))
+		local remaining = math.max(0, active.endTime - now)
+
+		castFrame.bar:SetMinMaxValues(0, duration)
+		if active.channel then
+			castFrame.bar:SetValue(remaining)
+		else
+			castFrame.bar:SetValue(elapsed)
+		end
+
+		castFrame.spellText:SetText(active.name or "")
+		castFrame.timeText:SetText(formatCastTime(remaining))
+
+		if remaining <= 0 then
+			self.castState = nil
+			self:RefreshCastState()
+		end
+	end)
+end
+
 function Target:RefreshFrame(frame)
 	if not frame then
 		return
@@ -422,6 +558,7 @@ function Target:RefreshAll()
 	self:RefreshFrame(self.focusFrame)
 	self:RefreshFrame(self.targetTargetFrame)
 	self:RefreshFrame(self.focusTargetFrame)
+	self:RefreshCastState()
 end
 
 function Target:OnEvent(event, unit)
@@ -438,6 +575,7 @@ function Target:OnEvent(event, unit)
 	if event == "PLAYER_TARGET_CHANGED" then
 		self:RefreshFrame(self.targetFrame)
 		self:RefreshFrame(self.targetTargetFrame)
+		self:RefreshCastState()
 		return
 	end
 
@@ -459,6 +597,10 @@ function Target:OnEvent(event, unit)
 	end
 
 	if unit == "target" then
+		if string.find(event, "^UNIT_SPELLCAST") then
+			self:RefreshCastState()
+			return
+		end
 		self:RefreshFrame(self.targetFrame)
 		return
 	end
@@ -497,6 +639,14 @@ function Target:RegisterEvents()
 	frame:RegisterUnitEvent("UNIT_POWER_UPDATE", "target", "focus", "targettarget", "focustarget")
 	frame:RegisterUnitEvent("UNIT_MAXPOWER", "target", "focus", "targettarget", "focustarget")
 	frame:RegisterUnitEvent("UNIT_DISPLAYPOWER", "target", "focus", "targettarget", "focustarget")
+	frame:RegisterUnitEvent("UNIT_SPELLCAST_START", "target")
+	frame:RegisterUnitEvent("UNIT_SPELLCAST_STOP", "target")
+	frame:RegisterUnitEvent("UNIT_SPELLCAST_FAILED", "target")
+	frame:RegisterUnitEvent("UNIT_SPELLCAST_INTERRUPTED", "target")
+	frame:RegisterUnitEvent("UNIT_SPELLCAST_DELAYED", "target")
+	frame:RegisterUnitEvent("UNIT_SPELLCAST_CHANNEL_START", "target")
+	frame:RegisterUnitEvent("UNIT_SPELLCAST_CHANNEL_UPDATE", "target")
+	frame:RegisterUnitEvent("UNIT_SPELLCAST_CHANNEL_STOP", "target")
 	frame:SetScript("OnEvent", function(_, event, ...)
 		XFrames:SafeCall("module Target:OnEvent", self.OnEvent, self, event, ...)
 	end)
@@ -515,6 +665,7 @@ function Target:Enable()
 	end
 
 	self.targetFrame = self:CreateUnitFrame("target", "target", XFrames.db.profile.target, HEALTH_BAR_COLOR)
+	self:CreateTargetCastFrame()
 	if self.focusEnabled then
 		self.focusFrame = self:CreateUnitFrame("focus", "focus", XFrames.db.profile.target.focus, FOCUS_HEALTH_BAR_COLOR)
 	end
@@ -527,6 +678,7 @@ function Target:Enable()
 	self.eventFrame = self.eventFrame or CreateFrame("Frame")
 	self:RegisterEvents()
 	self:RefreshAll()
+	self:RefreshCastState()
 	XFrames:Info("Target shell enabled")
 	if self.focusFrame then
 		XFrames:Info("Focus shell enabled")
@@ -542,6 +694,9 @@ end
 function Target:ForEachFrame(callback)
 	if self.targetFrame then
 		callback(self.targetFrame)
+	end
+	if self.castFrame then
+		callback(self.castFrame)
 	end
 	if self.focusFrame then
 		callback(self.focusFrame)
