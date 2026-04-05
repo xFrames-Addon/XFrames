@@ -84,6 +84,7 @@ function Party:CreateAnchorFrame()
 	frame:SetScale(config.scale or 1)
 	frame:SetPoint(config.position.point, UIParent, config.position.relativePoint, config.position.x, config.position.y)
 	frame:SetFrameStrata("MEDIUM")
+	frame:SetFrameLevel(20)
 	frame:Hide()
 
 	self.anchorFrame = frame
@@ -106,6 +107,8 @@ function Party:CreateUnitFrame(index)
 	frame.fallbackLabel = fallbackLabel
 	frame:SetSize(config.width, config.height)
 	frame:SetPoint("TOPLEFT", anchor, "TOPLEFT", 0, -((index - 1) * (config.height + config.spacing)))
+	frame:SetFrameStrata("MEDIUM")
+	frame:SetFrameLevel(anchor:GetFrameLevel() + index)
 	frame:SetBackdrop({
 		bgFile = "Interface\\Buttons\\WHITE8x8",
 		edgeFile = "Interface\\Buttons\\WHITE8x8",
@@ -131,7 +134,7 @@ function Party:CreateUnitFrame(index)
 	frame.powerBar = createBar(frame, 9, "TOPLEFT", frame.healthBar, "BOTTOMLEFT", 0, -5)
 
 	self.frames[index] = frame
-	XFrames:RegisterInteractiveUnitFrame(frame, unit, true)
+	XFrames:RegisterInteractiveUnitFrame(frame, unit, false)
 	return frame
 end
 
