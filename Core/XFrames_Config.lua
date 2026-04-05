@@ -19,7 +19,7 @@ local defaults = {
 		},
 		player = {
 			enabled = true,
-			width = 240,
+			width = 256,
 			height = 96,
 			scale = 1,
 			castBar = {
@@ -48,7 +48,7 @@ local defaults = {
 		},
 		target = {
 			enabled = true,
-			width = 240,
+			width = 256,
 			height = 96,
 			scale = 1,
 			position = {
@@ -59,7 +59,7 @@ local defaults = {
 			},
 			focus = {
 				enabled = true,
-				width = 220,
+				width = 236,
 				height = 90,
 				scale = 0.95,
 				position = {
