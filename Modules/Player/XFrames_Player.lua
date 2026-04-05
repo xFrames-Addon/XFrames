@@ -127,6 +127,7 @@ function Player:CreateFrame()
 	end
 
 	self.frame = frame
+	XFrames:RegisterMovableFrame(frame, config.position, "Player")
 	return frame
 end
 
@@ -286,6 +287,12 @@ function Player:Enable()
 	self:Refresh()
 	self.frame:Show()
 	XFrames:Info("Player shell enabled")
+end
+
+function Player:ForEachFrame(callback)
+	if self.frame then
+		callback(self.frame)
+	end
 end
 
 XFrames:RegisterModule("Player", Player)

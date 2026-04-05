@@ -128,6 +128,7 @@ function Target:CreateUnitFrame(key, unit, config, accent)
 	frame.powerBar = createBar(frame, 12, "TOPLEFT", frame.healthBar, "BOTTOMLEFT", 0, -6)
 	frame.powerBar:SetPoint("RIGHT", frame, "RIGHT", -10, 0)
 
+	XFrames:RegisterMovableFrame(frame, config.position, frame.fallbackLabel)
 	return frame
 end
 
@@ -184,6 +185,7 @@ function Target:CreateCompactUnitFrame(key, unit, config, accent)
 	frame.powerBar = createBar(frame, 8, "TOPLEFT", frame.healthBar, "BOTTOMLEFT", 0, -4)
 	frame.powerBar:SetPoint("RIGHT", frame, "RIGHT", -8, 0)
 
+	XFrames:RegisterMovableFrame(frame, config.position, frame.fallbackLabel)
 	return frame
 end
 
@@ -207,6 +209,11 @@ function Target:UpdateName(frame)
 end
 
 function Target:UpdateLevel(frame)
+	if not UnitExists(frame.unit) then
+		frame.levelText:SetText("")
+		return
+	end
+
 	XFrames:SetValueText(frame.levelText, UnitLevel(frame.unit))
 end
 
@@ -234,6 +241,15 @@ end
 function Target:UpdateHealth(frame)
 	local bar = frame.healthBar
 	local accent = frame.healthAccent or HEALTH_BAR_COLOR
+
+	if not UnitExists(frame.unit) then
+		bar:SetStatusBarColor(accent.r, accent.g, accent.b)
+		bar:SetMinMaxValues(0, 1)
+		bar:SetValue(0)
+		bar.valueText:SetText("")
+		return
+	end
+
 	local value = UnitHealth(frame.unit)
 	local maxValue = UnitHealthMax(frame.unit)
 
@@ -243,9 +259,18 @@ end
 
 function Target:UpdatePower(frame)
 	local bar = frame.powerBar
+	local _, color = XFrames:GetUnitPowerPresentation(frame.unit, frame.isCompact)
+
+	if not UnitExists(frame.unit) then
+		bar:SetStatusBarColor(color.r, color.g, color.b)
+		bar:SetMinMaxValues(0, 1)
+		bar:SetValue(0)
+		bar.valueText:SetText("")
+		return
+	end
+
 	local value = UnitPower(frame.unit)
 	local maxValue = UnitPowerMax(frame.unit)
-	local _, color = XFrames:GetUnitPowerPresentation(frame.unit, frame.isCompact)
 
 	bar:SetStatusBarColor(color.r, color.g, color.b)
 	XFrames:SetBarValues(bar, value, maxValue)
@@ -257,7 +282,17 @@ function Target:RefreshFrame(frame)
 	end
 
 	if not UnitExists(frame.unit) then
-		frame:Hide()
+		if XFrames:IsFramesUnlocked() then
+			frame:Show()
+			self:UpdateName(frame)
+			self:UpdateLevel(frame)
+			self:UpdateStatus(frame)
+			self:UpdatePortrait(frame)
+			self:UpdateHealth(frame)
+			self:UpdatePower(frame)
+		else
+			frame:Hide()
+		end
 		return
 	end
 
@@ -377,6 +412,21 @@ function Target:Enable()
 	end
 	if self.focusTargetFrame then
 		XFrames:Info("Focus-target shell enabled")
+	end
+end
+
+function Target:ForEachFrame(callback)
+	if self.targetFrame then
+		callback(self.targetFrame)
+	end
+	if self.focusFrame then
+		callback(self.focusFrame)
+	end
+	if self.targetTargetFrame then
+		callback(self.targetTargetFrame)
+	end
+	if self.focusTargetFrame then
+		callback(self.focusTargetFrame)
 	end
 end
 

@@ -104,6 +104,7 @@ function PlayerPet:CreateFrame()
 	frame.powerBar = createBar(frame, 9, "TOPLEFT", frame.healthBar, "BOTTOMLEFT", 0, -5)
 
 	self.frame = frame
+	XFrames:RegisterMovableFrame(frame, config.position, "Pet")
 	return frame
 end
 
@@ -132,6 +133,13 @@ end
 
 function PlayerPet:UpdateHealth()
 	local bar = self.frame.healthBar
+	if not UnitExists("pet") then
+		bar:SetMinMaxValues(0, 1)
+		bar:SetValue(0)
+		bar.valueText:SetText("")
+		return
+	end
+
 	local value = UnitHealth("pet")
 	local maxValue = UnitHealthMax("pet")
 
@@ -141,6 +149,13 @@ end
 
 function PlayerPet:UpdatePower()
 	local bar = self.frame.powerBar
+	if not UnitExists("pet") then
+		bar:SetMinMaxValues(0, 1)
+		bar:SetValue(0)
+		bar.valueText:SetText("")
+		return
+	end
+
 	local value = UnitPower("pet")
 	local maxValue = UnitPowerMax("pet")
 	local _, color = XFrames:GetUnitPowerPresentation("pet", true)
@@ -155,7 +170,16 @@ function PlayerPet:Refresh()
 	end
 
 	if not UnitExists("pet") then
-		self.frame:Hide()
+		if XFrames:IsFramesUnlocked() then
+			self.frame:Show()
+			self:UpdateName()
+			self:UpdateStatus()
+			self:UpdatePortrait()
+			self:UpdateHealth()
+			self:UpdatePower()
+		else
+			self.frame:Hide()
+		end
 		return
 	end
 
@@ -209,6 +233,12 @@ function PlayerPet:Enable()
 	self:RegisterEvents()
 	self:Refresh()
 	XFrames:Info("Player pet shell enabled")
+end
+
+function PlayerPet:ForEachFrame(callback)
+	if self.frame then
+		callback(self.frame)
+	end
 end
 
 XFrames:RegisterModule("PlayerPet", PlayerPet)

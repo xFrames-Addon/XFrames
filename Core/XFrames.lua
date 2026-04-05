@@ -10,6 +10,7 @@ XFrames.events = {}
 local InCombatLockdown = InCombatLockdown
 local date = date
 local geterrorhandler = geterrorhandler
+local ReloadUI = ReloadUI
 local pairs = pairs
 local select = select
 local string = string
@@ -243,7 +244,32 @@ function XFrames:RegisterSlashCommands()
 		command = command or ""
 
 		if command == "status" or msg == "" then
-			printf("|cff33ff99XFrames|r loaded. Modules: %d. Debug: %s", self:CountModules(), self:IsDebugEnabled() and "on" or "off")
+			printf("|cff33ff99XFrames|r loaded. Modules: %d. Debug: %s. Frames: %s", self:CountModules(), self:IsDebugEnabled() and "on" or "off", self:IsFramesUnlocked() and "unlocked" or "locked")
+			return
+		end
+
+		if command == "settings" or command == "config" then
+			self:ToggleSettings()
+			return
+		end
+
+		if command == "lock" then
+			self:SetFramesUnlocked(false)
+			return
+		end
+
+		if command == "unlock" then
+			self:SetFramesUnlocked(true)
+			return
+		end
+
+		if command == "toggle" then
+			self:ToggleFrameLocks()
+			return
+		end
+
+		if command == "reload" then
+			ReloadUI()
 			return
 		end
 
@@ -281,7 +307,7 @@ function XFrames:RegisterSlashCommands()
 			return
 		end
 
-		printf("|cff33ff99XFrames|r commands: status, debug")
+		printf("|cff33ff99XFrames|r commands: status, settings, lock, unlock, toggle, reload, debug")
 	end
 end
 
@@ -352,6 +378,7 @@ end
 function XFrames.events:PLAYER_LOGIN()
 	XFrames:ApplyDiagnosticCVars()
 	XFrames:ForEachModule("Enable")
+	XFrames:InitializeUI()
 end
 
 function XFrames.events:PLAYER_REGEN_ENABLED()

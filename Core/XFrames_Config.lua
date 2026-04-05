@@ -5,6 +5,12 @@ local XFrames = ns.XFrames
 local defaults = {
 	profile = {
 		debug = false,
+		ui = {
+			unlocked = false,
+			minimap = {
+				hide = false,
+			},
+		},
 		diagnostics = {
 			autoEnableCVars = false,
 			taintLogLevel = "5",
