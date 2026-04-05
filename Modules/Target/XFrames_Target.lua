@@ -10,8 +10,13 @@ local SetPortraitTexture = SetPortraitTexture
 local UnitClass = UnitClass
 local UnitCreatureType = UnitCreatureType
 local UnitExists = UnitExists
+local UnitHealth = UnitHealth
+local UnitHealthMax = UnitHealthMax
 local UnitIsPlayer = UnitIsPlayer
+local UnitLevel = UnitLevel
 local UnitName = UnitName
+local UnitPower = UnitPower
+local UnitPowerMax = UnitPowerMax
 
 local HEALTH_BAR_COLOR = {r = 0.33, g = 0.24, b = 0.24}
 local FOCUS_HEALTH_BAR_COLOR = {r = 0.33, g = 0.30, b = 0.22}
@@ -21,8 +26,6 @@ local BACKDROP_COLOR = {0.08, 0.09, 0.11, 0.92}
 local BORDER_COLOR = {0.24, 0.27, 0.31, 0.95}
 local POWER_BAR_COLOR = {r = 0.24, g = 0.28, b = 0.36}
 local PORTRAIT_BG_COLOR = {0.10, 0.11, 0.14, 0.98}
-local PLACEHOLDER_BAR_VALUE = 0.62
-local PLACEHOLDER_VALUE_TEXT = "Restricted"
 
 local function createText(parent, layer, template, size, anchorPoint, relativeTo, relativePoint, x, y, justify)
 	local text = parent:CreateFontString(nil, layer, template)
@@ -207,7 +210,7 @@ function Target:UpdateName(frame)
 end
 
 function Target:UpdateLevel(frame)
-	frame.levelText:SetText("")
+	XFrames:SetValueText(frame.levelText, UnitLevel(frame.unit))
 end
 
 function Target:UpdateStatus(frame)
@@ -234,30 +237,27 @@ end
 function Target:UpdateHealth(frame)
 	local bar = frame.healthBar
 	local accent = frame.healthAccent or HEALTH_BAR_COLOR
+	local value = UnitHealth(frame.unit)
+	local maxValue = UnitHealthMax(frame.unit)
 
 	bar:SetStatusBarColor(accent.r, accent.g, accent.b)
-	bar:SetMinMaxValues(0, 1)
-	bar:SetValue(PLACEHOLDER_BAR_VALUE)
 	if frame.isCompact then
 		bar.labelText:SetText("HP")
 	else
 		bar.labelText:SetText("Health")
 	end
-	bar.valueText:SetText(PLACEHOLDER_VALUE_TEXT)
+	XFrames:SetBarValues(bar, value, maxValue)
 end
 
 function Target:UpdatePower(frame)
 	local bar = frame.powerBar
+	local value = UnitPower(frame.unit)
+	local maxValue = UnitPowerMax(frame.unit)
+	local label, color = XFrames:GetUnitPowerPresentation(frame.unit, frame.isCompact)
 
-	if frame.isCompact then
-		bar.labelText:SetText("PW")
-	else
-		bar.labelText:SetText("Power")
-	end
-	bar:SetStatusBarColor(POWER_BAR_COLOR.r, POWER_BAR_COLOR.g, POWER_BAR_COLOR.b)
-	bar:SetMinMaxValues(0, 1)
-	bar:SetValue(PLACEHOLDER_BAR_VALUE)
-	bar.valueText:SetText(PLACEHOLDER_VALUE_TEXT)
+	bar.labelText:SetText(label)
+	bar:SetStatusBarColor(color.r, color.g, color.b)
+	XFrames:SetBarValues(bar, value, maxValue)
 end
 
 function Target:RefreshFrame(frame)
@@ -339,8 +339,14 @@ function Target:RegisterEvents()
 	frame:RegisterEvent("PLAYER_TARGET_CHANGED")
 	frame:RegisterEvent("PLAYER_FOCUS_CHANGED")
 	frame:RegisterUnitEvent("UNIT_TARGET", "target", "focus")
+	frame:RegisterUnitEvent("UNIT_HEALTH", "target", "focus", "targettarget", "focustarget")
+	frame:RegisterUnitEvent("UNIT_MAXHEALTH", "target", "focus", "targettarget", "focustarget")
+	frame:RegisterUnitEvent("UNIT_LEVEL", "target", "focus", "targettarget", "focustarget")
 	frame:RegisterUnitEvent("UNIT_NAME_UPDATE", "target", "focus", "targettarget", "focustarget")
 	frame:RegisterUnitEvent("UNIT_PORTRAIT_UPDATE", "target", "focus", "targettarget", "focustarget")
+	frame:RegisterUnitEvent("UNIT_POWER_UPDATE", "target", "focus", "targettarget", "focustarget")
+	frame:RegisterUnitEvent("UNIT_MAXPOWER", "target", "focus", "targettarget", "focustarget")
+	frame:RegisterUnitEvent("UNIT_DISPLAYPOWER", "target", "focus", "targettarget", "focustarget")
 	frame:SetScript("OnEvent", function(_, event, ...)
 		XFrames:SafeCall("module Target:OnEvent", self.OnEvent, self, event, ...)
 	end)

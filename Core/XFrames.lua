@@ -15,6 +15,28 @@ local select = select
 local string = string
 local tostring = tostring
 local tinsert = table.insert
+local UnitPowerType = UnitPowerType
+
+local DEFAULT_POWER_BAR_COLOR = {r = 0.24, g = 0.28, b = 0.36}
+local POWER_LABELS = {
+	MANA = "Mana",
+	RAGE = "Rage",
+	FOCUS = "Focus",
+	ENERGY = "Energy",
+	COMBO_POINTS = "Combo",
+	RUNES = "Runes",
+	RUNIC_POWER = "Runic",
+	SOUL_SHARDS = "Shards",
+	LUNAR_POWER = "Astral",
+	HOLY_POWER = "Holy",
+	MAELSTROM = "Maelstrom",
+	CHI = "Chi",
+	INSANITY = "Insanity",
+	ARCANE_CHARGES = "Arcane",
+	FURY = "Fury",
+	PAIN = "Pain",
+	ESSENCE = "Essence",
+}
 
 local function printf(...)
 	if DEFAULT_CHAT_FRAME then
@@ -270,6 +292,53 @@ function XFrames:CountModules()
 	end
 
 	return count
+end
+
+function XFrames:SetValueText(fontString, value, maxValue)
+	if not fontString then
+		return
+	end
+
+	if value == nil then
+		fontString:SetText("")
+		return
+	end
+
+	if maxValue ~= nil then
+		fontString:SetText(string.format("%s / %s", value, maxValue))
+		return
+	end
+
+	fontString:SetText(string.format("%s", value))
+end
+
+function XFrames:SetBarValues(bar, value, maxValue)
+	if not bar then
+		return
+	end
+
+	if maxValue ~= nil then
+		bar:SetMinMaxValues(0, maxValue)
+	else
+		bar:SetMinMaxValues(0, 1)
+	end
+
+	bar:SetValue(value or 0)
+	self:SetValueText(bar.valueText, value, maxValue)
+end
+
+function XFrames:GetUnitPowerPresentation(unit, compact)
+	local _, powerToken = UnitPowerType(unit)
+	local color = powerToken and PowerBarColor and PowerBarColor[powerToken]
+	local label
+
+	if compact then
+		label = "PW"
+	else
+		label = powerToken and POWER_LABELS[powerToken] or "Power"
+	end
+
+	return label or "Power", color or DEFAULT_POWER_BAR_COLOR
 end
 
 function XFrames.events:ADDON_LOADED(loadedAddon)

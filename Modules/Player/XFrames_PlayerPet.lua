@@ -6,15 +6,17 @@ local PlayerPet = {}
 local CreateFrame = CreateFrame
 local SetPortraitTexture = SetPortraitTexture
 local UnitExists = UnitExists
+local UnitHealth = UnitHealth
+local UnitHealthMax = UnitHealthMax
 local UnitName = UnitName
+local UnitPower = UnitPower
+local UnitPowerMax = UnitPowerMax
 
 local BACKDROP_COLOR = {0.08, 0.09, 0.11, 0.92}
 local BORDER_COLOR = {0.24, 0.27, 0.31, 0.95}
 local HEALTH_BAR_COLOR = {r = 0.26, g = 0.34, b = 0.24}
 local POWER_BAR_COLOR = {r = 0.23, g = 0.27, b = 0.35}
 local PORTRAIT_BG_COLOR = {0.10, 0.11, 0.14, 0.98}
-local PLACEHOLDER_BAR_VALUE = 0.6
-local PLACEHOLDER_VALUE_TEXT = "Restricted"
 
 local function createText(parent, layer, template, size, anchorPoint, relativeTo, relativePoint, x, y, justify)
 	local text = parent:CreateFontString(nil, layer, template)
@@ -131,22 +133,23 @@ end
 
 function PlayerPet:UpdateHealth()
 	local bar = self.frame.healthBar
+	local value = UnitHealth("pet")
+	local maxValue = UnitHealthMax("pet")
 
 	bar:SetStatusBarColor(HEALTH_BAR_COLOR.r, HEALTH_BAR_COLOR.g, HEALTH_BAR_COLOR.b)
-	bar:SetMinMaxValues(0, 1)
-	bar:SetValue(PLACEHOLDER_BAR_VALUE)
 	bar.labelText:SetText("HP")
-	bar.valueText:SetText(PLACEHOLDER_VALUE_TEXT)
+	XFrames:SetBarValues(bar, value, maxValue)
 end
 
 function PlayerPet:UpdatePower()
 	local bar = self.frame.powerBar
+	local value = UnitPower("pet")
+	local maxValue = UnitPowerMax("pet")
+	local _, color = XFrames:GetUnitPowerPresentation("pet", true)
 
-	bar:SetStatusBarColor(POWER_BAR_COLOR.r, POWER_BAR_COLOR.g, POWER_BAR_COLOR.b)
-	bar:SetMinMaxValues(0, 1)
-	bar:SetValue(PLACEHOLDER_BAR_VALUE)
+	bar:SetStatusBarColor(color.r, color.g, color.b)
 	bar.labelText:SetText("PW")
-	bar.valueText:SetText(PLACEHOLDER_VALUE_TEXT)
+	XFrames:SetBarValues(bar, value, maxValue)
 end
 
 function PlayerPet:Refresh()
@@ -184,8 +187,13 @@ function PlayerPet:RegisterEvents()
 	local frame = self.frame
 	frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 	frame:RegisterUnitEvent("UNIT_PET", "player")
+	frame:RegisterUnitEvent("UNIT_HEALTH", "pet")
+	frame:RegisterUnitEvent("UNIT_MAXHEALTH", "pet")
 	frame:RegisterUnitEvent("UNIT_NAME_UPDATE", "pet")
 	frame:RegisterUnitEvent("UNIT_PORTRAIT_UPDATE", "pet")
+	frame:RegisterUnitEvent("UNIT_POWER_UPDATE", "pet")
+	frame:RegisterUnitEvent("UNIT_MAXPOWER", "pet")
+	frame:RegisterUnitEvent("UNIT_DISPLAYPOWER", "pet")
 	frame:SetScript("OnEvent", function(_, event, ...)
 		XFrames:SafeCall("module PlayerPet:OnEvent", self.OnEvent, self, event, ...)
 	end)
