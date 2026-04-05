@@ -73,6 +73,24 @@ local function roundNumber(value)
 	return math.floor((value or 0) + 0.5)
 end
 
+local function getCreatureIDFromGUID(guid)
+	if type(guid) ~= "string" then
+		return nil
+	end
+
+	local unitType, _, _, _, _, creatureID = strsplit("-", guid)
+	if unitType ~= "Creature" and unitType ~= "Vehicle" and unitType ~= "Pet" then
+		return nil
+	end
+
+	creatureID = tonumber(creatureID)
+	if not creatureID or creatureID <= 0 then
+		return nil
+	end
+
+	return creatureID
+end
+
 function XFrames:RegisterModule(name, module)
 	if not name or not module then
 		return
@@ -535,13 +553,56 @@ function XFrames:GetCurrentDamageMeterValue(unit, meterType)
 	return nil
 end
 
-function XFrames:GetPerformanceTextForUnit(unit)
-	local meterType, label = self:GetPerformanceMetricForUnit(unit)
+function XFrames:GetLatestDamageMeterSessionID()
+	if not (C_DamageMeter and C_DamageMeter.GetAvailableCombatSessions) then
+		return nil
+	end
+
+	local ok, sessions = pcall(C_DamageMeter.GetAvailableCombatSessions)
+	if not ok or type(sessions) ~= "table" then
+		return nil
+	end
+
+	local latestSessionID
+	for _, sessionInfo in ipairs(sessions) do
+		local sessionID = sessionInfo and sessionInfo.sessionID
+		if type(sessionID) == "number" and (not latestSessionID or sessionID > latestSessionID) then
+			latestSessionID = sessionID
+		end
+	end
+
+	return latestSessionID
+end
+
+function XFrames:GetCompletedDamageMeterValue(unit, meterType)
+	if not unit or not meterType or not (C_DamageMeter and C_DamageMeter.GetCombatSessionSourceFromID) then
+		return nil
+	end
+
+	local guid = UnitGUID(unit)
+	local creatureID = getCreatureIDFromGUID(guid)
+	local sessionID = self:GetLatestDamageMeterSessionID()
+	if not guid or not sessionID then
+		return nil
+	end
+
+	local ok, source = pcall(C_DamageMeter.GetCombatSessionSourceFromID, sessionID, meterType, guid, creatureID)
+	if not ok or type(source) ~= "table" then
+		return nil
+	end
+
+	return source.totalAmount
+end
+
+function XFrames:GetMeterTextForUnit(unit, meterType, label)
 	if not meterType or not label then
 		return nil
 	end
 
 	local value = self:GetCurrentDamageMeterValue(unit, meterType)
+	if value == nil then
+		value = self:GetCompletedDamageMeterValue(unit, meterType)
+	end
 	if value == nil then
 		return nil
 	end
@@ -552,6 +613,15 @@ function XFrames:GetPerformanceTextForUnit(unit)
 	end
 
 	return string.format("%s %s", compactValue, label)
+end
+
+function XFrames:GetPerformanceTextForUnit(unit)
+	local meterType, label = self:GetPerformanceMetricForUnit(unit)
+	if not meterType or not label then
+		return nil
+	end
+
+	return self:GetMeterTextForUnit(unit, meterType, label)
 end
 
 function XFrames:CreateAccentFrame(parent, inset, edgeSize)
