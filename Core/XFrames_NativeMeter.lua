@@ -4,8 +4,8 @@ local XFrames = ns.XFrames
 
 local DAMAGE_METER_SESSION_TOTAL = 0
 local DAMAGE_METER_SESSION_CURRENT = 1
-local DAMAGE_METER_TYPE_DPS = 1
-local DAMAGE_METER_TYPE_HPS = 3
+local DAMAGE_METER_TYPE_DAMAGE_DONE = 0
+local DAMAGE_METER_TYPE_HEALING_DONE = 2
 local METER_CACHE_TTL = 0.5
 
 local GetTime = GetTime
@@ -80,10 +80,10 @@ function XFrames:GetPerformanceMetricForUnit(unit)
 
 	local role = UnitGroupRolesAssigned and UnitGroupRolesAssigned(unit)
 	if role == "HEALER" then
-		return DAMAGE_METER_TYPE_HPS, "HPS"
+		return DAMAGE_METER_TYPE_HEALING_DONE, "HPS"
 	end
 	if role == "TANK" or role == "DAMAGER" then
-		return DAMAGE_METER_TYPE_DPS, "DPS"
+		return DAMAGE_METER_TYPE_DAMAGE_DONE, "DPS"
 	end
 
 	return nil, nil
@@ -120,8 +120,24 @@ function XFrames:GetNativeMeterSourceForUnit(unit, meterType)
 		return nil
 	end
 
+	local enumMeterType = meterType
+	if Enum and Enum.DamageMeterType then
+		if meterType == DAMAGE_METER_TYPE_DAMAGE_DONE and Enum.DamageMeterType.DamageDone then
+			enumMeterType = Enum.DamageMeterType.DamageDone
+		elseif meterType == DAMAGE_METER_TYPE_HEALING_DONE and Enum.DamageMeterType.HealingDone then
+			enumMeterType = Enum.DamageMeterType.HealingDone
+		end
+	end
+
+	local currentSessionType = DAMAGE_METER_SESSION_CURRENT
+	local totalSessionType = DAMAGE_METER_SESSION_TOTAL
+	if Enum and Enum.DamageMeterSessionType then
+		currentSessionType = Enum.DamageMeterSessionType.Current or currentSessionType
+		totalSessionType = Enum.DamageMeterSessionType.Overall or totalSessionType
+	end
+
 	if InCombatLockdown and InCombatLockdown() and C_DamageMeter.GetCurrentCombatSessionSource then
-		local ok, source = pcall(C_DamageMeter.GetCurrentCombatSessionSource, meterType, unit)
+		local ok, source = pcall(C_DamageMeter.GetCurrentCombatSessionSource, enumMeterType, unit)
 		if ok and type(source) == "table" then
 			return source
 		end
@@ -134,13 +150,19 @@ function XFrames:GetNativeMeterSourceForUnit(unit, meterType)
 	end
 
 	local sessionType = self:GetMeterSessionType()
-	local ok, source = pcall(C_DamageMeter.GetCombatSessionSourceFromType, sessionType, meterType, unitGUID, unitCreatureID)
+	if sessionType == DAMAGE_METER_SESSION_CURRENT then
+		sessionType = currentSessionType
+	else
+		sessionType = totalSessionType
+	end
+
+	local ok, source = pcall(C_DamageMeter.GetCombatSessionSourceFromType, sessionType, enumMeterType, unitGUID, unitCreatureID)
 	if ok and type(source) == "table" then
 		return source
 	end
 
-	if sessionType ~= DAMAGE_METER_SESSION_CURRENT then
-		ok, source = pcall(C_DamageMeter.GetCombatSessionSourceFromType, DAMAGE_METER_SESSION_CURRENT, meterType, unitGUID, unitCreatureID)
+	if sessionType ~= currentSessionType then
+		ok, source = pcall(C_DamageMeter.GetCombatSessionSourceFromType, currentSessionType, enumMeterType, unitGUID, unitCreatureID)
 		if ok and type(source) == "table" then
 			return source
 		end
