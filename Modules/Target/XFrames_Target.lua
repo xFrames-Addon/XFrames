@@ -10,7 +10,6 @@ local CanInspect = CanInspect
 local ClearInspectPlayer = ClearInspectPlayer
 local GetInspectSpecialization = GetInspectSpecialization
 local GetSpecializationInfoByID = GetSpecializationInfoByID
-local GetTime = GetTime
 local InCombatLockdown = InCombatLockdown
 local NotifyInspect = NotifyInspect
 local UnitClass = UnitClass
@@ -97,8 +96,6 @@ local function getCastInfo(unit)
 	if name then
 		return {
 			name = name,
-			startTime = startTimeMS,
-			endTime = endTimeMS,
 			notInterruptible = notInterruptible,
 			channel = false,
 		}
@@ -108,8 +105,6 @@ local function getCastInfo(unit)
 	if channelName then
 		return {
 			name = channelName,
-			startTime = channelStartMS,
-			endTime = channelEndMS,
 			notInterruptible = channelNotInterruptible,
 			channel = true,
 		}
@@ -486,28 +481,12 @@ function Target:RefreshCastState()
 	end
 
 	local color = info.notInterruptible and LOCKED_BAR_COLOR or (info.channel and CHANNEL_BAR_COLOR or CAST_BAR_COLOR)
+	castFrame.bar:SetMinMaxValues(0, 1)
+	castFrame.bar:SetValue(info.channel and 0.35 or 1)
 	castFrame.bar:SetStatusBarColor(color.r, color.g, color.b)
 	castFrame.spellText:SetText(info.name or "")
 	castFrame.timeText:SetText("")
-	castFrame:SetScript("OnUpdate", function(_, _)
-		local active = getCastInfo("target")
-		if not active then
-			self.castState = nil
-			self:RefreshCastState()
-			return
-		end
-
-		self.castState = active
-		castFrame.bar:SetMinMaxValues(active.startTime, active.endTime)
-		if active.channel then
-			castFrame.bar:SetValue(active.endTime)
-		else
-			castFrame.bar:SetValue(active.startTime)
-		end
-
-		castFrame.spellText:SetText(active.name or "")
-		castFrame.timeText:SetText("")
-	end)
+	castFrame:SetScript("OnUpdate", nil)
 end
 
 function Target:RefreshFrame(frame)
