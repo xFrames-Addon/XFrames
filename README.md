@@ -20,6 +20,14 @@ The first build targets:
 
 Raid frames are planned, but they will be built fresh after the core frame architecture is stable.
 
+## Testing Module
+
+A separate development scaffold for future simulation work lives under:
+
+- `Tools/XFrames_Testing/`
+
+That code is intentionally decoupled from the live addon so party and raid test tools can stay removable.
+
 ## Design Rules
 
 - Retail only

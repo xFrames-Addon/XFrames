@@ -13,6 +13,7 @@
 - `Modules/Player/`: player-frame module
 - `Modules/Target/`: target and target-of-target module
 - `Modules/Raid/`: future raid-frame module
+- `Tools/XFrames_Testing/`: separate development-only addon scaffold for future simulation tools
 
 ## Core Principles
 
@@ -21,3 +22,4 @@
 3. Blizzard-managed UI stays under Blizzard control.
 4. New frame code should prefer fresh frame construction over adapting legacy frame trees.
 5. Raid support is deferred until the core player/target path is stable in live testing.
+6. Testing and simulation utilities should live outside the shipping addon whenever practical.
