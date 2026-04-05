@@ -245,13 +245,13 @@ function Party:RefreshFrame(frame)
 			self:UpdatePortrait(frame)
 			self:UpdateHealth(frame)
 			self:UpdatePower(frame)
+		else
+			frame:Hide()
 		end
 		return
 	end
 
-	if XFrames:IsFramesUnlocked() then
-		frame:Show()
-	end
+	frame:Show()
 	self:UpdateFrameBorder(frame)
 	self:UpdateName(frame)
 	self:UpdateLevel(frame)
