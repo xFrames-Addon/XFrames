@@ -305,11 +305,11 @@ function XFrames:SetValueText(fontString, value, maxValue)
 	end
 
 	if maxValue ~= nil then
-		fontString:SetText(string.format("%s / %s", value, maxValue))
+		fontString:SetText(string.format("%d / %d", value, maxValue))
 		return
 	end
 
-	fontString:SetText(string.format("%s", value))
+	fontString:SetText(string.format("%d", value))
 end
 
 function XFrames:SetBarValues(bar, value, maxValue)
