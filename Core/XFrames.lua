@@ -439,10 +439,18 @@ function XFrames:RegisterSlashCommands()
 				return
 			end
 			if arg == "status" then
-				printf("|cff33ff99XFrames|r raid frames: %s", self:IsRaidFramesEnabled() and "on" or "off")
+				printf("|cff33ff99XFrames|r raid frames: %s (%s)", self:IsRaidFramesEnabled() and "on" or "off", self:GetRaidLayout() == "row" and "1x5" or "5x1")
 				return
 			end
-			printf("|cff33ff99XFrames|r raid commands: on, off, toggle, status")
+			if arg == "layout" then
+				printf("|cff33ff99XFrames|r raid layout: %s", self:GetRaidLayout() == "row" and "1x5" or "5x1")
+				return
+			end
+			if arg == "1x5" or arg == "5x1" or arg == "row" or arg == "column" or arg == "horizontal" or arg == "vertical" then
+				self:SetRaidLayout(arg)
+				return
+			end
+			printf("|cff33ff99XFrames|r raid commands: on, off, toggle, status, layout, 1x5, 5x1")
 			return
 		end
 
@@ -582,12 +590,50 @@ function XFrames:IsRaidFramesEnabled()
 	return self.db and self.db.profile and self.db.profile.raid and self.db.profile.raid.enabled ~= false
 end
 
+function XFrames:GetRaidLayout()
+	local raid = self.db and self.db.profile and self.db.profile.raid
+	if raid and raid.layout == "column" then
+		return "column"
+	end
+
+	return "row"
+end
+
+function XFrames:SetRaidLayout(layout)
+	layout = trim(layout):lower()
+	if layout == "5x1" or layout == "column" or layout == "vertical" then
+		layout = "column"
+	elseif layout == "1x5" or layout == "row" or layout == "horizontal" then
+		layout = "row"
+	end
+
+	if layout ~= "row" and layout ~= "column" then
+		self:Warn(string.format("Unknown raid layout: %s", safeToString(layout)))
+		return
+	end
+
+	if not (self.db and self.db.profile and self.db.profile.raid) then
+		return
+	end
+
+	self.db.profile.raid.layout = layout
+	self:Info(string.format("Raid layout set to %s", layout == "row" and "1x5" or "5x1"))
+	self:RefreshAllFrameLocks()
+end
+
 function XFrames:SetRaidFramesEnabled(enabled)
 	if not (self.db and self.db.profile and self.db.profile.raid) then
 		return
 	end
 
 	self.db.profile.raid.enabled = not not enabled
+	local raidModule = self:GetModule("Raid")
+	if raidModule then
+		raidModule.enabled = self.db.profile.raid.enabled
+		if type(raidModule.RefreshAll) == "function" then
+			raidModule:RefreshAll()
+		end
+	end
 	self:Info(string.format("Raid frames %s", self.db.profile.raid.enabled and "enabled" or "disabled"))
 	self:ApplyBlizzardFrameVisibility()
 	self:RefreshAllFrameLocks()
@@ -595,6 +641,15 @@ end
 
 function XFrames:ToggleRaidFramesEnabled()
 	self:SetRaidFramesEnabled(not self:IsRaidFramesEnabled())
+end
+
+function XFrames:ToggleRaidLayout()
+	if self:GetRaidLayout() == "row" then
+		self:SetRaidLayout("column")
+		return
+	end
+
+	self:SetRaidLayout("row")
 end
 
 function XFrames:ApplyClassIcon(texture, classToken, fallbackTexture)
