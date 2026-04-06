@@ -135,7 +135,20 @@ local defaults = {
 			},
 		},
 		raid = {
-			enabled = false,
+			enabled = true,
+			width = 172,
+			height = 52,
+			scale = 1,
+			columns = 5,
+			maxUnits = 20,
+			spacingX = 10,
+			spacingY = 8,
+			position = {
+				point = "CENTER",
+				relativePoint = "CENTER",
+				x = 210,
+				y = 120,
+			},
 		},
 	},
 }
