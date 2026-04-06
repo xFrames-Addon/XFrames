@@ -31,3 +31,17 @@ To use it in-game, it should be copied or packaged as its own top-level addon fo
 
 - `XFrames`
 - `XFrames_Testing`
+
+## Easy Windows Install
+
+From the repo on the Windows test machine, run:
+
+- [`/Users/jimadkins/Repos/XFrames/Tools/Install-XFramesTesting.cmd`](/Users/jimadkins/Repos/XFrames/Tools/Install-XFramesTesting.cmd)
+
+If the repo already lives inside WoW's `AddOns` folder, it will install `XFrames_Testing` as a sibling addon automatically.
+
+If not, it will create:
+
+- `Build/XFrames_Testing`
+
+and you can copy that folder into WoW's `_retail_\Interface\AddOns` folder.
