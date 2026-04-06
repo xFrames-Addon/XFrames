@@ -44,10 +44,3 @@ See:
 
 - `DEBUGGING.md`
 
-## Cross-Machine Handoff
-
-If you are working from more than one Codex chat or machine, use:
-
-- `SESSION_HANDOFF.md`
-- `HANDOFF_PROTOCOL.md`
-- `handoff/`
