@@ -9,10 +9,13 @@ local CreateFrame = CreateFrame
 local InCombatLockdown = InCombatLockdown
 local UnitClass = UnitClass
 local UnitCreatureType = UnitCreatureType
+local UnitDetailedThreatSituation = UnitDetailedThreatSituation
+local UnitCanAttack = UnitCanAttack
 local UnitExists = UnitExists
 local UnitGroupRolesAssigned = UnitGroupRolesAssigned
 local UnitHealth = UnitHealth
 local UnitHealthMax = UnitHealthMax
+local UnitIsFriend = UnitIsFriend
 local UnitIsPlayer = UnitIsPlayer
 local UnitLevel = UnitLevel
 local UnitName = UnitName
@@ -29,6 +32,11 @@ local SECONDARY_TEXT_COLOR = {0.72, 0.77, 0.84}
 local LEVEL_TEXT_COLOR = {0.90, 0.92, 0.96}
 local ROLE_BG_COLOR = {0.12, 0.14, 0.18, 0.96}
 local ROLE_ICON_TEXTURE = "Interface\\LFGFrame\\UI-LFG-ICON-ROLES"
+local AGGRO_BG_COLOR = {0.12, 0.14, 0.18, 0.96}
+local AGGRO_NEUTRAL_COLOR = {r = 0.24, g = 0.27, b = 0.31}
+local AGGRO_GOOD_COLOR = {r = 0.24, g = 0.82, b = 0.36}
+local AGGRO_WARN_COLOR = {r = 0.92, g = 0.82, b = 0.28}
+local AGGRO_BAD_COLOR = {r = 0.90, g = 0.28, b = 0.28}
 local DEMO_MEMBERS = {
 	{className = "Warrior", classToken = "WARRIOR", role = "TANK", name = "Tankard", level = 80, health = 920000, healthMax = 1000000, power = 35, powerMax = 100, powerColor = {r = 0.78, g = 0.24, b = 0.18}},
 	{className = "Priest", classToken = "PRIEST", role = "HEALER", name = "Mendra", level = 80, health = 760000, healthMax = 820000, power = 220000, powerMax = 250000, powerColor = {r = 0.20, g = 0.44, b = 0.86}},
@@ -166,6 +174,53 @@ local function setRoleIcon(texture, role)
 	texture:Hide()
 end
 
+local function getThreatMobUnit(unit)
+	if not unit then
+		return nil
+	end
+
+	local unitTarget = unit .. "target"
+	if UnitExists(unitTarget) and ((UnitCanAttack and UnitCanAttack("player", unitTarget)) or not (UnitIsFriend and UnitIsFriend("player", unitTarget))) then
+		return unitTarget
+	end
+
+	if UnitExists("target") and ((UnitCanAttack and UnitCanAttack("player", "target")) or not (UnitIsFriend and UnitIsFriend("player", "target"))) then
+		return "target"
+	end
+
+	return nil
+end
+
+local function getAggroColor(unit, role)
+	local mobUnit = getThreatMobUnit(unit)
+	if not mobUnit or not UnitDetailedThreatSituation then
+		return nil
+	end
+
+	local _, status = UnitDetailedThreatSituation(unit, mobUnit)
+	if status == nil then
+		return nil
+	end
+
+	if role == "TANK" then
+		if status >= 3 then
+			return AGGRO_GOOD_COLOR
+		end
+		if status == 2 then
+			return AGGRO_WARN_COLOR
+		end
+		return AGGRO_BAD_COLOR
+	end
+
+	if status >= 2 then
+		return AGGRO_BAD_COLOR
+	end
+	if status == 1 then
+		return AGGRO_WARN_COLOR
+	end
+	return AGGRO_GOOD_COLOR
+end
+
 function Party:CreateAnchorFrame()
 	if self.anchorFrame then
 		return self.anchorFrame
@@ -225,7 +280,12 @@ function Party:CreateUnitFrame(index)
 	frame.nameText:SetWordWrap(false)
 	frame.levelText = createText(frame, "OVERLAY", "GameFontHighlight", 12, "TOPRIGHT", frame, "TOPRIGHT", -10, -10, "RIGHT")
 	frame.levelText:SetTextColor(unpack(LEVEL_TEXT_COLOR))
-	frame.roleFrame = createBackdropFrame(nil, frame, 20, 20, "RIGHT", frame.levelText, "LEFT", -8, 0, ROLE_BG_COLOR)
+	frame.aggroFrame = createBackdropFrame(nil, frame, 16, 16, "RIGHT", frame.levelText, "LEFT", -8, 0, AGGRO_BG_COLOR)
+	frame.aggroFill = frame.aggroFrame:CreateTexture(nil, "OVERLAY")
+	frame.aggroFill:SetPoint("TOPLEFT", frame.aggroFrame, "TOPLEFT", 2, -2)
+	frame.aggroFill:SetPoint("BOTTOMRIGHT", frame.aggroFrame, "BOTTOMRIGHT", -2, 2)
+	frame.aggroFill:SetColorTexture(AGGRO_NEUTRAL_COLOR.r, AGGRO_NEUTRAL_COLOR.g, AGGRO_NEUTRAL_COLOR.b, 1)
+	frame.roleFrame = createBackdropFrame(nil, frame, 20, 20, "RIGHT", frame.aggroFrame, "LEFT", -8, 0, ROLE_BG_COLOR)
 	frame.roleIcon = frame:CreateTexture(nil, "OVERLAY")
 	frame.roleIcon:SetSize(18, 18)
 	frame.roleIcon:SetPoint("CENTER", frame.roleFrame, "CENTER")
@@ -358,6 +418,38 @@ function Party:UpdateRole(frame)
 	setRoleIcon(frame.roleIcon, role)
 end
 
+function Party:UpdateAggro(frame)
+	if not frame or not frame.aggroFrame or not frame.aggroFill then
+		return
+	end
+
+	local demoData = self:GetDemoData(frame)
+	if demoData then
+		frame.aggroFrame:Show()
+		frame.aggroFill:SetColorTexture(AGGRO_NEUTRAL_COLOR.r, AGGRO_NEUTRAL_COLOR.g, AGGRO_NEUTRAL_COLOR.b, 1)
+		return
+	end
+
+	if not UnitExists(frame.unit) then
+		if XFrames:IsFramesUnlocked() then
+			frame.aggroFrame:Show()
+			frame.aggroFill:SetColorTexture(AGGRO_NEUTRAL_COLOR.r, AGGRO_NEUTRAL_COLOR.g, AGGRO_NEUTRAL_COLOR.b, 1)
+		else
+			frame.aggroFrame:Hide()
+		end
+		return
+	end
+
+	local color = getAggroColor(frame.unit, getRoleInfo(frame.unit))
+	if color then
+		frame.aggroFrame:Show()
+		frame.aggroFill:SetColorTexture(color.r, color.g, color.b, 1)
+	else
+		frame.aggroFrame:Show()
+		frame.aggroFill:SetColorTexture(AGGRO_NEUTRAL_COLOR.r, AGGRO_NEUTRAL_COLOR.g, AGGRO_NEUTRAL_COLOR.b, 1)
+	end
+end
+
 function Party:UpdateStatus(frame)
 	local demoData = self:GetDemoData(frame)
 	if demoData then
@@ -458,6 +550,7 @@ function Party:RefreshFrame(frame)
 			self:UpdateName(frame)
 			self:UpdateLevel(frame)
 			self:UpdateRole(frame)
+			self:UpdateAggro(frame)
 			self:UpdateStatus(frame)
 			self:UpdateRank(frame)
 			self:UpdatePortrait(frame)
@@ -474,6 +567,7 @@ function Party:RefreshFrame(frame)
 	self:UpdateName(frame)
 	self:UpdateLevel(frame)
 	self:UpdateRole(frame)
+	self:UpdateAggro(frame)
 	self:UpdateStatus(frame)
 	self:UpdateRank(frame)
 	self:UpdatePortrait(frame)
@@ -539,6 +633,11 @@ function Party:OnEvent(event, unit)
 		return
 	end
 
+	if event == "UNIT_THREAT_SITUATION_UPDATE" or event == "UNIT_THREAT_LIST_UPDATE" then
+		self:RefreshAll()
+		return
+	end
+
 	if not unit then
 		self:RefreshAll()
 		return
@@ -562,9 +661,13 @@ function Party:RegisterEvents()
 	frame:RegisterEvent("GROUP_ROSTER_UPDATE")
 	frame:RegisterEvent("PLAYER_ROLES_ASSIGNED")
 	frame:RegisterEvent("PLAYER_ENTERING_WORLD")
+	frame:RegisterEvent("PLAYER_TARGET_CHANGED")
+	frame:RegisterEvent("UNIT_THREAT_SITUATION_UPDATE")
+	frame:RegisterEvent("UNIT_THREAT_LIST_UPDATE")
 	frame:RegisterUnitEvent("UNIT_NAME_UPDATE", "party1", "party2", "party3", "party4")
 	frame:RegisterUnitEvent("UNIT_OTHER_PARTY_CHANGED", "party1", "party2", "party3", "party4")
 	frame:RegisterUnitEvent("UNIT_PORTRAIT_UPDATE", "party1", "party2", "party3", "party4")
+	frame:RegisterUnitEvent("UNIT_TARGET", "party1", "party2", "party3", "party4")
 	frame:RegisterUnitEvent("UNIT_HEALTH", "party1", "party2", "party3", "party4")
 	frame:RegisterUnitEvent("UNIT_MAXHEALTH", "party1", "party2", "party3", "party4")
 	frame:RegisterUnitEvent("UNIT_POWER_UPDATE", "party1", "party2", "party3", "party4")
