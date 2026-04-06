@@ -35,11 +35,11 @@ local function abbreviateName(name)
 
 	local firstWord = name:match("^(%S+)")
 	firstWord = firstWord or name
-	if #firstWord <= 3 then
+	if #firstWord <= 4 then
 		return firstWord
 	end
 
-	return firstWord:sub(1, 3)
+	return firstWord:sub(1, 4)
 end
 
 local function createText(parent, layer, template, size, anchorPoint, relativeTo, relativePoint, x, y, justify)
@@ -180,15 +180,15 @@ function Raid:CreateUnitFrame(index)
 	frame.accentFrame = XFrames:CreateAccentFrame(frame, 2, 3)
 	frame:Hide()
 
-	frame.nameText = createText(frame, "OVERLAY", "GameFontNormalSmall", 8, "TOPLEFT", frame, "TOPLEFT", 2, -4, "LEFT")
-	frame.nameText:SetWidth(config.width - 4)
+	frame.nameText = createText(frame, "OVERLAY", "GameFontNormalSmall", 9, "TOPLEFT", frame, "TOPLEFT", 4, -4, "LEFT")
+	frame.nameText:SetWidth(config.width - 8)
 	frame.nameText:SetWordWrap(false)
 	frame.statusText = createText(frame, "OVERLAY", "GameFontHighlightSmall", 7, "TOPLEFT", frame.nameText, "BOTTOMLEFT", 0, -1, "LEFT")
-	frame.statusText:SetWidth(config.width - 4)
+	frame.statusText:SetWidth(config.width - 8)
 	frame.statusText:SetWordWrap(false)
 	frame.statusText:SetTextColor(unpack(SECONDARY_TEXT_COLOR))
 
-	frame.healthBar = createBar(frame, 8, "TOPLEFT", frame, "TOPLEFT", 2, -22)
+	frame.healthBar = createBar(frame, 8, "TOPLEFT", frame, "TOPLEFT", 4, -22)
 	frame.powerBar = createBar(frame, 4, "TOPLEFT", frame.healthBar, "BOTTOMLEFT", 0, -4)
 
 	self.frames[index] = frame
