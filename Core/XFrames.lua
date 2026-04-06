@@ -591,7 +591,9 @@ function XFrames:SetRaidFramesEnabled(enabled)
 	local raidModule = self:GetModule("Raid")
 	if raidModule then
 		raidModule.enabled = self.db.profile.raid.enabled
-		if type(raidModule.RefreshAll) == "function" then
+		if self.db.profile.raid.enabled and type(raidModule.Enable) == "function" and not raidModule.anchorFrame then
+			raidModule:Enable()
+		elseif type(raidModule.RefreshAll) == "function" then
 			raidModule:RefreshAll()
 		end
 	end
