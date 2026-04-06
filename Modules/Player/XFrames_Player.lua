@@ -10,7 +10,9 @@ local GetSpecialization = GetSpecialization
 local GetSpecializationInfo = GetSpecializationInfo
 local UnitClass = UnitClass
 local UnitCastingInfo = UnitCastingInfo
+local UnitCastingDuration = UnitCastingDuration
 local UnitChannelInfo = UnitChannelInfo
+local UnitChannelDuration = UnitChannelDuration
 local UnitHealth = UnitHealth
 local UnitHealthMax = UnitHealthMax
 local UnitName = UnitName
@@ -27,6 +29,8 @@ local PORTRAIT_BG_COLOR = {0.10, 0.11, 0.14, 0.98}
 local CAST_BAR_COLOR = {r = 0.86, g = 0.66, b = 0.22}
 local CHANNEL_BAR_COLOR = {r = 0.28, g = 0.56, b = 0.86}
 local LOCKED_BAR_COLOR = {r = 0.55, g = 0.55, b = 0.58}
+local TIMER_DIRECTION = Enum and Enum.StatusBarTimerDirection
+local BAR_INTERPOLATION = Enum and Enum.StatusBarInterpolation
 
 local function getStatusText()
 	local className = UnitClass("player")
@@ -100,6 +104,7 @@ local function getCastInfo(unit)
 		return {
 			name = name,
 			channel = false,
+			duration = UnitCastingDuration and UnitCastingDuration(unit) or nil,
 		}
 	end
 
@@ -108,6 +113,7 @@ local function getCastInfo(unit)
 		return {
 			name = channelName,
 			channel = true,
+			duration = UnitChannelDuration and UnitChannelDuration(unit) or nil,
 		}
 	end
 
@@ -315,10 +321,23 @@ function Player:RefreshCastState()
 	self.castState = info
 	castFrame:Show()
 	local color = info.channel and CHANNEL_BAR_COLOR or CAST_BAR_COLOR
-	castFrame.bar:SetMinMaxValues(0, 1)
-	castFrame.bar:SetValue(info.channel and 0.35 or 1)
 	castFrame.bar:SetStatusBarColor(color.r, color.g, color.b)
 	castFrame.spellText:SetText(info.name or "")
+	if info.duration and castFrame.bar.SetTimerDuration then
+		local direction = info.channel and (TIMER_DIRECTION and TIMER_DIRECTION.RemainingTime or 1)
+			or (TIMER_DIRECTION and TIMER_DIRECTION.ElapsedTime or 0)
+		castFrame.bar:SetTimerDuration(
+			info.duration,
+			BAR_INTERPOLATION and BAR_INTERPOLATION.Immediate or 0,
+			direction
+		)
+		castFrame.timeText:SetText("")
+		castFrame:SetScript("OnUpdate", nil)
+		return
+	end
+
+	castFrame.bar:SetMinMaxValues(0, 1)
+	castFrame.bar:SetValue(info.channel and 0.35 or 1)
 	castFrame.timeText:SetText("")
 	castFrame:SetScript("OnUpdate", nil)
 end
