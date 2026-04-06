@@ -381,6 +381,28 @@ function XFrames:RegisterSlashCommands()
 			return
 		end
 
+		if command == "raid" then
+			arg = trim(arg)
+			if arg == "" or arg == "toggle" then
+				self:ToggleRaidFramesEnabled()
+				return
+			end
+			if arg == "on" or arg == "enable" then
+				self:SetRaidFramesEnabled(true)
+				return
+			end
+			if arg == "off" or arg == "disable" then
+				self:SetRaidFramesEnabled(false)
+				return
+			end
+			if arg == "status" then
+				printf("|cff33ff99XFrames|r raid frames: %s", self:IsRaidFramesEnabled() and "on" or "off")
+				return
+			end
+			printf("|cff33ff99XFrames|r raid commands: on, off, toggle, status")
+			return
+		end
+
 		if command == "debug" then
 			arg = trim(arg)
 			if arg == "" or arg == "toggle" then
@@ -415,7 +437,7 @@ function XFrames:RegisterSlashCommands()
 			return
 		end
 
-		printf("|cff33ff99XFrames|r commands: status, settings, lock, unlock, toggle, blizzard, party, reload, debug")
+		printf("|cff33ff99XFrames|r commands: status, settings, lock, unlock, toggle, blizzard, castbars, portraits, party, raid, reload, debug")
 	end
 end
 
@@ -511,6 +533,25 @@ function XFrames:TogglePortraitStyle()
 	end
 
 	self:SetPortraitStyle("class")
+end
+
+function XFrames:IsRaidFramesEnabled()
+	return self.db and self.db.profile and self.db.profile.raid and self.db.profile.raid.enabled ~= false
+end
+
+function XFrames:SetRaidFramesEnabled(enabled)
+	if not (self.db and self.db.profile and self.db.profile.raid) then
+		return
+	end
+
+	self.db.profile.raid.enabled = not not enabled
+	self:Info(string.format("Raid frames %s", self.db.profile.raid.enabled and "enabled" or "disabled"))
+	self:ApplyBlizzardFrameVisibility()
+	self:RefreshAllFrameLocks()
+end
+
+function XFrames:ToggleRaidFramesEnabled()
+	self:SetRaidFramesEnabled(not self:IsRaidFramesEnabled())
 end
 
 function XFrames:ApplyClassIcon(texture, classToken, fallbackTexture)

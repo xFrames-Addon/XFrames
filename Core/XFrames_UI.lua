@@ -26,13 +26,15 @@ local BLIZZARD_UNIT_FRAME_NAMES = {
 	"CompactPartyFrameMemberFrame3",
 	"CompactPartyFrameMemberFrame4",
 	"CompactPartyFrameMemberFrame5",
-	"CompactRaidFrameContainer",
 	"PartyMemberFrame1",
 	"PartyMemberFrame2",
 	"PartyMemberFrame3",
 	"PartyMemberFrame4",
 	"TargetFrameToT",
 	"FocusFrameToT",
+}
+local BLIZZARD_RAID_FRAME_NAMES = {
+	"CompactRaidFrameContainer",
 }
 local BLIZZARD_CAST_BAR_NAMES = {
 	"PlayerCastingBarFrame",
@@ -89,6 +91,15 @@ function XFrames:GetBlizzardUnitFrames()
 		local frame = _G[frameName]
 		if frame then
 			frames[#frames + 1] = frame
+		end
+	end
+
+	if self:IsRaidFramesEnabled() then
+		for _, frameName in ipairs(BLIZZARD_RAID_FRAME_NAMES) do
+			local frame = _G[frameName]
+			if frame then
+				frames[#frames + 1] = frame
+			end
 		end
 	end
 
@@ -415,6 +426,9 @@ function XFrames:CreateSettingsPanel()
 	frame.portraitsButton = createButton(frame, "Portraits: Live", 118, "TOPLEFT", frame.castBarsButton, "BOTTOMLEFT", 0, -10, function()
 		XFrames:TogglePortraitStyle()
 	end)
+	frame.raidFramesButton = createButton(frame, "Raid Frames: On", 118, "TOPLEFT", frame.portraitsButton, "BOTTOMLEFT", 0, -10, function()
+		XFrames:ToggleRaidFramesEnabled()
+	end)
 	frame.reloadButton = createButton(frame, "Reload UI", 78, "LEFT", frame.lockButton, "RIGHT", 8, 0, function()
 		ReloadUI()
 	end)
@@ -441,6 +455,7 @@ function XFrames:RefreshSettingsPanel()
 	self.settingsFrame.blizzardButton:SetText(ui and ui.hideBlizzard ~= false and "Show Blizzard" or "Hide Blizzard")
 	self.settingsFrame.castBarsButton:SetText(ui and ui.hideBlizzardCastBars ~= false and "Show Cast Bars" or "Hide Cast Bars")
 	self.settingsFrame.portraitsButton:SetText(self:GetPortraitStyle() == "class" and "Portraits: Class" or "Portraits: Live")
+	self.settingsFrame.raidFramesButton:SetText(self:IsRaidFramesEnabled() and "Raid Frames: On" or "Raid Frames: Off")
 end
 
 function XFrames:ToggleSettings()

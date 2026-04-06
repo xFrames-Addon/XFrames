@@ -349,6 +349,11 @@ function Raid:RefreshAnchor()
 		return
 	end
 
+	if not XFrames:IsRaidFramesEnabled() then
+		self.anchorFrame:Hide()
+		return
+	end
+
 	if XFrames:IsFramesUnlocked() then
 		self.anchorFrame:Show()
 		return
@@ -367,6 +372,17 @@ end
 
 function Raid:RefreshAll()
 	local maxUnits = XFrames.db.profile.raid.maxUnits or 20
+
+	if not XFrames:IsRaidFramesEnabled() then
+		for index = 1, maxUnits do
+			if self.frames and self.frames[index] then
+				self.frames[index]:Hide()
+			end
+		end
+		self:RefreshAnchor()
+		return
+	end
+
 	for index = 1, maxUnits do
 		self:RefreshFrame(self.frames and self.frames[index])
 	end
