@@ -202,6 +202,14 @@ local function getAggroColor(unit, role)
 		return nil
 	end
 
+	if canaccessvalue then
+		if not canaccessvalue(status) then
+			return nil
+		end
+	elseif issecretvalue and issecretvalue(status) then
+		return nil
+	end
+
 	if role == "TANK" then
 		if status >= 3 then
 			return AGGRO_GOOD_COLOR
