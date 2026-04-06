@@ -8,7 +8,6 @@ local RAID_CLASS_COLORS = RAID_CLASS_COLORS
 local CreateFrame = CreateFrame
 local GetSpecialization = GetSpecialization
 local GetSpecializationInfo = GetSpecializationInfo
-local GetTime = GetTime
 local UnitClass = UnitClass
 local UnitCastingInfo = UnitCastingInfo
 local UnitChannelInfo = UnitChannelInfo
@@ -95,13 +94,12 @@ local function createBackdropFrame(name, parent, width, height, anchorPoint, rel
 	return frame
 end
 
-local function getCastInfo(unit, spellIdentifier)
+local function getCastInfo(unit)
 	local name = UnitCastingInfo(unit)
 	if name then
 		return {
 			name = name,
 			channel = false,
-			duration = XFrames:GetStaticCastDuration(spellIdentifier or name),
 		}
 	end
 
@@ -110,7 +108,6 @@ local function getCastInfo(unit, spellIdentifier)
 		return {
 			name = channelName,
 			channel = true,
-			duration = XFrames:GetStaticCastDuration(spellIdentifier or channelName),
 		}
 	end
 
@@ -289,13 +286,13 @@ function Player:StopCastBar()
 	self:RefreshCastState()
 end
 
-function Player:RefreshCastState(spellIdentifier)
+function Player:RefreshCastState()
 	local castFrame = self.castFrame
 	if not castFrame then
 		return
 	end
 
-	local info = getCastInfo("player", spellIdentifier)
+	local info = getCastInfo("player")
 	local unlocked = XFrames:IsFramesUnlocked()
 
 	if not info then
@@ -318,37 +315,10 @@ function Player:RefreshCastState(spellIdentifier)
 	self.castState = info
 	castFrame:Show()
 	local color = info.channel and CHANNEL_BAR_COLOR or CAST_BAR_COLOR
-	castFrame.bar:SetStatusBarColor(color.r, color.g, color.b)
-	castFrame.spellText:SetText(info.name or "")
-	if info.duration and info.duration > 0 and GetTime then
-		local startedAt = GetTime()
-		self.castState = {
-			name = info.name,
-			channel = info.channel,
-			duration = info.duration,
-			startedAt = startedAt,
-			endsAt = startedAt + info.duration,
-		}
-		castFrame.bar:SetMinMaxValues(0, info.duration)
-		castFrame.bar:SetValue(info.channel and info.duration or 0)
-		castFrame.timeText:SetText(string.format("%.1f", info.duration))
-		castFrame:SetScript("OnUpdate", function()
-			local state = self.castState
-			if not state then
-				return
-			end
-
-			local now = GetTime()
-			local remaining = math.max(0, state.endsAt - now)
-			local progress = state.duration - remaining
-			castFrame.bar:SetValue(state.channel and remaining or progress)
-			castFrame.timeText:SetText(string.format("%.1f", remaining))
-		end)
-		return
-	end
-
 	castFrame.bar:SetMinMaxValues(0, 1)
 	castFrame.bar:SetValue(info.channel and 0.35 or 1)
+	castFrame.bar:SetStatusBarColor(color.r, color.g, color.b)
+	castFrame.spellText:SetText(info.name or "")
 	castFrame.timeText:SetText("")
 	castFrame:SetScript("OnUpdate", nil)
 end
@@ -389,7 +359,7 @@ function Player:RefreshPerformanceMode()
 	end)
 end
 
-function Player:OnEvent(event, unit, _, spellID)
+function Player:OnEvent(event, unit)
 	if unit and unit ~= "player" and not string.find(event, "^UNIT_SPELLCAST") then
 		return
 	end
@@ -427,7 +397,7 @@ function Player:OnEvent(event, unit, _, spellID)
 	end
 
 	if string.find(event, "^UNIT_SPELLCAST") then
-		self:RefreshCastState(spellID)
+		self:RefreshCastState()
 		return
 	end
 
