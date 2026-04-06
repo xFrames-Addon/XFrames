@@ -27,6 +27,7 @@ local UnitIsPlayer = UnitIsPlayer
 local UnitPowerType = UnitPowerType
 local UnitSelectionColor = UnitSelectionColor
 local SetPortraitTexture = SetPortraitTexture
+local C_Spell = C_Spell
 
 local DEFAULT_POWER_BAR_COLOR = {r = 0.24, g = 0.28, b = 0.36}
 local DEFAULT_UNIT_ACCENT_COLOR = {r = 0.24, g = 0.27, b = 0.31}
@@ -52,6 +53,8 @@ local POWER_LABELS = {
 	PAIN = "Pain",
 	ESSENCE = "Essence",
 }
+
+local spellCastDurationCache = {}
 
 local function printf(...)
 	if DEFAULT_CHAT_FRAME then
@@ -476,6 +479,27 @@ function XFrames:SetBarValues(bar, value, maxValue)
 
 	bar:SetValue(value or 0)
 	self:SetValueText(bar.valueText, value, maxValue)
+end
+
+function XFrames:GetStaticCastDuration(spellIdentifier)
+	if not spellIdentifier or not C_Spell or not C_Spell.GetSpellInfo then
+		return nil
+	end
+
+	if spellCastDurationCache[spellIdentifier] ~= nil then
+		return spellCastDurationCache[spellIdentifier]
+	end
+
+	local spellInfo = C_Spell.GetSpellInfo(spellIdentifier)
+	local duration = spellInfo and spellInfo.castTime
+	if type(duration) ~= "number" or duration <= 0 then
+		spellCastDurationCache[spellIdentifier] = false
+		return nil
+	end
+
+	duration = duration / 1000
+	spellCastDurationCache[spellIdentifier] = duration
+	return duration
 end
 
 function XFrames:GetPortraitStyle()
