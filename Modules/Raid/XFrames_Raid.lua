@@ -180,7 +180,7 @@ function Raid:IsDemoModeActive()
 		return true
 	end
 
-	if not XFrames:IsFramesUnlocked() then
+	if not XFrames:IsRaidFramesEnabled() then
 		return false
 	end
 
@@ -568,6 +568,11 @@ function Raid:RefreshAnchor()
 	end
 
 	if XFrames:IsTestingPreviewActive("raid") then
+		self.anchorFrame:Show()
+		return
+	end
+
+	if self:IsDemoModeActive() then
 		self.anchorFrame:Show()
 		return
 	end
