@@ -347,16 +347,16 @@ function Target:ProcessInspectQueue()
 end
 
 function Target:HandleInspectReady(inspectGUID)
-	if not inspectGUID or not GetInspectSpecialization then
+	if inspectGUID == nil or not GetInspectSpecialization then
 		return
 	end
 
 	for _, unit in ipairs({"target", "focus"}) do
 		if UnitExists(unit) and UnitGUID(unit) == inspectGUID then
 			local specID = GetInspectSpecialization(unit)
-			if specID and specID > 0 and GetSpecializationInfoByID then
-				local _, name = GetSpecializationInfoByID(specID)
-				if name then
+			if specID ~= nil and GetSpecializationInfoByID then
+				local ok, _, name = pcall(GetSpecializationInfoByID, specID)
+				if ok and name then
 					self.inspectCache = self.inspectCache or {}
 					self.inspectCache[inspectGUID] = XFrames:FormatSpecLabel(name)
 				end
