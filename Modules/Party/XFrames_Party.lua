@@ -18,6 +18,7 @@ local UnitLevel = UnitLevel
 local UnitName = UnitName
 local UnitPower = UnitPower
 local UnitPowerMax = UnitPowerMax
+local GetReadyCheckStatus = GetReadyCheckStatus
 
 local PERFORMANCE_UPDATE_INTERVAL = 0.5
 
@@ -29,6 +30,9 @@ local SECONDARY_TEXT_COLOR = {0.72, 0.77, 0.84}
 local LEVEL_TEXT_COLOR = {0.90, 0.92, 0.96}
 local ROLE_BG_COLOR = {0.12, 0.14, 0.18, 0.96}
 local ROLE_ICON_TEXTURE = "Interface\\LFGFrame\\UI-LFG-ICON-ROLES"
+local READY_CHECK_READY_TEX = "Interface\\RaidFrame\\ReadyCheck-Ready"
+local READY_CHECK_NOT_READY_TEX = "Interface\\RaidFrame\\ReadyCheck-NotReady"
+local READY_CHECK_WAITING_TEX = "Interface\\RaidFrame\\ReadyCheck-Waiting"
 local DEMO_MEMBERS = {
 	{className = "Warrior", classToken = "WARRIOR", role = "TANK", name = "Tankard", level = 80, health = 920000, healthMax = 1000000, power = 35, powerMax = 100, powerColor = {r = 0.78, g = 0.24, b = 0.18}},
 	{className = "Priest", classToken = "PRIEST", role = "HEALER", name = "Mendra", level = 80, health = 760000, healthMax = 820000, power = 220000, powerMax = 250000, powerColor = {r = 0.20, g = 0.44, b = 0.86}},
@@ -166,6 +170,34 @@ local function setRoleIcon(texture, role)
 	texture:Hide()
 end
 
+local function setReadyCheckIcon(texture, status)
+	if not texture then
+		return false
+	end
+
+	if status == "ready" then
+		texture:SetTexture(READY_CHECK_READY_TEX)
+		texture:SetTexCoord(0, 1, 0, 1)
+		texture:Show()
+		return true
+	end
+	if status == "notready" then
+		texture:SetTexture(READY_CHECK_NOT_READY_TEX)
+		texture:SetTexCoord(0, 1, 0, 1)
+		texture:Show()
+		return true
+	end
+	if status == "waiting" then
+		texture:SetTexture(READY_CHECK_WAITING_TEX)
+		texture:SetTexCoord(0, 1, 0, 1)
+		texture:Show()
+		return true
+	end
+
+	texture:Hide()
+	return false
+end
+
 function Party:CreateAnchorFrame()
 	if self.anchorFrame then
 		return self.anchorFrame
@@ -230,6 +262,10 @@ function Party:CreateUnitFrame(index)
 	frame.roleIcon:SetSize(18, 18)
 	frame.roleIcon:SetPoint("CENTER", frame.roleFrame, "CENTER")
 	frame.roleIcon:Hide()
+	frame.readyCheckIcon = frame:CreateTexture(nil, "OVERLAY")
+	frame.readyCheckIcon:SetSize(18, 18)
+	frame.readyCheckIcon:SetPoint("RIGHT", frame.roleFrame, "LEFT", -6, 0)
+	frame.readyCheckIcon:Hide()
 	frame.statusText = createText(frame, "OVERLAY", "GameFontHighlightSmall", 10, "TOPLEFT", frame.nameText, "BOTTOMLEFT", 0, -2, "LEFT")
 	frame.statusText:SetWidth(config.width - 154)
 	frame.statusText:SetWordWrap(false)
@@ -371,6 +407,21 @@ function Party:UpdateRole(frame)
 	setRoleIcon(frame.roleIcon, role)
 end
 
+function Party:UpdateReadyCheck(frame)
+	local demoData = self:GetDemoData(frame)
+	if demoData then
+		setReadyCheckIcon(frame.readyCheckIcon, demoData.readyCheckStatus)
+		return
+	end
+
+	if not UnitExists(frame.unit) or not GetReadyCheckStatus then
+		frame.readyCheckIcon:Hide()
+		return
+	end
+
+	setReadyCheckIcon(frame.readyCheckIcon, GetReadyCheckStatus(frame.unit))
+end
+
 function Party:UpdateStatus(frame)
 	local demoData = self:GetDemoData(frame)
 	if demoData then
@@ -472,6 +523,7 @@ function Party:RefreshFrame(frame)
 			self:UpdateName(frame)
 			self:UpdateLevel(frame)
 			self:UpdateRole(frame)
+			self:UpdateReadyCheck(frame)
 			self:UpdateStatus(frame)
 			self:UpdateRank(frame)
 			self:UpdatePortrait(frame)
@@ -488,6 +540,7 @@ function Party:RefreshFrame(frame)
 	self:UpdateName(frame)
 	self:UpdateLevel(frame)
 	self:UpdateRole(frame)
+	self:UpdateReadyCheck(frame)
 	self:UpdateStatus(frame)
 	self:UpdateRank(frame)
 	self:UpdatePortrait(frame)
@@ -579,6 +632,9 @@ function Party:RegisterEvents()
 	self.eventFrame = self.eventFrame or CreateFrame("Frame")
 	local frame = self.eventFrame
 	frame:RegisterEvent("GROUP_ROSTER_UPDATE")
+	frame:RegisterEvent("READY_CHECK")
+	frame:RegisterEvent("READY_CHECK_CONFIRM")
+	frame:RegisterEvent("READY_CHECK_FINISHED")
 	frame:RegisterEvent("PLAYER_ROLES_ASSIGNED")
 	frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 	frame:RegisterUnitEvent("UNIT_NAME_UPDATE", "party1", "party2", "party3", "party4")

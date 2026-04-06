@@ -16,6 +16,7 @@ local UnitName = UnitName
 local UnitPower = UnitPower
 local UnitPowerMax = UnitPowerMax
 local UnitGroupRolesAssigned = UnitGroupRolesAssigned
+local GetReadyCheckStatus = GetReadyCheckStatus
 
 local HEALTH_BAR_COLOR = {r = 0.18, g = 0.62, b = 0.32}
 local BACKDROP_COLOR = {0.08, 0.09, 0.11, 0.92}
@@ -26,6 +27,9 @@ local SECONDARY_TEXT_COLOR = {0.72, 0.77, 0.84}
 local DEAD_TEXT_COLOR = {0.56, 0.58, 0.62}
 local DEAD_BAR_COLOR = {r = 0.12, g = 0.12, b = 0.14}
 local ROLE_BG_COLOR = {0.12, 0.14, 0.18, 0.96}
+local READY_CHECK_READY_TEX = "Interface\\RaidFrame\\ReadyCheck-Ready"
+local READY_CHECK_NOT_READY_TEX = "Interface\\RaidFrame\\ReadyCheck-NotReady"
+local READY_CHECK_WAITING_TEX = "Interface\\RaidFrame\\ReadyCheck-Waiting"
 local ROLE_ICON_TEXTURE = "Interface\\LFGFrame\\UI-LFG-ICON-ROLES"
 local DEMO_TEMPLATES = {
 	{className = "Warrior", classToken = "WARRIOR", role = "TANK", name = "Tankard", health = 920000, healthMax = 1000000, power = 35, powerMax = 100, powerColor = {r = 0.78, g = 0.24, b = 0.18}},
@@ -143,6 +147,34 @@ local function setRoleIcon(texture, role)
 	texture:Hide()
 end
 
+local function setReadyCheckIcon(texture, status)
+	if not texture then
+		return false
+	end
+
+	if status == "ready" then
+		texture:SetTexture(READY_CHECK_READY_TEX)
+		texture:SetTexCoord(0, 1, 0, 1)
+		texture:Show()
+		return true
+	end
+	if status == "notready" then
+		texture:SetTexture(READY_CHECK_NOT_READY_TEX)
+		texture:SetTexCoord(0, 1, 0, 1)
+		texture:Show()
+		return true
+	end
+	if status == "waiting" then
+		texture:SetTexture(READY_CHECK_WAITING_TEX)
+		texture:SetTexCoord(0, 1, 0, 1)
+		texture:Show()
+		return true
+	end
+
+	texture:Hide()
+	return false
+end
+
 function Raid:IsDemoModeActive()
 	if XFrames:IsTestingPreviewActive("raid") then
 		return true
@@ -253,6 +285,10 @@ function Raid:CreateUnitFrame(index)
 	frame.roleIcon:SetSize(12, 12)
 	frame.roleIcon:SetPoint("CENTER", frame.roleFrame, "CENTER")
 	frame.roleIcon:Hide()
+	frame.readyCheckIcon = frame:CreateTexture(nil, "OVERLAY")
+	frame.readyCheckIcon:SetSize(12, 12)
+	frame.readyCheckIcon:SetPoint("RIGHT", frame.roleFrame, "LEFT", -4, 0)
+	frame.readyCheckIcon:Hide()
 	frame.statusText = createText(frame, "OVERLAY", "GameFontHighlightSmall", 7, "TOPLEFT", frame.nameText, "BOTTOMLEFT", 0, -1, "LEFT")
 	frame.statusText:SetWidth(config.width - 8)
 	frame.statusText:SetWordWrap(false)
@@ -374,6 +410,21 @@ function Raid:UpdateStatus(frame)
 	end
 end
 
+function Raid:UpdateReadyCheck(frame)
+	local demoData = self:GetDemoData(frame)
+	if demoData then
+		setReadyCheckIcon(frame.readyCheckIcon, demoData.readyCheckStatus)
+		return
+	end
+
+	if not UnitExists(frame.unit) or not GetReadyCheckStatus then
+		frame.readyCheckIcon:Hide()
+		return
+	end
+
+	setReadyCheckIcon(frame.readyCheckIcon, GetReadyCheckStatus(frame.unit))
+end
+
 function Raid:UpdateHealth(frame)
 	local bar = frame.healthBar
 	local demoData = self:GetDemoData(frame)
@@ -481,6 +532,7 @@ function Raid:RefreshFrame(frame)
 			self:UpdateName(frame)
 			self:UpdateLevel(frame)
 			self:UpdateStatus(frame)
+			self:UpdateReadyCheck(frame)
 			self:UpdateHealth(frame)
 			self:UpdatePower(frame)
 		else
@@ -495,6 +547,7 @@ function Raid:RefreshFrame(frame)
 	self:UpdateName(frame)
 	self:UpdateLevel(frame)
 	self:UpdateStatus(frame)
+	self:UpdateReadyCheck(frame)
 	self:UpdateHealth(frame)
 	self:UpdatePower(frame)
 end
@@ -565,6 +618,9 @@ function Raid:RegisterEvents()
 	end
 
 	frame:RegisterEvent("GROUP_ROSTER_UPDATE")
+	frame:RegisterEvent("READY_CHECK")
+	frame:RegisterEvent("READY_CHECK_CONFIRM")
+	frame:RegisterEvent("READY_CHECK_FINISHED")
 	frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 	frame:RegisterUnitEvent("UNIT_NAME_UPDATE", unpack(units))
 	frame:RegisterUnitEvent("UNIT_OTHER_PARTY_CHANGED", unpack(units))
