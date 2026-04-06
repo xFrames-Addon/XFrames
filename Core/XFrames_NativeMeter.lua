@@ -389,6 +389,17 @@ function XFrames:FormatNativeMeterText(value, label)
 		return nil
 	end
 
+	local allowCompact = not (InCombatLockdown and InCombatLockdown()) and canCompareValue(value)
+	if allowCompact and type(self.FormatCompactNumber) == "function" then
+		local ok, compactValue = pcall(self.FormatCompactNumber, self, value)
+		if ok and compactValue and compactValue ~= "" then
+			local okText, compactText = pcall(string.format, "%s %s", compactValue, label)
+			if okText then
+				return compactText
+			end
+		end
+	end
+
 	local ok, displayText = pcall(string.format, "%.0f %s", value, label)
 	if ok then
 		return displayText
