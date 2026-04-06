@@ -588,6 +588,13 @@ function XFrames:SetRaidFramesEnabled(enabled)
 	end
 
 	self.db.profile.raid.enabled = not not enabled
+	local raidModule = self:GetModule("Raid")
+	if raidModule then
+		raidModule.enabled = self.db.profile.raid.enabled
+		if type(raidModule.RefreshAll) == "function" then
+			raidModule:RefreshAll()
+		end
+	end
 	self:Info(string.format("Raid frames %s", self.db.profile.raid.enabled and "enabled" or "disabled"))
 	self:ApplyBlizzardFrameVisibility()
 	self:RefreshAllFrameLocks()

@@ -144,7 +144,7 @@ local defaults = {
 			},
 		},
 		raid = {
-			enabled = true,
+			enabled = false,
 			width = 96,
 			height = 40,
 			scale = 1,
@@ -197,7 +197,6 @@ function XFrames:InitializeDatabase()
 	end
 
 	if self.db.profile.raid then
-		self.db.profile.raid.enabled = true
 		self.db.profile.raid.width = 96
 		self.db.profile.raid.height = 40
 		if self.db.profile.raid.maxUnits == nil or self.db.profile.raid.maxUnits == 20 then
@@ -205,5 +204,8 @@ function XFrames:InitializeDatabase()
 		end
 		self.db.profile.raid.spacingX = 8
 		self.db.profile.raid.spacingY = 6
+		if not (IsInRaid and IsInRaid()) then
+			self.db.profile.raid.enabled = false
+		end
 	end
 end
