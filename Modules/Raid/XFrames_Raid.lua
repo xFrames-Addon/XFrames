@@ -28,6 +28,20 @@ local DEMO_TEMPLATES = {
 	{className = "Paladin", classToken = "PALADIN", role = "HEALER", name = "Dawn", health = 850000, healthMax = 910000, power = 190000, powerMax = 210000, powerColor = {r = 0.20, g = 0.44, b = 0.86}},
 }
 
+local function abbreviateName(name)
+	if type(name) ~= "string" or name == "" then
+		return ""
+	end
+
+	local firstWord = name:match("^(%S+)")
+	firstWord = firstWord or name
+	if #firstWord <= 3 then
+		return firstWord
+	end
+
+	return firstWord:sub(1, 3)
+end
+
 local function createText(parent, layer, template, size, anchorPoint, relativeTo, relativePoint, x, y, justify)
 	local text = parent:CreateFontString(nil, layer, template)
 	text:SetPoint(anchorPoint, relativeTo, relativePoint, x, y)
@@ -45,7 +59,7 @@ local function createBar(parent, height, anchorPoint, relativeTo, relativePoint,
 	local bar = CreateFrame("StatusBar", nil, parent)
 	bar:SetHeight(height)
 	bar:SetPoint(anchorPoint, relativeTo, relativePoint, x, y)
-	bar:SetPoint("RIGHT", parent, "RIGHT", -6, 0)
+	bar:SetPoint("RIGHT", parent, "RIGHT", -3, 0)
 	bar:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
 	bar:SetMinMaxValues(0, 1)
 	bar:SetValue(0)
@@ -54,7 +68,8 @@ local function createBar(parent, height, anchorPoint, relativeTo, relativePoint,
 	bar.bg:SetAllPoints()
 	bar.bg:SetColorTexture(0.12, 0.13, 0.16, 0.95)
 
-	bar.valueText = createText(bar, "OVERLAY", "GameFontHighlightSmall", 9, "RIGHT", bar, "RIGHT", -4, 0, "RIGHT")
+	bar.valueText = createText(bar, "OVERLAY", "GameFontHighlightSmall", 8, "RIGHT", bar, "RIGHT", -2, 0, "RIGHT")
+	bar.valueText:Hide()
 	return bar
 end
 
@@ -165,16 +180,16 @@ function Raid:CreateUnitFrame(index)
 	frame.accentFrame = XFrames:CreateAccentFrame(frame, 2, 3)
 	frame:Hide()
 
-	frame.nameText = createText(frame, "OVERLAY", "GameFontNormalSmall", 10, "TOPLEFT", frame, "TOPLEFT", 6, -6, "LEFT")
-	frame.nameText:SetWidth(config.width - 12)
+	frame.nameText = createText(frame, "OVERLAY", "GameFontNormalSmall", 8, "TOPLEFT", frame, "TOPLEFT", 2, -4, "LEFT")
+	frame.nameText:SetWidth(config.width - 4)
 	frame.nameText:SetWordWrap(false)
-	frame.statusText = createText(frame, "OVERLAY", "GameFontHighlightSmall", 8, "TOPLEFT", frame.nameText, "BOTTOMLEFT", 0, -1, "LEFT")
-	frame.statusText:SetWidth(config.width - 12)
+	frame.statusText = createText(frame, "OVERLAY", "GameFontHighlightSmall", 7, "TOPLEFT", frame.nameText, "BOTTOMLEFT", 0, -1, "LEFT")
+	frame.statusText:SetWidth(config.width - 4)
 	frame.statusText:SetWordWrap(false)
 	frame.statusText:SetTextColor(unpack(SECONDARY_TEXT_COLOR))
 
-	frame.healthBar = createBar(frame, 8, "TOPLEFT", frame, "TOPLEFT", 6, -22)
-	frame.powerBar = createBar(frame, 4, "TOPLEFT", frame.healthBar, "BOTTOMLEFT", 0, -3)
+	frame.healthBar = createBar(frame, 8, "TOPLEFT", frame, "TOPLEFT", 2, -22)
+	frame.powerBar = createBar(frame, 4, "TOPLEFT", frame.healthBar, "BOTTOMLEFT", 0, -4)
 
 	self.frames[index] = frame
 	XFrames:RegisterInteractiveUnitFrame(frame, frame.unit, true)
@@ -205,7 +220,7 @@ function Raid:UpdateName(frame)
 	local demoData = self:GetDemoData(frame)
 	if demoData then
 		local color = getRaidAccentColor(frame.unit, demoData)
-		frame.nameText:SetText(demoData.name)
+		frame.nameText:SetText(abbreviateName(demoData.name))
 		frame.nameText:SetTextColor(color.r, color.g, color.b)
 		return
 	end
@@ -218,7 +233,7 @@ function Raid:UpdateName(frame)
 
 	local name = UnitName(frame.unit) or frame.fallbackLabel
 	local color = getRaidAccentColor(frame.unit)
-	frame.nameText:SetText(name)
+	frame.nameText:SetText(abbreviateName(name))
 	frame.nameText:SetTextColor(color.r, color.g, color.b)
 end
 
@@ -230,11 +245,11 @@ function Raid:UpdateStatus(frame)
 	local demoData = self:GetDemoData(frame)
 	if demoData then
 		if demoData.role == "TANK" then
-			frame.statusText:SetText("Tank")
+			frame.statusText:SetText("T")
 		elseif demoData.role == "HEALER" then
-			frame.statusText:SetText("Healer")
+			frame.statusText:SetText("H")
 		elseif demoData.role == "DAMAGER" then
-			frame.statusText:SetText("Damage")
+			frame.statusText:SetText("D")
 		else
 			frame.statusText:SetText("")
 		end
@@ -248,11 +263,11 @@ function Raid:UpdateStatus(frame)
 
 	local role = UnitGroupRolesAssigned and UnitGroupRolesAssigned(frame.unit)
 	if role == "TANK" then
-		frame.statusText:SetText("Tank")
+		frame.statusText:SetText("T")
 	elseif role == "HEALER" then
-		frame.statusText:SetText("Healer")
+		frame.statusText:SetText("H")
 	elseif role == "DAMAGER" then
-		frame.statusText:SetText("Damage")
+		frame.statusText:SetText("D")
 	else
 		frame.statusText:SetText("")
 	end
