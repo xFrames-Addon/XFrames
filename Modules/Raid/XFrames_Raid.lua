@@ -105,6 +105,11 @@ local function getDemoMember(index)
 		member[key] = value
 	end
 	member.name = string.format("%s %d", template.name, index)
+	member.isDead = (index % 9 == 0) or (index % 13 == 0)
+	if member.isDead then
+		member.health = 0
+		member.power = 0
+	end
 	return member
 end
 
