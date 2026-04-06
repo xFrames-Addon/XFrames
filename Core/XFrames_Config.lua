@@ -136,12 +136,12 @@ local defaults = {
 		},
 		raid = {
 			enabled = true,
-			width = 48,
+			width = 96,
 			height = 40,
 			scale = 1,
 			columns = 5,
 			maxUnits = 20,
-			spacingX = 6,
+			spacingX = 8,
 			spacingY = 6,
 			position = {
 				point = "CENTER",
@@ -189,9 +189,9 @@ function XFrames:InitializeDatabase()
 
 	if self.db.profile.raid then
 		self.db.profile.raid.enabled = true
-		self.db.profile.raid.width = 48
+		self.db.profile.raid.width = 96
 		self.db.profile.raid.height = 40
-		self.db.profile.raid.spacingX = 6
+		self.db.profile.raid.spacingX = 8
 		self.db.profile.raid.spacingY = 6
 	end
 end

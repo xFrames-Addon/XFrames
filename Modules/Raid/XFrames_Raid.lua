@@ -35,11 +35,11 @@ local function abbreviateName(name)
 
 	local firstWord = name:match("^(%S+)")
 	firstWord = firstWord or name
-	if #firstWord <= 4 then
+	if #firstWord <= 6 then
 		return firstWord
 	end
 
-	return firstWord:sub(1, 4)
+	return firstWord:sub(1, 6)
 end
 
 local function createText(parent, layer, template, size, anchorPoint, relativeTo, relativePoint, x, y, justify)
