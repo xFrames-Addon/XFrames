@@ -448,3 +448,36 @@ args = <table> {
  4 = <table> {
  }
 }
+
+
+Message: module Player:OnEvent failed: ...ace/AddOns/XFrames/Modules/Player/XFrames_Player.lua:419: attempt to compare a secret number value (tainted by 'XFrames')
+Time: Mon Apr  6 11:22:23 2026
+Count: 52
+Stack:
+[Interface/AddOns/XFrames/Core/XFrames.lua]:174: in function 'SafeCall'
+[Interface/AddOns/XFrames/Modules/Player/XFrames_Player.lua]:630: in function <...ace/AddOns/XFrames/Modules/Player/XFrames_Player.lua:629>
+
+Locals:
+self = Frame {
+ modules = <table> {
+ }
+ db = <table> {
+ }
+ events = <table> {
+ }
+ minimapButton = XFramesMinimapButton {
+ }
+ settingsFrame = Frame {
+ }
+ initialized = true
+ name = "XFrames"
+}
+scope = "module Player:OnEvent"
+args = <table> {
+ 1 = <table> {
+ }
+ 2 = "UNIT_AURA"
+ 3 = "player"
+ 4 = <table> {
+ }
+}
