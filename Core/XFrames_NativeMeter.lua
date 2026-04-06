@@ -285,7 +285,35 @@ function XFrames:GetPerformanceRankForUnit(unit)
 		return nil
 	end
 
-	local source = self:GetNativeMeterSourceForUnit(unit, meterType)
+	if InCombatLockdown and InCombatLockdown() then
+		return nil
+	end
+
+	local view = self:GetNativeMeterView(DAMAGE_METER_SESSION_TOTAL, meterType)
+	if not view or type(view) ~= "table" or type(view.combatSources) ~= "table" then
+		return nil
+	end
+
+	local enumMeterType, _, totalSessionType = self:GetNativeMeterContext(meterType)
+	local unitGUID = UnitGUID(unit)
+	local unitCreatureID = getCreatureIDFromGUID(unitGUID)
+	local source
+	if unitGUID and C_DamageMeter and C_DamageMeter.GetCombatSessionSourceFromType then
+		local ok, resolvedSource = pcall(C_DamageMeter.GetCombatSessionSourceFromType, totalSessionType, enumMeterType, unitGUID, unitCreatureID)
+		if ok and type(resolvedSource) == "table" then
+			source = resolvedSource
+		end
+	end
+
+	if not source and unit == "player" then
+		for _, candidate in ipairs(view.combatSources) do
+			if type(candidate) == "table" and candidate.isLocalPlayer then
+				source = candidate
+				break
+			end
+		end
+	end
+
 	if not source then
 		return nil
 	end
@@ -295,18 +323,7 @@ function XFrames:GetPerformanceRankForUnit(unit)
 		return directRank
 	end
 
-	local sessionType = self:GetMeterSessionType()
-	local view = self:GetNativeMeterView(sessionType, meterType)
-	if not view and sessionType ~= DAMAGE_METER_SESSION_CURRENT then
-		view = self:GetNativeMeterView(DAMAGE_METER_SESSION_CURRENT, meterType)
-	end
-	if not view or type(view) ~= "table" or type(view.combatSources) ~= "table" then
-		return nil
-	end
-
-	local unitGUID = UnitGUID(unit)
 	local unitName = UnitName(unit)
-	local unitCreatureID = getCreatureIDFromGUID(unitGUID)
 	local sourceIdentity = getSourceIdentity(source)
 	local sourceRate = getComparableNumber(getSourceRate(source))
 	local sourceClass = getSafeSourceField(source, "classFilename", "class")
