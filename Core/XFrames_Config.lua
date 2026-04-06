@@ -31,6 +31,14 @@ local defaults = {
 			width = 266,
 			height = 96,
 			scale = 1,
+			debuffs = {
+				enabled = true,
+				size = 22,
+				max = 8,
+				spacing = 4,
+				xOffset = 6,
+				yOffset = -8,
+			},
 			castBar = {
 				enabled = true,
 				width = 240,
