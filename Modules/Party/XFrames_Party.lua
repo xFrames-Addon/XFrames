@@ -29,7 +29,6 @@ local PORTRAIT_BG_COLOR = {0.10, 0.11, 0.14, 0.98}
 local SECONDARY_TEXT_COLOR = {0.72, 0.77, 0.84}
 local LEVEL_TEXT_COLOR = {0.90, 0.92, 0.96}
 local ROLE_BG_COLOR = {0.12, 0.14, 0.18, 0.96}
-local ROLE_ICON_TEXTURE = "Interface\\LFGFrame\\UI-LFG-ICON-ROLES"
 local READY_CHECK_READY_TEX = "Interface\\RaidFrame\\ReadyCheck-Ready"
 local READY_CHECK_NOT_READY_TEX = "Interface\\RaidFrame\\ReadyCheck-NotReady"
 local READY_CHECK_WAITING_TEX = "Interface\\RaidFrame\\ReadyCheck-Waiting"
@@ -142,32 +141,36 @@ end
 
 local function setRoleIcon(texture, role)
 	if not texture then
-		return
+		return false
 	end
 
 	if role == "TANK" then
-		texture:SetTexture(ROLE_ICON_TEXTURE)
-		texture:SetTexCoord(0, 19 / 64, 22 / 64, 41 / 64)
+		if texture.SetAtlas then
+			texture:SetAtlas("UI-LFG-RoleIcon-Tank", false)
+		end
 		texture:SetVertexColor(1, 1, 1, 1)
 		texture:Show()
-		return
+		return true
 	end
 	if role == "HEALER" then
-		texture:SetTexture(ROLE_ICON_TEXTURE)
-		texture:SetTexCoord(20 / 64, 39 / 64, 1 / 64, 20 / 64)
+		if texture.SetAtlas then
+			texture:SetAtlas("UI-LFG-RoleIcon-Healer", false)
+		end
 		texture:SetVertexColor(1, 1, 1, 1)
 		texture:Show()
-		return
+		return true
 	end
 	if role == "DAMAGER" then
-		texture:SetTexture(ROLE_ICON_TEXTURE)
-		texture:SetTexCoord(20 / 64, 39 / 64, 22 / 64, 41 / 64)
+		if texture.SetAtlas then
+			texture:SetAtlas("UI-LFG-RoleIcon-DPS", false)
+		end
 		texture:SetVertexColor(1, 1, 1, 1)
 		texture:Show()
-		return
+		return true
 	end
 
 	texture:Hide()
+	return false
 end
 
 local function setReadyCheckIcon(texture, status)
@@ -258,7 +261,7 @@ function Party:CreateUnitFrame(index)
 	frame.levelText = createText(frame, "OVERLAY", "GameFontHighlight", 12, "TOPRIGHT", frame, "TOPRIGHT", -10, -10, "RIGHT")
 	frame.levelText:SetTextColor(unpack(LEVEL_TEXT_COLOR))
 	frame.roleFrame = createBackdropFrame(nil, frame, 20, 20, "RIGHT", frame.levelText, "LEFT", -8, 0, ROLE_BG_COLOR)
-	frame.roleIcon = frame:CreateTexture(nil, "OVERLAY")
+	frame.roleIcon = frame.roleFrame:CreateTexture(nil, "OVERLAY")
 	frame.roleIcon:SetSize(18, 18)
 	frame.roleIcon:SetPoint("CENTER", frame.roleFrame, "CENTER")
 	frame.roleIcon:Hide()
@@ -399,12 +402,7 @@ end
 function Party:UpdateRole(frame)
 	local demoData = self:GetDemoData(frame)
 	local role = demoData and demoData.role or getRoleInfo(frame.unit)
-	if role then
-		frame.roleFrame:Show()
-	else
-		frame.roleFrame:Hide()
-	end
-	setRoleIcon(frame.roleIcon, role)
+	frame.roleFrame:SetShown(setRoleIcon(frame.roleIcon, role))
 end
 
 function Party:UpdateReadyCheck(frame)
