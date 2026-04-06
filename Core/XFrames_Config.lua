@@ -188,8 +188,6 @@ function XFrames:InitializeDatabase()
 	end
 
 	if self.db.profile.raid then
-		if self.db.profile.raid.width == nil then
-			self.db.profile.raid.enabled = true
-		end
+		self.db.profile.raid.enabled = true
 	end
 end
