@@ -197,3 +197,99 @@ args = <table> {
  6 = 1
 }
 
+Message: module Party:OnEvent failed: ...rface/AddOns/XFrames/Modules/Party/XFrames_Party.lua:206: attempt to compare local 'status' (a secret number value tainted by 'XFrames')
+Time: Mon Apr  6 11:12:08 2026
+Count: 67
+Stack:
+[Interface/AddOns/XFrames/Core/XFrames.lua]:174: in function 'SafeCall'
+[Interface/AddOns/XFrames/Modules/Party/XFrames_Party.lua]:678: in function <...rface/AddOns/XFrames/Modules/Party/XFrames_Party.lua:677>
+
+Locals:
+self = Frame {
+ modules = <table> {
+ }
+ db = <table> {
+ }
+ events = <table> {
+ }
+ minimapButton = XFramesMinimapButton {
+ }
+ settingsFrame = Frame {
+ }
+ nativeMeterCache = <table> {
+ }
+ initialized = true
+ name = "XFrames"
+}
+scope = "module Party:OnEvent"
+args = <table> {
+ 1 = <table> {
+ }
+ 2 = "UNIT_THREAT_LIST_UPDATE"
+ 3 = "target"
+}
+
+Message: ...rface/AddOns/XFrames/Modules/Party/XFrames_Party.lua:206: attempt to compare local 'status' (a secret number value tainted by 'XFrames')
+Time: Mon Apr  6 11:12:08 2026
+Count: 40
+Stack:
+[Interface/AddOns/XFrames/Modules/Party/XFrames_Party.lua]:206: in function <...rface/AddOns/XFrames/Modules/Party/XFrames_Party.lua:194>
+[Interface/AddOns/XFrames/Modules/Party/XFrames_Party.lua]:443: in function 'UpdateAggro'
+[Interface/AddOns/XFrames/Modules/Party/XFrames_Party.lua]:570: in function 'RefreshFrame'
+[Interface/AddOns/XFrames/Modules/Party/XFrames_Party.lua]:600: in function 'RefreshAll'
+[Interface/AddOns/XFrames/Modules/Party/XFrames_Party.lua]:620: in function <...rface/AddOns/XFrames/Modules/Party/XFrames_Party.lua:613>
+
+Locals:
+unit = "party1"
+role = "TANK"
+mobUnit = "party1target"
+_ = <no value>
+status = <no value>
+(*temporary) = "party1target"
+(*temporary) = "attempt to compare local 'status' (a secret number value tainted by 'XFrames')"
+AGGRO_GOOD_COLOR = <table> {
+ b = 0.360000
+ g = 0.820000
+ r = 0.240000
+}
+AGGRO_WARN_COLOR = <table> {
+ b = 0.280000
+ g = 0.820000
+ r = 0.920000
+}
+AGGRO_BAD_COLOR = <table> {
+ b = 0.280000
+ g = 0.280000
+ r = 0.900000
+}
+
+Message: module Party:OnEvent failed: ...rface/AddOns/XFrames/Modules/Party/XFrames_Party.lua:215: attempt to compare local 'status' (a secret number value tainted by 'XFrames')
+Time: Mon Apr  6 11:12:11 2026
+Count: 47
+Stack:
+[Interface/AddOns/XFrames/Core/XFrames.lua]:174: in function 'SafeCall'
+[Interface/AddOns/XFrames/Modules/Party/XFrames_Party.lua]:678: in function <...rface/AddOns/XFrames/Modules/Party/XFrames_Party.lua:677>
+
+Locals:
+self = Frame {
+ modules = <table> {
+ }
+ db = <table> {
+ }
+ events = <table> {
+ }
+ minimapButton = XFramesMinimapButton {
+ }
+ settingsFrame = Frame {
+ }
+ initialized = true
+ name = "XFrames"
+}
+scope = "module Party:OnEvent"
+args = <table> {
+ 1 = <table> {
+ }
+ 2 = "UNIT_TARGET"
+ 3 = "party3"
+}
+
