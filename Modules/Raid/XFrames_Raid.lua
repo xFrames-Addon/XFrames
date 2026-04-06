@@ -119,32 +119,45 @@ end
 
 local function setRoleIcon(texture, role)
 	if not texture then
-		return
+		return false
 	end
 
 	if role == "TANK" then
-		texture:SetTexture(ROLE_ICON_TEXTURE)
-		texture:SetTexCoord(0, 19 / 64, 22 / 64, 41 / 64)
+		if texture.SetAtlas then
+			texture:SetAtlas("UI-LFG-RoleIcon-Tank", false)
+		else
+			texture:SetTexture(ROLE_ICON_TEXTURE)
+			texture:SetTexCoord(0, 19 / 64, 22 / 64, 41 / 64)
+		end
 		texture:SetVertexColor(1, 1, 1, 1)
 		texture:Show()
-		return
+		return true
 	end
 	if role == "HEALER" then
-		texture:SetTexture(ROLE_ICON_TEXTURE)
-		texture:SetTexCoord(20 / 64, 39 / 64, 1 / 64, 20 / 64)
+		if texture.SetAtlas then
+			texture:SetAtlas("UI-LFG-RoleIcon-Healer", false)
+		else
+			texture:SetTexture(ROLE_ICON_TEXTURE)
+			texture:SetTexCoord(20 / 64, 39 / 64, 1 / 64, 20 / 64)
+		end
 		texture:SetVertexColor(1, 1, 1, 1)
 		texture:Show()
-		return
+		return true
 	end
 	if role == "DAMAGER" then
-		texture:SetTexture(ROLE_ICON_TEXTURE)
-		texture:SetTexCoord(20 / 64, 39 / 64, 22 / 64, 41 / 64)
+		if texture.SetAtlas then
+			texture:SetAtlas("UI-LFG-RoleIcon-DPS", false)
+		else
+			texture:SetTexture(ROLE_ICON_TEXTURE)
+			texture:SetTexCoord(20 / 64, 39 / 64, 22 / 64, 41 / 64)
+		end
 		texture:SetVertexColor(1, 1, 1, 1)
 		texture:Show()
-		return
+		return true
 	end
 
 	texture:Hide()
+	return false
 end
 
 local function setReadyCheckIcon(texture, status)
@@ -281,7 +294,7 @@ function Raid:CreateUnitFrame(index)
 	})
 	frame.roleFrame:SetBackdropColor(unpack(ROLE_BG_COLOR))
 	frame.roleFrame:SetBackdropBorderColor(unpack(BORDER_COLOR))
-	frame.roleIcon = frame:CreateTexture(nil, "OVERLAY")
+	frame.roleIcon = frame.roleFrame:CreateTexture(nil, "OVERLAY")
 	frame.roleIcon:SetSize(12, 12)
 	frame.roleIcon:SetPoint("CENTER", frame.roleFrame, "CENTER")
 	frame.roleIcon:Hide()
@@ -293,15 +306,17 @@ function Raid:CreateUnitFrame(index)
 	frame.statusText:SetWidth(config.width - 8)
 	frame.statusText:SetWordWrap(false)
 	frame.statusText:SetTextColor(unpack(SECONDARY_TEXT_COLOR))
-	frame.deadOverlay = frame:CreateTexture(nil, "OVERLAY")
-	frame.deadOverlay:SetPoint("TOPLEFT", frame, "TOPLEFT", 1, -1)
-	frame.deadOverlay:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -1, 1)
+	frame.deadFrame = CreateFrame("Frame", nil, frame)
+	frame.deadFrame:SetAllPoints(frame)
+	frame.deadFrame:SetFrameLevel(frame:GetFrameLevel() + 20)
+	frame.deadFrame:Hide()
+	frame.deadOverlay = frame.deadFrame:CreateTexture(nil, "OVERLAY")
+	frame.deadOverlay:SetPoint("TOPLEFT", frame.deadFrame, "TOPLEFT", 1, -1)
+	frame.deadOverlay:SetPoint("BOTTOMRIGHT", frame.deadFrame, "BOTTOMRIGHT", -1, 1)
 	frame.deadOverlay:SetColorTexture(0, 0, 0, 0.45)
-	frame.deadOverlay:Hide()
-	frame.deadText = createText(frame, "OVERLAY", "GameFontNormalSmall", 12, "CENTER", frame, "CENTER", 0, 0, "CENTER")
+	frame.deadText = createText(frame.deadFrame, "OVERLAY", "GameFontNormalSmall", 12, "CENTER", frame.deadFrame, "CENTER", 0, 0, "CENTER")
 	frame.deadText:SetText("DEAD")
 	frame.deadText:SetTextColor(1, 0.2, 0.2)
-	frame.deadText:Hide()
 
 	frame.healthBar = createBar(frame, 8, "TOPLEFT", frame, "TOPLEFT", 4, -22)
 	frame.powerBar = createBar(frame, 4, "TOPLEFT", frame.healthBar, "BOTTOMLEFT", 0, -4)
@@ -383,8 +398,7 @@ function Raid:UpdateStatus(frame)
 	local demoData = self:GetDemoData(frame)
 	if demoData then
 		frame.statusText:SetText("")
-		frame.roleFrame:Show()
-		setRoleIcon(frame.roleIcon, demoData.role)
+		frame.roleFrame:SetShown(setRoleIcon(frame.roleIcon, demoData.role))
 		return
 	end
 
@@ -403,8 +417,7 @@ function Raid:UpdateStatus(frame)
 	local role = UnitGroupRolesAssigned and UnitGroupRolesAssigned(frame.unit)
 	frame.statusText:SetText("")
 	if role == "TANK" or role == "HEALER" or role == "DAMAGER" then
-		frame.roleFrame:Show()
-		setRoleIcon(frame.roleIcon, role)
+		frame.roleFrame:SetShown(setRoleIcon(frame.roleIcon, role))
 	else
 		frame.roleFrame:Hide()
 	end
@@ -508,15 +521,13 @@ function Raid:UpdateDeadState(frame)
 	if self:IsDead(frame) then
 		frame:SetBackdropColor(unpack(DEAD_BACKDROP_COLOR))
 		frame:SetBackdropBorderColor(unpack(DEAD_BORDER_COLOR))
-		frame.deadOverlay:Show()
-		frame.deadText:Show()
+		frame.deadFrame:Show()
 		return
 	end
 
 	frame:SetBackdropColor(unpack(BACKDROP_COLOR))
 	frame:SetBackdropBorderColor(unpack(BORDER_COLOR))
-	frame.deadOverlay:Hide()
-	frame.deadText:Hide()
+	frame.deadFrame:Hide()
 end
 
 function Raid:RefreshFrame(frame)
