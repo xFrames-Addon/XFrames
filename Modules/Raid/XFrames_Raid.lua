@@ -139,6 +139,10 @@ local function setRoleIcon(texture, role)
 end
 
 function Raid:IsDemoModeActive()
+	if XFrames:IsTestingPreviewActive("raid") then
+		return true
+	end
+
 	if not XFrames:IsFramesUnlocked() then
 		return false
 	end
@@ -154,7 +158,16 @@ function Raid:IsDemoModeActive()
 end
 
 function Raid:GetDemoData(frame)
-	if not frame or not frame.demoIndex or not self:IsDemoModeActive() then
+	if not frame or not frame.demoIndex then
+		return nil
+	end
+
+	local testingData = XFrames:GetTestingPreviewData("raid", frame.demoIndex)
+	if testingData then
+		return testingData
+	end
+
+	if not self:IsDemoModeActive() then
 		return nil
 	end
 
@@ -283,8 +296,13 @@ function Raid:UpdateFrameBorder(frame)
 end
 
 function Raid:IsDead(frame)
-	if not frame or self:GetDemoData(frame) then
+	if not frame then
 		return false
+	end
+
+	local demoData = self:GetDemoData(frame)
+	if demoData then
+		return demoData.isDead == true or demoData.isGhost == true
 	end
 
 	return UnitExists(frame.unit) and UnitIsDeadOrGhost and UnitIsDeadOrGhost(frame.unit) or false
@@ -356,6 +374,13 @@ function Raid:UpdateHealth(frame)
 	local demoData = self:GetDemoData(frame)
 
 	if demoData then
+		if self:IsDead(frame) then
+			bar:SetStatusBarColor(DEAD_BAR_COLOR.r, DEAD_BAR_COLOR.g, DEAD_BAR_COLOR.b)
+			bar:SetMinMaxValues(0, 1)
+			bar:SetValue(0)
+			bar.valueText:SetText("")
+			return
+		end
 		bar:SetStatusBarColor(HEALTH_BAR_COLOR.r, HEALTH_BAR_COLOR.g, HEALTH_BAR_COLOR.b)
 		XFrames:SetBarValues(bar, demoData.health, demoData.healthMax)
 		return
@@ -385,6 +410,13 @@ function Raid:UpdatePower(frame)
 	local bar = frame.powerBar
 	local demoData = self:GetDemoData(frame)
 	if demoData then
+		if self:IsDead(frame) then
+			bar:SetStatusBarColor(DEAD_BAR_COLOR.r, DEAD_BAR_COLOR.g, DEAD_BAR_COLOR.b)
+			bar:SetMinMaxValues(0, 1)
+			bar:SetValue(0)
+			bar.valueText:SetText("")
+			return
+		end
 		bar:SetStatusBarColor(demoData.powerColor.r, demoData.powerColor.g, demoData.powerColor.b)
 		XFrames:SetBarValues(bar, demoData.power, demoData.powerMax)
 		return
@@ -473,6 +505,11 @@ function Raid:RefreshAnchor()
 	end
 
 	if XFrames:IsFramesUnlocked() then
+		self.anchorFrame:Show()
+		return
+	end
+
+	if XFrames:IsTestingPreviewActive("raid") then
 		self.anchorFrame:Show()
 		return
 	end

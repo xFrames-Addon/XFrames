@@ -284,6 +284,10 @@ function Party:UpdatePortraitBorder(frame)
 end
 
 function Party:IsDemoModeActive()
+	if XFrames:IsTestingPreviewActive("party") then
+		return true
+	end
+
 	if not XFrames:IsFramesUnlocked() then
 		return false
 	end
@@ -298,7 +302,16 @@ function Party:IsDemoModeActive()
 end
 
 function Party:GetDemoData(frame)
-	if not frame or not frame.demoIndex or not self:IsDemoModeActive() then
+	if not frame or not frame.demoIndex then
+		return nil
+	end
+
+	local testingData = XFrames:GetTestingPreviewData("party", frame.demoIndex)
+	if testingData then
+		return testingData
+	end
+
+	if not self:IsDemoModeActive() then
 		return nil
 	end
 
@@ -451,7 +464,8 @@ function Party:RefreshFrame(frame)
 		return
 	end
 
-	if not UnitExists(frame.unit) then
+	local demoData = self:GetDemoData(frame)
+	if not UnitExists(frame.unit) and not demoData then
 		if XFrames:IsFramesUnlocked() then
 			frame:Show()
 			self:UpdateFrameBorder(frame)
@@ -487,6 +501,11 @@ function Party:RefreshAnchor()
 	end
 
 	if XFrames:IsFramesUnlocked() then
+		self.anchorFrame:Show()
+		return
+	end
+
+	if XFrames:IsTestingPreviewActive("party") then
 		self.anchorFrame:Show()
 		return
 	end

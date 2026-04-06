@@ -151,9 +151,17 @@ function XFrames:RefreshDragState(frame)
 	end
 
 	local unlocked = self:IsFramesUnlocked()
+	local previewActive = false
+	if frame.unit and type(frame.unit) == "string" then
+		if frame.unit:match("^party%d+$") and self:IsTestingPreviewActive("party") then
+			previewActive = true
+		elseif frame.unit:match("^raid%d+$") and self:IsTestingPreviewActive("raid") then
+			previewActive = true
+		end
+	end
 
 	if frame.xfUnitWatch then
-		if unlocked then
+		if unlocked or previewActive then
 			if frame.xfUnitWatchActive and not (InCombatLockdown and InCombatLockdown()) then
 				UnregisterUnitWatch(frame)
 				frame.xfUnitWatchActive = nil

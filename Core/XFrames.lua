@@ -2,6 +2,7 @@ local addonName, ns = ...
 
 local XFrames = CreateFrame("Frame")
 ns.XFrames = XFrames
+_G.XFrames = XFrames
 
 XFrames.name = addonName
 XFrames.modules = {}
@@ -100,6 +101,48 @@ function XFrames:RegisterModule(name, module)
 
 	module.name = name
 	self.modules[name] = module
+end
+
+function XFrames:SetTestingPreview(kind, data)
+	if kind ~= "party" and kind ~= "raid" then
+		return
+	end
+
+	self.testingPreview = self.testingPreview or {}
+
+	if type(data) == "table" and next(data) ~= nil then
+		self.testingPreview[kind] = data
+	else
+		self.testingPreview[kind] = nil
+	end
+
+	self:RefreshAllFrameLocks()
+end
+
+function XFrames:ClearTestingPreview(kind)
+	if kind ~= "party" and kind ~= "raid" then
+		return
+	end
+
+	if self.testingPreview then
+		self.testingPreview[kind] = nil
+	end
+
+	self:RefreshAllFrameLocks()
+end
+
+function XFrames:IsTestingPreviewActive(kind)
+	local preview = self.testingPreview and self.testingPreview[kind]
+	return type(preview) == "table" and next(preview) ~= nil
+end
+
+function XFrames:GetTestingPreviewData(kind, index)
+	local preview = self.testingPreview and self.testingPreview[kind]
+	if type(preview) ~= "table" then
+		return nil
+	end
+
+	return preview[index]
 end
 
 function XFrames:GetModule(name)

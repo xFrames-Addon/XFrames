@@ -4,6 +4,5 @@
 ## Author: Jim Adkins, OpenAI Codex
 ## Version: 0.1.0
 ## RequiredDeps: XFrames
-## LoadOnDemand: 1
 
 XFrames_Testing.lua
