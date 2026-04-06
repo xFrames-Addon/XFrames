@@ -237,6 +237,70 @@ function XFrames:GetNativeMeterView(sessionType, meterType)
 	return cache.views[cacheKey] or nil
 end
 
+function XFrames:GetLatestCompletedMeterSessionID()
+	if not self:IsNativeMeterAvailable() or not (C_DamageMeter and C_DamageMeter.GetAvailableCombatSessions) then
+		return nil
+	end
+
+	local cache = self.nativeMeterCache or {}
+	cache.latestCompletedSession = cache.latestCompletedSession or {}
+	self.nativeMeterCache = cache
+
+	if cache.latestCompletedSession.id ~= nil then
+		return cache.latestCompletedSession.id or nil
+	end
+
+	local ok, sessions = pcall(C_DamageMeter.GetAvailableCombatSessions)
+	if not ok or type(sessions) ~= "table" then
+		cache.latestCompletedSession.id = false
+		return nil
+	end
+
+	local latestSessionID
+	for _, sessionInfo in ipairs(sessions) do
+		local sessionID = sessionInfo and sessionInfo.sessionID
+		if type(sessionID) == "number" and (not latestSessionID or sessionID > latestSessionID) then
+			latestSessionID = sessionID
+		end
+	end
+
+	cache.latestCompletedSession.id = latestSessionID or false
+	return latestSessionID
+end
+
+function XFrames:GetCompletedMeterView(meterType)
+	if not self:IsNativeMeterAvailable() then
+		return nil
+	end
+
+	local sessionID = self:GetLatestCompletedMeterSessionID()
+	if not sessionID or not (C_DamageMeter and C_DamageMeter.GetCombatSessionFromID) then
+		return nil
+	end
+
+	local cache = self.nativeMeterCache or {}
+	cache.completedViews = cache.completedViews or {}
+	self.nativeMeterCache = cache
+
+	local enumMeterType = meterType
+	if Enum and Enum.DamageMeterType then
+		if meterType == DAMAGE_METER_TYPE_DPS and Enum.DamageMeterType.Dps then
+			enumMeterType = Enum.DamageMeterType.Dps
+		elseif meterType == DAMAGE_METER_TYPE_HPS and Enum.DamageMeterType.Hps then
+			enumMeterType = Enum.DamageMeterType.Hps
+		end
+	end
+
+	local cacheKey = tostring(sessionID) .. ":" .. tostring(enumMeterType)
+	if cache.completedViews[cacheKey] ~= nil then
+		return cache.completedViews[cacheKey] or nil
+	end
+
+	local ok, view = pcall(C_DamageMeter.GetCombatSessionFromID, sessionID, enumMeterType)
+	cache.completedViews[cacheKey] = ok and view or false
+	return cache.completedViews[cacheKey] or nil
+end
+
 function XFrames:GetNativeMeterSourceForUnit(unit, meterType)
 	if not unit or not meterType or not UnitExists(unit) or not self:IsNativeMeterAvailable() then
 		return nil
@@ -257,20 +321,24 @@ function XFrames:GetNativeMeterSourceForUnit(unit, meterType)
 		return nil
 	end
 
-	local sessionType = self:GetMeterSessionType()
-	if sessionType == DAMAGE_METER_SESSION_CURRENT then
-		sessionType = currentSessionType
-	else
-		sessionType = totalSessionType
+	if not (InCombatLockdown and InCombatLockdown()) and C_DamageMeter.GetCombatSessionSourceFromID then
+		local sessionID = self:GetLatestCompletedMeterSessionID()
+		if sessionID then
+			local ok, source = pcall(C_DamageMeter.GetCombatSessionSourceFromID, sessionID, enumMeterType, unitGUID, unitCreatureID)
+			if ok and type(source) == "table" then
+				return source
+			end
+		end
 	end
 
+	local sessionType = currentSessionType
 	local ok, source = pcall(C_DamageMeter.GetCombatSessionSourceFromType, sessionType, enumMeterType, unitGUID, unitCreatureID)
 	if ok and type(source) == "table" then
 		return source
 	end
 
-	if sessionType ~= currentSessionType then
-		ok, source = pcall(C_DamageMeter.GetCombatSessionSourceFromType, currentSessionType, enumMeterType, unitGUID, unitCreatureID)
+	if totalSessionType and totalSessionType ~= currentSessionType then
+		ok, source = pcall(C_DamageMeter.GetCombatSessionSourceFromType, totalSessionType, enumMeterType, unitGUID, unitCreatureID)
 		if ok and type(source) == "table" then
 			return source
 		end
@@ -289,17 +357,18 @@ function XFrames:GetPerformanceRankForUnit(unit)
 		return nil
 	end
 
-	local view = self:GetNativeMeterView(DAMAGE_METER_SESSION_TOTAL, meterType)
+	local view = self:GetCompletedMeterView(meterType)
 	if not view or type(view) ~= "table" or type(view.combatSources) ~= "table" then
 		return nil
 	end
 
-	local enumMeterType, _, totalSessionType = self:GetNativeMeterContext(meterType)
+	local enumMeterType = self:GetNativeMeterContext(meterType)
 	local unitGUID = UnitGUID(unit)
 	local unitCreatureID = getCreatureIDFromGUID(unitGUID)
 	local source
-	if unitGUID and C_DamageMeter and C_DamageMeter.GetCombatSessionSourceFromType then
-		local ok, resolvedSource = pcall(C_DamageMeter.GetCombatSessionSourceFromType, totalSessionType, enumMeterType, unitGUID, unitCreatureID)
+	local sessionID = self:GetLatestCompletedMeterSessionID()
+	if unitGUID and sessionID and C_DamageMeter and C_DamageMeter.GetCombatSessionSourceFromID then
+		local ok, resolvedSource = pcall(C_DamageMeter.GetCombatSessionSourceFromID, sessionID, enumMeterType, unitGUID, unitCreatureID)
 		if ok and type(resolvedSource) == "table" then
 			source = resolvedSource
 		end
