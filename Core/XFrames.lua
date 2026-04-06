@@ -629,11 +629,21 @@ function XFrames:GetUnitAccentColor(unit)
 end
 
 function XFrames:FormatSpecLabel(name)
-	if not name or name == "" then
+	if name == nil then
 		return ""
 	end
 
-	return name:match("^[^%s]+") or name
+	local ok, shortName = pcall(string.match, name, "^[^%s]+")
+	if ok and shortName then
+		return shortName
+	end
+
+	ok, shortName = pcall(string.format, "%s", name)
+	if ok then
+		return shortName
+	end
+
+	return ""
 end
 
 function XFrames:GetPartySubtitleMode()
