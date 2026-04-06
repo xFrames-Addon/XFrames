@@ -135,6 +135,7 @@ local defaults = {
 			spacing = 10,
 			scale = 1,
 			subtitleMode = "status",
+			outOfCombatMeterMode = "segment",
 			position = {
 				point = "CENTER",
 				relativePoint = "CENTER",

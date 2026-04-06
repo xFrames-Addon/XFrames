@@ -118,6 +118,37 @@ function XFrames:GetPartySubtitleMode()
 	return self.db and self.db.profile and self.db.profile.party and self.db.profile.party.subtitleMode or "status"
 end
 
+function XFrames:GetOutOfCombatMeterMode()
+	return self.db and self.db.profile and self.db.profile.party and self.db.profile.party.outOfCombatMeterMode or "segment"
+end
+
+function XFrames:SetOutOfCombatMeterMode(mode)
+	if mode ~= "segment" and mode ~= "overall" then
+		self:Warn(string.format("Unknown out-of-combat meter mode: %s", tostring(mode)))
+		return
+	end
+
+	if not (self.db and self.db.profile and self.db.profile.party) then
+		return
+	end
+
+	self.db.profile.party.outOfCombatMeterMode = mode
+	self:Info(string.format("Out-of-combat meter mode set to %s", mode))
+	self:InvalidateMeterCache()
+
+	local party = self:GetModule("Party")
+	if party and type(party.RefreshPerformanceMode) == "function" then
+		party:RefreshPerformanceMode()
+	end
+
+	local player = self:GetModule("Player")
+	if player and type(player.Refresh) == "function" then
+		player:Refresh()
+	end
+
+	self:RefreshSettingsPanel()
+end
+
 function XFrames:SetPartySubtitleMode(mode)
 	if mode ~= "status" and mode ~= "performance" then
 		self:Warn(string.format("Unknown party subtitle mode: %s", tostring(mode)))
@@ -321,7 +352,7 @@ function XFrames:GetNativeMeterSourceForUnit(unit, meterType)
 		return nil
 	end
 
-	if not (InCombatLockdown and InCombatLockdown()) and C_DamageMeter.GetCombatSessionSourceFromID then
+	if not (InCombatLockdown and InCombatLockdown()) and self:GetOutOfCombatMeterMode() == "segment" and C_DamageMeter.GetCombatSessionSourceFromID then
 		local sessionID = self:GetLatestCompletedMeterSessionID()
 		if sessionID then
 			local ok, source = pcall(C_DamageMeter.GetCombatSessionSourceFromID, sessionID, enumMeterType, unitGUID, unitCreatureID)
@@ -357,7 +388,13 @@ function XFrames:GetPerformanceRankForUnit(unit)
 		return nil
 	end
 
-	local view = self:GetCompletedMeterView(meterType)
+	local mode = self:GetOutOfCombatMeterMode()
+	local view
+	if mode == "overall" then
+		view = self:GetNativeMeterView(DAMAGE_METER_SESSION_TOTAL, meterType)
+	else
+		view = self:GetCompletedMeterView(meterType)
+	end
 	if not view or type(view) ~= "table" or type(view.combatSources) ~= "table" then
 		return nil
 	end
@@ -366,11 +403,21 @@ function XFrames:GetPerformanceRankForUnit(unit)
 	local unitGUID = UnitGUID(unit)
 	local unitCreatureID = getCreatureIDFromGUID(unitGUID)
 	local source
-	local sessionID = self:GetLatestCompletedMeterSessionID()
-	if unitGUID and sessionID and C_DamageMeter and C_DamageMeter.GetCombatSessionSourceFromID then
-		local ok, resolvedSource = pcall(C_DamageMeter.GetCombatSessionSourceFromID, sessionID, enumMeterType, unitGUID, unitCreatureID)
-		if ok and type(resolvedSource) == "table" then
-			source = resolvedSource
+	if unitGUID and C_DamageMeter then
+		if mode == "overall" and C_DamageMeter.GetCombatSessionSourceFromType then
+			local _, _, totalSessionType = self:GetNativeMeterContext(meterType)
+			local ok, resolvedSource = pcall(C_DamageMeter.GetCombatSessionSourceFromType, totalSessionType, enumMeterType, unitGUID, unitCreatureID)
+			if ok and type(resolvedSource) == "table" then
+				source = resolvedSource
+			end
+		elseif mode ~= "overall" and C_DamageMeter.GetCombatSessionSourceFromID then
+			local sessionID = self:GetLatestCompletedMeterSessionID()
+			if sessionID then
+				local ok, resolvedSource = pcall(C_DamageMeter.GetCombatSessionSourceFromID, sessionID, enumMeterType, unitGUID, unitCreatureID)
+				if ok and type(resolvedSource) == "table" then
+					source = resolvedSource
+				end
+			end
 		end
 	end
 
