@@ -2,7 +2,7 @@
 
 `XFrames` is a fresh Retail-only World of Warcraft unit frame addon.
 
-It replaces the legacy ZPerl salvage approach with a clean rebuild that:
+
 
 - avoids Blizzard frame takeover patterns
 - keeps module boundaries small and explicit
@@ -35,12 +35,4 @@ That code is intentionally decoupled from the live addon so party and raid test 
 - no disabling or reparening Blizzard-managed frames
 - no legacy XML-heavy options system unless there is a clear need
 - prefer small Lua modules with explicit lifecycle hooks
-
-## Diagnostics
-
-Built-in debugging is part of the core design.
-
-See:
-
-- `DEBUGGING.md`
 
