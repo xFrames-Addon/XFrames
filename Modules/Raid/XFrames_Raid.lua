@@ -6,28 +6,26 @@ local Raid = {}
 local RAID_CLASS_COLORS = RAID_CLASS_COLORS
 
 local CreateFrame = CreateFrame
-local IsInRaid = IsInRaid
+local InCombatLockdown = InCombatLockdown
 local UnitClass = UnitClass
 local UnitExists = UnitExists
 local UnitHealth = UnitHealth
 local UnitHealthMax = UnitHealthMax
-local UnitIsPlayer = UnitIsPlayer
-local UnitLevel = UnitLevel
 local UnitName = UnitName
 local UnitPower = UnitPower
 local UnitPowerMax = UnitPowerMax
+local UnitGroupRolesAssigned = UnitGroupRolesAssigned
 
 local HEALTH_BAR_COLOR = {r = 0.18, g = 0.62, b = 0.32}
 local BACKDROP_COLOR = {0.08, 0.09, 0.11, 0.92}
 local BORDER_COLOR = {0.24, 0.27, 0.31, 0.95}
-local LEVEL_TEXT_COLOR = {0.90, 0.92, 0.96}
 local SECONDARY_TEXT_COLOR = {0.72, 0.77, 0.84}
 local DEMO_TEMPLATES = {
-	{className = "Warrior", classToken = "WARRIOR", name = "Tankard", level = 80, health = 920000, healthMax = 1000000, power = 35, powerMax = 100, powerColor = {r = 0.78, g = 0.24, b = 0.18}},
-	{className = "Priest", classToken = "PRIEST", name = "Mendra", level = 80, health = 760000, healthMax = 820000, power = 220000, powerMax = 250000, powerColor = {r = 0.20, g = 0.44, b = 0.86}},
-	{className = "Rogue", classToken = "ROGUE", name = "Shade", level = 80, health = 710000, healthMax = 760000, power = 82, powerMax = 100, powerColor = {r = 0.95, g = 0.78, b = 0.20}},
-	{className = "Mage", classToken = "MAGE", name = "Ember", level = 80, health = 640000, healthMax = 700000, power = 180000, powerMax = 200000, powerColor = {r = 0.20, g = 0.44, b = 0.86}},
-	{className = "Paladin", classToken = "PALADIN", name = "Dawn", level = 80, health = 850000, healthMax = 910000, power = 190000, powerMax = 210000, powerColor = {r = 0.20, g = 0.44, b = 0.86}},
+	{className = "Warrior", classToken = "WARRIOR", role = "TANK", name = "Tankard", health = 920000, healthMax = 1000000, power = 35, powerMax = 100, powerColor = {r = 0.78, g = 0.24, b = 0.18}},
+	{className = "Priest", classToken = "PRIEST", role = "HEALER", name = "Mendra", health = 760000, healthMax = 820000, power = 220000, powerMax = 250000, powerColor = {r = 0.20, g = 0.44, b = 0.86}},
+	{className = "Rogue", classToken = "ROGUE", role = "DAMAGER", name = "Shade", health = 710000, healthMax = 760000, power = 82, powerMax = 100, powerColor = {r = 0.95, g = 0.78, b = 0.20}},
+	{className = "Mage", classToken = "MAGE", role = "DAMAGER", name = "Ember", health = 640000, healthMax = 700000, power = 180000, powerMax = 200000, powerColor = {r = 0.20, g = 0.44, b = 0.86}},
+	{className = "Paladin", classToken = "PALADIN", role = "HEALER", name = "Dawn", health = 850000, healthMax = 910000, power = 190000, powerMax = 210000, powerColor = {r = 0.20, g = 0.44, b = 0.86}},
 }
 
 local function createText(parent, layer, template, size, anchorPoint, relativeTo, relativePoint, x, y, justify)
@@ -167,21 +165,34 @@ function Raid:CreateUnitFrame(index)
 	frame.accentFrame = XFrames:CreateAccentFrame(frame, 2, 3)
 	frame:Hide()
 
-	frame.nameText = createText(frame, "OVERLAY", "GameFontNormal", 11, "TOPLEFT", frame, "TOPLEFT", 8, -8, "LEFT")
-	frame.nameText:SetWidth(config.width - 44)
+	frame.nameText = createText(frame, "OVERLAY", "GameFontNormalSmall", 10, "TOPLEFT", frame, "TOPLEFT", 6, -6, "LEFT")
+	frame.nameText:SetWidth(config.width - 12)
 	frame.nameText:SetWordWrap(false)
-	frame.levelText = createText(frame, "OVERLAY", "GameFontHighlightSmall", 10, "TOPRIGHT", frame, "TOPRIGHT", -8, -9, "RIGHT")
-	frame.levelText:SetTextColor(unpack(LEVEL_TEXT_COLOR))
-	frame.statusText = createText(frame, "OVERLAY", "GameFontHighlightSmall", 9, "TOPLEFT", frame.nameText, "BOTTOMLEFT", 0, -2, "LEFT")
-	frame.statusText:SetWidth(config.width - 56)
+	frame.statusText = createText(frame, "OVERLAY", "GameFontHighlightSmall", 8, "TOPLEFT", frame.nameText, "BOTTOMLEFT", 0, -1, "LEFT")
+	frame.statusText:SetWidth(config.width - 12)
 	frame.statusText:SetWordWrap(false)
 	frame.statusText:SetTextColor(unpack(SECONDARY_TEXT_COLOR))
 
-	frame.healthBar = createBar(frame, 10, "TOPLEFT", frame, "TOPLEFT", 8, -28)
-	frame.powerBar = createBar(frame, 6, "TOPLEFT", frame.healthBar, "BOTTOMLEFT", 0, -4)
+	frame.healthBar = createBar(frame, 8, "TOPLEFT", frame, "TOPLEFT", 6, -22)
+	frame.powerBar = createBar(frame, 4, "TOPLEFT", frame.healthBar, "BOTTOMLEFT", 0, -3)
 
 	self.frames[index] = frame
 	XFrames:RegisterInteractiveUnitFrame(frame, frame.unit, true)
+	frame:RegisterForDrag("LeftButton")
+	frame:SetScript("OnDragStart", function()
+		if not XFrames:IsFramesUnlocked() then
+			return
+		end
+		if InCombatLockdown and InCombatLockdown() then
+			return
+		end
+
+		anchor:StartMoving()
+	end)
+	frame:SetScript("OnDragStop", function()
+		anchor:StopMovingOrSizing()
+		XFrames:SaveFramePosition(anchor)
+	end)
 	return frame
 end
 
@@ -212,24 +223,21 @@ function Raid:UpdateName(frame)
 end
 
 function Raid:UpdateLevel(frame)
-	local demoData = self:GetDemoData(frame)
-	if demoData then
-		XFrames:SetValueText(frame.levelText, demoData.level)
-		return
-	end
-
-	if not UnitExists(frame.unit) then
-		frame.levelText:SetText("")
-		return
-	end
-
-	XFrames:SetValueText(frame.levelText, UnitLevel(frame.unit))
+	return
 end
 
 function Raid:UpdateStatus(frame)
 	local demoData = self:GetDemoData(frame)
 	if demoData then
-		frame.statusText:SetText(demoData.className)
+		if demoData.role == "TANK" then
+			frame.statusText:SetText("Tank")
+		elseif demoData.role == "HEALER" then
+			frame.statusText:SetText("Healer")
+		elseif demoData.role == "DAMAGER" then
+			frame.statusText:SetText("Damage")
+		else
+			frame.statusText:SetText("")
+		end
 		return
 	end
 
@@ -238,8 +246,16 @@ function Raid:UpdateStatus(frame)
 		return
 	end
 
-	local className = UnitClass(frame.unit)
-	frame.statusText:SetText(className or "")
+	local role = UnitGroupRolesAssigned and UnitGroupRolesAssigned(frame.unit)
+	if role == "TANK" then
+		frame.statusText:SetText("Tank")
+	elseif role == "HEALER" then
+		frame.statusText:SetText("Healer")
+	elseif role == "DAMAGER" then
+		frame.statusText:SetText("Damage")
+	else
+		frame.statusText:SetText("")
+	end
 end
 
 function Raid:UpdateHealth(frame)
