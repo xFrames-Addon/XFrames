@@ -186,4 +186,10 @@ function XFrames:InitializeDatabase()
 			self.db.profile.party.spacing = 10
 		end
 	end
+
+	if self.db.profile.raid then
+		if self.db.profile.raid.width == nil then
+			self.db.profile.raid.enabled = true
+		end
+	end
 end
