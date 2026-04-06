@@ -148,7 +148,6 @@ local defaults = {
 			width = 96,
 			height = 40,
 			scale = 1,
-			layout = "row",
 			columns = 5,
 			maxUnits = 40,
 			spacingX = 8,

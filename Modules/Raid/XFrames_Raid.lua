@@ -26,13 +26,7 @@ local SECONDARY_TEXT_COLOR = {0.72, 0.77, 0.84}
 local DEAD_TEXT_COLOR = {0.56, 0.58, 0.62}
 local DEAD_BAR_COLOR = {r = 0.12, g = 0.12, b = 0.14}
 local ROLE_BG_COLOR = {0.12, 0.14, 0.18, 0.96}
-local GROUP_BG_COLOR = {0.05, 0.06, 0.08, 0.78}
-local GROUP_LABEL_COLOR = {0.84, 0.88, 0.94}
-local GROUP_SPACING_X = 12
-local GROUP_SPACING_Y = 12
-local GROUP_PADDING_X = 4
-local GROUP_PADDING_Y = 4
-local GROUP_LABEL_HEIGHT = 14
+local ROLE_ICON_TEXTURE = "Interface\\LFGFrame\\UI-LFG-ICON-ROLES"
 local DEMO_TEMPLATES = {
 	{className = "Warrior", classToken = "WARRIOR", role = "TANK", name = "Tankard", health = 920000, healthMax = 1000000, power = 35, powerMax = 100, powerColor = {r = 0.78, g = 0.24, b = 0.18}},
 	{className = "Priest", classToken = "PRIEST", role = "HEALER", name = "Mendra", health = 760000, healthMax = 820000, power = 220000, powerMax = 250000, powerColor = {r = 0.20, g = 0.44, b = 0.86}},
@@ -116,36 +110,32 @@ end
 
 local function setRoleIcon(texture, role)
 	if not texture then
-		return false
+		return
 	end
 
 	if role == "TANK" then
-		if texture.SetAtlas then
-			texture:SetAtlas("UI-LFG-RoleIcon-Tank", false)
-		end
+		texture:SetTexture(ROLE_ICON_TEXTURE)
+		texture:SetTexCoord(0, 19 / 64, 22 / 64, 41 / 64)
 		texture:SetVertexColor(1, 1, 1, 1)
 		texture:Show()
-		return true
+		return
 	end
 	if role == "HEALER" then
-		if texture.SetAtlas then
-			texture:SetAtlas("UI-LFG-RoleIcon-Healer", false)
-		end
+		texture:SetTexture(ROLE_ICON_TEXTURE)
+		texture:SetTexCoord(20 / 64, 39 / 64, 1 / 64, 20 / 64)
 		texture:SetVertexColor(1, 1, 1, 1)
 		texture:Show()
-		return true
+		return
 	end
 	if role == "DAMAGER" then
-		if texture.SetAtlas then
-			texture:SetAtlas("UI-LFG-RoleIcon-DPS", false)
-		end
+		texture:SetTexture(ROLE_ICON_TEXTURE)
+		texture:SetTexCoord(20 / 64, 39 / 64, 22 / 64, 41 / 64)
 		texture:SetVertexColor(1, 1, 1, 1)
 		texture:Show()
-		return true
+		return
 	end
 
 	texture:Hide()
-	return false
 end
 
 function Raid:IsDemoModeActive()
@@ -190,8 +180,14 @@ function Raid:CreateAnchorFrame()
 	end
 
 	local config = XFrames.db.profile.raid
+	local columns = config.columns or 5
+	local maxUnits = config.maxUnits or 20
+	local rows = math.ceil(maxUnits / columns)
+	local width = (config.width * columns) + (config.spacingX * (columns - 1))
+	local height = (config.height * rows) + (config.spacingY * (rows - 1))
+
 	local frame = CreateFrame("Frame", "XFramesRaidAnchor", UIParent)
-	frame:SetSize(1, 1)
+	frame:SetSize(width, height)
 	frame:SetScale(config.scale or 1)
 	frame:SetPoint(config.position.point, UIParent, config.position.relativePoint, config.position.x, config.position.y)
 	frame:SetFrameStrata("MEDIUM")
@@ -201,119 +197,6 @@ function Raid:CreateAnchorFrame()
 	self.anchorFrame = frame
 	XFrames:RegisterMovableFrame(frame, config.position, "Raid")
 	return frame
-end
-
-function Raid:CreateGroupFrame(groupIndex)
-	self.groupFrames = self.groupFrames or {}
-	if self.groupFrames[groupIndex] then
-		return self.groupFrames[groupIndex]
-	end
-
-	local anchor = self:CreateAnchorFrame()
-	local frame = CreateFrame("Frame", "XFramesRaidGroupFrame" .. groupIndex, anchor, "BackdropTemplate")
-	frame:SetFrameStrata("MEDIUM")
-	frame:SetFrameLevel(anchor:GetFrameLevel() + 1)
-	frame:SetBackdrop({
-		bgFile = "Interface\\Buttons\\WHITE8x8",
-		edgeFile = "Interface\\Buttons\\WHITE8x8",
-		edgeSize = 1,
-		insets = {left = 1, right = 1, top = 1, bottom = 1},
-	})
-	frame:SetBackdropColor(unpack(GROUP_BG_COLOR))
-	frame:SetBackdropBorderColor(unpack(BORDER_COLOR))
-	frame.labelText = createText(frame, "OVERLAY", "GameFontHighlightSmall", 9, "TOPLEFT", frame, "TOPLEFT", 6, -4, "LEFT")
-	frame.labelText:SetTextColor(unpack(GROUP_LABEL_COLOR))
-	frame.labelText:SetText("Group " .. groupIndex)
-	frame:Hide()
-
-	self.groupFrames[groupIndex] = frame
-	return frame
-end
-
-function Raid:GetLayoutMetrics()
-	local config = XFrames.db.profile.raid
-	local layout = XFrames:GetRaidLayout()
-	local membersPerGroup = 5
-	local innerColumns = layout == "column" and 1 or membersPerGroup
-	local innerRows = layout == "column" and membersPerGroup or 1
-	local groupColumns = layout == "column" and 4 or 2
-	local groupRows = math.ceil(8 / groupColumns)
-	local groupWidth = (GROUP_PADDING_X * 2) + (config.width * innerColumns) + (config.spacingX * (innerColumns - 1))
-	local groupHeight = GROUP_LABEL_HEIGHT + (GROUP_PADDING_Y * 2) + (config.height * innerRows) + (config.spacingY * (innerRows - 1))
-	local anchorWidth = (groupWidth * groupColumns) + (GROUP_SPACING_X * (groupColumns - 1))
-	local anchorHeight = (groupHeight * groupRows) + (GROUP_SPACING_Y * (groupRows - 1))
-
-	return {
-		layout = layout,
-		groupColumns = groupColumns,
-		groupWidth = groupWidth,
-		groupHeight = groupHeight,
-		anchorWidth = anchorWidth,
-		anchorHeight = anchorHeight,
-	}
-end
-
-function Raid:LayoutFrames()
-	local anchor = self:CreateAnchorFrame()
-	local config = XFrames.db.profile.raid
-	local metrics = self:GetLayoutMetrics()
-	local maxUnits = config.maxUnits or 40
-
-	anchor:SetScale(config.scale or 1)
-	anchor:SetSize(metrics.anchorWidth, metrics.anchorHeight)
-
-	for groupIndex = 1, 8 do
-		local groupFrame = self:CreateGroupFrame(groupIndex)
-		local groupCol = (groupIndex - 1) % metrics.groupColumns
-		local groupRow = math.floor((groupIndex - 1) / metrics.groupColumns)
-		groupFrame:SetSize(metrics.groupWidth, metrics.groupHeight)
-		groupFrame:ClearAllPoints()
-		groupFrame:SetPoint("TOPLEFT", anchor, "TOPLEFT", groupCol * (metrics.groupWidth + GROUP_SPACING_X), -(groupRow * (metrics.groupHeight + GROUP_SPACING_Y)))
-	end
-
-	for index = 1, maxUnits do
-		local frame = self.frames and self.frames[index]
-		if frame then
-			local groupIndex = math.floor((index - 1) / 5) + 1
-			local slotIndex = ((index - 1) % 5) + 1
-			local groupFrame = self.groupFrames and self.groupFrames[groupIndex]
-			local col = metrics.layout == "column" and 0 or (slotIndex - 1)
-			local row = metrics.layout == "column" and (slotIndex - 1) or 0
-			local x = GROUP_PADDING_X + (col * (config.width + config.spacingX))
-			local y = GROUP_LABEL_HEIGHT + GROUP_PADDING_Y + (row * (config.height + config.spacingY))
-
-			frame:SetSize(config.width, config.height)
-			frame:ClearAllPoints()
-			frame:SetPoint("TOPLEFT", groupFrame, "TOPLEFT", x, -y)
-		end
-	end
-end
-
-function Raid:RefreshGroupFrames()
-	if not self.groupFrames then
-		return
-	end
-
-	local unlocked = XFrames:IsFramesUnlocked()
-	local preview = XFrames:IsTestingPreviewActive("raid") or self:IsDemoModeActive()
-	local maxUnits = XFrames.db.profile.raid.maxUnits or 40
-
-	for groupIndex = 1, 8 do
-		local groupFrame = self.groupFrames[groupIndex]
-		local visible = unlocked or preview
-		if not visible then
-			local startIndex = ((groupIndex - 1) * 5) + 1
-			local endIndex = math.min(startIndex + 4, maxUnits)
-			for index = startIndex, endIndex do
-				if UnitExists("raid" .. index) then
-					visible = true
-					break
-				end
-			end
-		end
-
-		groupFrame:SetShown(visible)
-	end
 end
 
 function Raid:CreateUnitFrame(index)
@@ -361,7 +244,7 @@ function Raid:CreateUnitFrame(index)
 	})
 	frame.roleFrame:SetBackdropColor(unpack(ROLE_BG_COLOR))
 	frame.roleFrame:SetBackdropBorderColor(unpack(BORDER_COLOR))
-	frame.roleIcon = frame.roleFrame:CreateTexture(nil, "OVERLAY")
+	frame.roleIcon = frame:CreateTexture(nil, "OVERLAY")
 	frame.roleIcon:SetSize(12, 12)
 	frame.roleIcon:SetPoint("CENTER", frame.roleFrame, "CENTER")
 	frame.roleIcon:Hide()
@@ -369,17 +252,15 @@ function Raid:CreateUnitFrame(index)
 	frame.statusText:SetWidth(config.width - 8)
 	frame.statusText:SetWordWrap(false)
 	frame.statusText:SetTextColor(unpack(SECONDARY_TEXT_COLOR))
-	frame.deadFrame = CreateFrame("Frame", nil, frame)
-	frame.deadFrame:SetAllPoints(frame)
-	frame.deadFrame:SetFrameLevel(frame:GetFrameLevel() + 20)
-	frame.deadFrame:Hide()
-	frame.deadOverlay = frame.deadFrame:CreateTexture(nil, "OVERLAY")
-	frame.deadOverlay:SetPoint("TOPLEFT", frame.deadFrame, "TOPLEFT", 1, -1)
-	frame.deadOverlay:SetPoint("BOTTOMRIGHT", frame.deadFrame, "BOTTOMRIGHT", -1, 1)
+	frame.deadOverlay = frame:CreateTexture(nil, "OVERLAY")
+	frame.deadOverlay:SetPoint("TOPLEFT", frame, "TOPLEFT", 1, -1)
+	frame.deadOverlay:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -1, 1)
 	frame.deadOverlay:SetColorTexture(0, 0, 0, 0.45)
-	frame.deadText = createText(frame.deadFrame, "OVERLAY", "GameFontNormalSmall", 12, "CENTER", frame.deadFrame, "CENTER", 0, 0, "CENTER")
+	frame.deadOverlay:Hide()
+	frame.deadText = createText(frame, "OVERLAY", "GameFontNormalSmall", 12, "CENTER", frame, "CENTER", 0, 0, "CENTER")
 	frame.deadText:SetText("DEAD")
 	frame.deadText:SetTextColor(1, 0.2, 0.2)
+	frame.deadText:Hide()
 
 	frame.healthBar = createBar(frame, 8, "TOPLEFT", frame, "TOPLEFT", 4, -22)
 	frame.powerBar = createBar(frame, 4, "TOPLEFT", frame.healthBar, "BOTTOMLEFT", 0, -4)
@@ -461,7 +342,8 @@ function Raid:UpdateStatus(frame)
 	local demoData = self:GetDemoData(frame)
 	if demoData then
 		frame.statusText:SetText("")
-		frame.roleFrame:SetShown(setRoleIcon(frame.roleIcon, demoData.role))
+		frame.roleFrame:Show()
+		setRoleIcon(frame.roleIcon, demoData.role)
 		return
 	end
 
@@ -480,7 +362,8 @@ function Raid:UpdateStatus(frame)
 	local role = UnitGroupRolesAssigned and UnitGroupRolesAssigned(frame.unit)
 	frame.statusText:SetText("")
 	if role == "TANK" or role == "HEALER" or role == "DAMAGER" then
-		frame.roleFrame:SetShown(setRoleIcon(frame.roleIcon, role))
+		frame.roleFrame:Show()
+		setRoleIcon(frame.roleIcon, role)
 	else
 		frame.roleFrame:Hide()
 	end
@@ -569,13 +452,15 @@ function Raid:UpdateDeadState(frame)
 	if self:IsDead(frame) then
 		frame:SetBackdropColor(unpack(DEAD_BACKDROP_COLOR))
 		frame:SetBackdropBorderColor(unpack(DEAD_BORDER_COLOR))
-		frame.deadFrame:Show()
+		frame.deadOverlay:Show()
+		frame.deadText:Show()
 		return
 	end
 
 	frame:SetBackdropColor(unpack(BACKDROP_COLOR))
 	frame:SetBackdropBorderColor(unpack(BORDER_COLOR))
-	frame.deadFrame:Hide()
+	frame.deadOverlay:Hide()
+	frame.deadText:Hide()
 end
 
 function Raid:RefreshFrame(frame)
@@ -643,17 +528,10 @@ end
 function Raid:RefreshAll()
 	local maxUnits = XFrames.db.profile.raid.maxUnits or 20
 
-	self:LayoutFrames()
-
 	if not XFrames:IsRaidFramesEnabled() then
 		for index = 1, maxUnits do
 			if self.frames and self.frames[index] then
 				self.frames[index]:Hide()
-			end
-		end
-		if self.groupFrames then
-			for _, groupFrame in ipairs(self.groupFrames) do
-				groupFrame:Hide()
 			end
 		end
 		self:RefreshAnchor()
@@ -663,7 +541,6 @@ function Raid:RefreshAll()
 	for index = 1, maxUnits do
 		self:RefreshFrame(self.frames and self.frames[index])
 	end
-	self:RefreshGroupFrames()
 	self:RefreshAnchor()
 end
 

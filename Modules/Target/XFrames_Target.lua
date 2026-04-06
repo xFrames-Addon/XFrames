@@ -21,7 +21,6 @@ local UnitCreatureType = UnitCreatureType
 local UnitExists = UnitExists
 local UnitHealth = UnitHealth
 local UnitHealthMax = UnitHealthMax
-local UnitClassification = UnitClassification
 local UnitGUID = UnitGUID
 local UnitIsPlayer = UnitIsPlayer
 local UnitLevel = UnitLevel
@@ -37,7 +36,6 @@ local BACKDROP_COLOR = {0.08, 0.09, 0.11, 0.92}
 local BORDER_COLOR = {0.24, 0.27, 0.31, 0.95}
 local POWER_BAR_COLOR = {r = 0.24, g = 0.28, b = 0.36}
 local PORTRAIT_BG_COLOR = {0.10, 0.11, 0.14, 0.98}
-local CLASSIFICATION_BG_COLOR = {0.16, 0.19, 0.23, 0.95}
 local CAST_BAR_COLOR = {r = 0.22, g = 0.78, b = 0.32}
 local CHANNEL_BAR_COLOR = {r = 0.22, g = 0.78, b = 0.32}
 local TIMER_DIRECTION = Enum and Enum.StatusBarTimerDirection
@@ -129,31 +127,6 @@ local function getStatusText(unit, fallbackLabel)
 	return UnitCreatureType(unit) or fallbackLabel
 end
 
-local function getClassificationLabel(unit)
-	if not UnitExists(unit) or UnitIsPlayer(unit) then
-		return nil
-	end
-
-	local classification = UnitClassification and UnitClassification(unit)
-	if classification == "worldboss" then
-		return "BOSS"
-	end
-	if classification == "elite" then
-		return "ELITE"
-	end
-	if classification == "rare" then
-		return "RARE"
-	end
-	if classification == "rareelite" then
-		return "RARE+"
-	end
-	if UnitLevel(unit) == -1 then
-		return "BOSS"
-	end
-
-	return nil
-end
-
 function Target:CreateUnitFrame(key, unit, config, accent)
 	local frameName = key == "focus" and "XFramesFocusFrame" or "XFramesTargetFrame"
 	local frame = CreateFrame("Button", frameName, UIParent, "SecureUnitButtonTemplate,BackdropTemplate")
@@ -188,11 +161,6 @@ function Target:CreateUnitFrame(key, unit, config, accent)
 
 	frame.nameText = createText(frame, "OVERLAY", "GameFontNormalLarge", 13, "TOPLEFT", frame, "TOPLEFT", 64, -10, "LEFT")
 	frame.levelText = createText(frame, "OVERLAY", "GameFontHighlight", 12, "TOPRIGHT", frame, "TOPRIGHT", -10, -10, "RIGHT")
-	frame.classificationFrame = createBackdropFrame(nil, frame, 48, 18, "RIGHT", frame.levelText, "LEFT", -8, 0)
-	frame.classificationFrame:SetBackdropColor(unpack(CLASSIFICATION_BG_COLOR))
-	frame.classificationFrame:Hide()
-	frame.classificationText = createText(frame.classificationFrame, "GameFontNormalSmall", 9, "CENTER", frame.classificationFrame, "CENTER", 0, 0, "CENTER")
-	frame.classificationText:SetTextColor(1, 0.88, 0.42)
 	frame.statusText = createText(frame, "OVERLAY", "GameFontHighlightSmall", 10, "TOPLEFT", frame.nameText, "BOTTOMLEFT", 0, -2, "LEFT")
 
 	frame.healthBar = createBar(frame, 14, "TOPLEFT", frame, "TOPLEFT", 64, -40)
@@ -424,22 +392,6 @@ function Target:UpdateStatus(frame)
 	end
 end
 
-function Target:UpdateClassification(frame)
-	if not frame or frame.isCompact or not frame.classificationFrame or not frame.classificationText then
-		return
-	end
-
-	local label = getClassificationLabel(frame.unit)
-	if not label then
-		frame.classificationText:SetText("")
-		frame.classificationFrame:Hide()
-		return
-	end
-
-	frame.classificationText:SetText(label)
-	frame.classificationFrame:Show()
-end
-
 function Target:UpdatePortrait(frame)
 	if not frame.portraitTexture then
 		return
@@ -562,7 +514,6 @@ function Target:RefreshFrame(frame)
 			self:UpdateFrameBorder(frame)
 			self:UpdateName(frame)
 			self:UpdateLevel(frame)
-			self:UpdateClassification(frame)
 			self:UpdateStatus(frame)
 			self:UpdateSpec(frame)
 			self:UpdatePortrait(frame)
@@ -578,7 +529,6 @@ function Target:RefreshFrame(frame)
 	self:UpdateFrameBorder(frame)
 	self:UpdateName(frame)
 	self:UpdateLevel(frame)
-	self:UpdateClassification(frame)
 	self:UpdateStatus(frame)
 	self:UpdateSpec(frame)
 	self:UpdatePortrait(frame)
@@ -671,7 +621,6 @@ function Target:RegisterEvents()
 	frame:RegisterUnitEvent("UNIT_HEALTH", "target", "focus", "targettarget", "focustarget")
 	frame:RegisterUnitEvent("UNIT_MAXHEALTH", "target", "focus", "targettarget", "focustarget")
 	frame:RegisterUnitEvent("UNIT_LEVEL", "target", "focus", "targettarget", "focustarget")
-	frame:RegisterUnitEvent("UNIT_CLASSIFICATION_CHANGED", "target", "focus")
 	frame:RegisterUnitEvent("UNIT_NAME_UPDATE", "target", "focus", "targettarget", "focustarget")
 	frame:RegisterUnitEvent("UNIT_PORTRAIT_UPDATE", "target", "focus", "targettarget", "focustarget")
 	frame:RegisterUnitEvent("UNIT_POWER_UPDATE", "target", "focus", "targettarget", "focustarget")
