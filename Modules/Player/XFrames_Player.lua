@@ -187,6 +187,32 @@ local function getDebuffData(unit, filter, maxCount)
 	return results
 end
 
+local function getAuraCountText(aura)
+	if not aura then
+		return ""
+	end
+
+	local applications = aura.applications
+	if applications == nil then
+		return ""
+	end
+
+	if canaccessvalue then
+		if not canaccessvalue(applications) then
+			return ""
+		end
+	elseif issecretvalue and issecretvalue(applications) then
+		return ""
+	end
+
+	local ok, countValue = pcall(tonumber, applications)
+	if not ok or not countValue or countValue <= 1 then
+		return ""
+	end
+
+	return countValue
+end
+
 local function getCastInfo(unit)
 	local name = UnitCastingInfo(unit)
 	if name then
@@ -416,7 +442,7 @@ function Player:UpdateDebuffs()
 			button.icon:SetTexture(aura.icon or 134400)
 			button.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
 			button.icon:SetVertexColor(1, 1, 1, 1)
-			button.countText:SetText((aura.applications and aura.applications > 1) and aura.applications or "")
+			button.countText:SetText(getAuraCountText(aura))
 			button.auraInstanceID = aura.auraInstanceID
 			button:SetBackdropBorderColor(DEBUFF_BORDER_COLOR.r, DEBUFF_BORDER_COLOR.g, DEBUFF_BORDER_COLOR.b, 0.9)
 
