@@ -107,9 +107,9 @@ local function createDebuffButton(parent, index, size)
 	local button = CreateFrame("Button", nil, parent, "BackdropTemplate")
 	button:SetSize(size, size)
 	if index == 1 then
-		button:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, 0)
+		button:SetPoint("TOPRIGHT", parent, "TOPRIGHT", 0, 0)
 	else
-		button:SetPoint("LEFT", parent.buttons[index - 1], "RIGHT", parent.spacing, 0)
+		button:SetPoint("RIGHT", parent.buttons[index - 1], "LEFT", -parent.spacing, 0)
 	end
 
 	button:SetBackdrop({
@@ -256,7 +256,7 @@ function Player:CreateFrame()
 
 	local debuffConfig = config.debuffs or {}
 	local debuffFrame = CreateFrame("Frame", nil, frame)
-	debuffFrame:SetPoint("TOPLEFT", frame, "BOTTOMLEFT", debuffConfig.xOffset or 6, debuffConfig.yOffset or -8)
+	debuffFrame:SetPoint("TOPRIGHT", frame, "BOTTOMRIGHT", -(debuffConfig.xOffset or 6), debuffConfig.yOffset or -8)
 	debuffFrame:SetSize(((debuffConfig.size or 22) * (debuffConfig.max or 8)) + ((debuffConfig.spacing or 4) * math.max((debuffConfig.max or 8) - 1, 0)), debuffConfig.size or 22)
 	debuffFrame.buttons = {}
 	debuffFrame.spacing = debuffConfig.spacing or 4
