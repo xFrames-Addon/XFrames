@@ -25,6 +25,8 @@ local DEAD_BORDER_COLOR = {0.16, 0.16, 0.18, 0.95}
 local SECONDARY_TEXT_COLOR = {0.72, 0.77, 0.84}
 local DEAD_TEXT_COLOR = {0.56, 0.58, 0.62}
 local DEAD_BAR_COLOR = {r = 0.12, g = 0.12, b = 0.14}
+local ROLE_BG_COLOR = {0.12, 0.14, 0.18, 0.96}
+local ROLE_ICON_TEXTURE = "Interface\\LFGFrame\\UI-LFG-ICON-ROLES"
 local DEMO_TEMPLATES = {
 	{className = "Warrior", classToken = "WARRIOR", role = "TANK", name = "Tankard", health = 920000, healthMax = 1000000, power = 35, powerMax = 100, powerColor = {r = 0.78, g = 0.24, b = 0.18}},
 	{className = "Priest", classToken = "PRIEST", role = "HEALER", name = "Mendra", health = 760000, healthMax = 820000, power = 220000, powerMax = 250000, powerColor = {r = 0.20, g = 0.44, b = 0.86}},
@@ -104,6 +106,36 @@ local function getDemoMember(index)
 	end
 	member.name = string.format("%s %d", template.name, index)
 	return member
+end
+
+local function setRoleIcon(texture, role)
+	if not texture then
+		return
+	end
+
+	if role == "TANK" then
+		texture:SetTexture(ROLE_ICON_TEXTURE)
+		texture:SetTexCoord(0, 19 / 64, 22 / 64, 41 / 64)
+		texture:SetVertexColor(1, 1, 1, 1)
+		texture:Show()
+		return
+	end
+	if role == "HEALER" then
+		texture:SetTexture(ROLE_ICON_TEXTURE)
+		texture:SetTexCoord(20 / 64, 39 / 64, 1 / 64, 20 / 64)
+		texture:SetVertexColor(1, 1, 1, 1)
+		texture:Show()
+		return
+	end
+	if role == "DAMAGER" then
+		texture:SetTexture(ROLE_ICON_TEXTURE)
+		texture:SetTexCoord(20 / 64, 39 / 64, 22 / 64, 41 / 64)
+		texture:SetVertexColor(1, 1, 1, 1)
+		texture:Show()
+		return
+	end
+
+	texture:Hide()
 end
 
 function Raid:IsDemoModeActive()
@@ -186,8 +218,23 @@ function Raid:CreateUnitFrame(index)
 	frame:Hide()
 
 	frame.nameText = createText(frame, "OVERLAY", "GameFontNormalSmall", 9, "TOPLEFT", frame, "TOPLEFT", 4, -4, "LEFT")
-	frame.nameText:SetWidth(config.width - 8)
+	frame.nameText:SetWidth(config.width - 26)
 	frame.nameText:SetWordWrap(false)
+	frame.roleFrame = CreateFrame("Frame", nil, frame, "BackdropTemplate")
+	frame.roleFrame:SetSize(14, 14)
+	frame.roleFrame:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -4, -4)
+	frame.roleFrame:SetBackdrop({
+		bgFile = "Interface\\Buttons\\WHITE8x8",
+		edgeFile = "Interface\\Buttons\\WHITE8x8",
+		edgeSize = 1,
+		insets = {left = 1, right = 1, top = 1, bottom = 1},
+	})
+	frame.roleFrame:SetBackdropColor(unpack(ROLE_BG_COLOR))
+	frame.roleFrame:SetBackdropBorderColor(unpack(BORDER_COLOR))
+	frame.roleIcon = frame:CreateTexture(nil, "OVERLAY")
+	frame.roleIcon:SetSize(12, 12)
+	frame.roleIcon:SetPoint("CENTER", frame.roleFrame, "CENTER")
+	frame.roleIcon:Hide()
 	frame.statusText = createText(frame, "OVERLAY", "GameFontHighlightSmall", 7, "TOPLEFT", frame.nameText, "BOTTOMLEFT", 0, -1, "LEFT")
 	frame.statusText:SetWidth(config.width - 8)
 	frame.statusText:SetWordWrap(false)
@@ -276,37 +323,31 @@ end
 function Raid:UpdateStatus(frame)
 	local demoData = self:GetDemoData(frame)
 	if demoData then
-		if demoData.role == "TANK" then
-			frame.statusText:SetText("T")
-		elseif demoData.role == "HEALER" then
-			frame.statusText:SetText("H")
-		elseif demoData.role == "DAMAGER" then
-			frame.statusText:SetText("D")
-		else
-			frame.statusText:SetText("")
-		end
+		frame.statusText:SetText("")
+		frame.roleFrame:Show()
+		setRoleIcon(frame.roleIcon, demoData.role)
 		return
 	end
 
 	if not UnitExists(frame.unit) then
 		frame.statusText:SetText("")
+		frame.roleFrame:Hide()
 		return
 	end
 
 	if self:IsDead(frame) then
 		frame.statusText:SetText("")
+		frame.roleFrame:Hide()
 		return
 	end
 
 	local role = UnitGroupRolesAssigned and UnitGroupRolesAssigned(frame.unit)
-	if role == "TANK" then
-		frame.statusText:SetText("T")
-	elseif role == "HEALER" then
-		frame.statusText:SetText("H")
-	elseif role == "DAMAGER" then
-		frame.statusText:SetText("D")
+	frame.statusText:SetText("")
+	if role == "TANK" or role == "HEALER" or role == "DAMAGER" then
+		frame.roleFrame:Show()
+		setRoleIcon(frame.roleIcon, role)
 	else
-		frame.statusText:SetText("")
+		frame.roleFrame:Hide()
 	end
 end
 
