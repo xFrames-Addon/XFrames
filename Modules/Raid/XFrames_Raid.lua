@@ -8,6 +8,7 @@ local RAID_CLASS_COLORS = RAID_CLASS_COLORS
 local CreateFrame = CreateFrame
 local InCombatLockdown = InCombatLockdown
 local UnitClass = UnitClass
+local UnitIsDeadOrGhost = UnitIsDeadOrGhost
 local UnitExists = UnitExists
 local UnitHealth = UnitHealth
 local UnitHealthMax = UnitHealthMax
@@ -18,8 +19,12 @@ local UnitGroupRolesAssigned = UnitGroupRolesAssigned
 
 local HEALTH_BAR_COLOR = {r = 0.18, g = 0.62, b = 0.32}
 local BACKDROP_COLOR = {0.08, 0.09, 0.11, 0.92}
+local DEAD_BACKDROP_COLOR = {0.03, 0.03, 0.04, 0.96}
 local BORDER_COLOR = {0.24, 0.27, 0.31, 0.95}
+local DEAD_BORDER_COLOR = {0.16, 0.16, 0.18, 0.95}
 local SECONDARY_TEXT_COLOR = {0.72, 0.77, 0.84}
+local DEAD_TEXT_COLOR = {0.56, 0.58, 0.62}
+local DEAD_BAR_COLOR = {r = 0.12, g = 0.12, b = 0.14}
 local DEMO_TEMPLATES = {
 	{className = "Warrior", classToken = "WARRIOR", role = "TANK", name = "Tankard", health = 920000, healthMax = 1000000, power = 35, powerMax = 100, powerColor = {r = 0.78, g = 0.24, b = 0.18}},
 	{className = "Priest", classToken = "PRIEST", role = "HEALER", name = "Mendra", health = 760000, healthMax = 820000, power = 220000, powerMax = 250000, powerColor = {r = 0.20, g = 0.44, b = 0.86}},
@@ -187,6 +192,15 @@ function Raid:CreateUnitFrame(index)
 	frame.statusText:SetWidth(config.width - 8)
 	frame.statusText:SetWordWrap(false)
 	frame.statusText:SetTextColor(unpack(SECONDARY_TEXT_COLOR))
+	frame.deadOverlay = frame:CreateTexture(nil, "OVERLAY")
+	frame.deadOverlay:SetPoint("TOPLEFT", frame, "TOPLEFT", 1, -1)
+	frame.deadOverlay:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -1, 1)
+	frame.deadOverlay:SetColorTexture(0, 0, 0, 0.45)
+	frame.deadOverlay:Hide()
+	frame.deadText = createText(frame, "OVERLAY", "GameFontNormalSmall", 12, "CENTER", frame, "CENTER", 0, 0, "CENTER")
+	frame.deadText:SetText("DEAD")
+	frame.deadText:SetTextColor(1, 0.2, 0.2)
+	frame.deadText:Hide()
 
 	frame.healthBar = createBar(frame, 8, "TOPLEFT", frame, "TOPLEFT", 4, -22)
 	frame.powerBar = createBar(frame, 4, "TOPLEFT", frame.healthBar, "BOTTOMLEFT", 0, -4)
@@ -212,8 +226,21 @@ function Raid:CreateUnitFrame(index)
 end
 
 function Raid:UpdateFrameBorder(frame)
+	if self:IsDead(frame) then
+		frame.accentFrame:SetBackdropBorderColor(DEAD_BORDER_COLOR[1], DEAD_BORDER_COLOR[2], DEAD_BORDER_COLOR[3], 1)
+		return
+	end
+
 	local color = getRaidAccentColor(frame.unit, self:GetDemoData(frame))
 	frame.accentFrame:SetBackdropBorderColor(color.r, color.g, color.b, 1)
+end
+
+function Raid:IsDead(frame)
+	if not frame or self:GetDemoData(frame) then
+		return false
+	end
+
+	return UnitExists(frame.unit) and UnitIsDeadOrGhost and UnitIsDeadOrGhost(frame.unit) or false
 end
 
 function Raid:UpdateName(frame)
@@ -232,8 +259,13 @@ function Raid:UpdateName(frame)
 	end
 
 	local name = UnitName(frame.unit) or frame.fallbackLabel
-	local color = getRaidAccentColor(frame.unit)
 	frame.nameText:SetText(abbreviateName(name))
+	if self:IsDead(frame) then
+		frame.nameText:SetTextColor(unpack(DEAD_TEXT_COLOR))
+		return
+	end
+
+	local color = getRaidAccentColor(frame.unit)
 	frame.nameText:SetTextColor(color.r, color.g, color.b)
 end
 
@@ -261,6 +293,11 @@ function Raid:UpdateStatus(frame)
 		return
 	end
 
+	if self:IsDead(frame) then
+		frame.statusText:SetText("")
+		return
+	end
+
 	local role = UnitGroupRolesAssigned and UnitGroupRolesAssigned(frame.unit)
 	if role == "TANK" then
 		frame.statusText:SetText("T")
@@ -276,20 +313,30 @@ end
 function Raid:UpdateHealth(frame)
 	local bar = frame.healthBar
 	local demoData = self:GetDemoData(frame)
-	bar:SetStatusBarColor(HEALTH_BAR_COLOR.r, HEALTH_BAR_COLOR.g, HEALTH_BAR_COLOR.b)
 
 	if demoData then
+		bar:SetStatusBarColor(HEALTH_BAR_COLOR.r, HEALTH_BAR_COLOR.g, HEALTH_BAR_COLOR.b)
 		XFrames:SetBarValues(bar, demoData.health, demoData.healthMax)
 		return
 	end
 
 	if not UnitExists(frame.unit) then
+		bar:SetStatusBarColor(HEALTH_BAR_COLOR.r, HEALTH_BAR_COLOR.g, HEALTH_BAR_COLOR.b)
 		bar:SetMinMaxValues(0, 1)
 		bar:SetValue(0)
 		bar.valueText:SetText("")
 		return
 	end
 
+	if self:IsDead(frame) then
+		bar:SetStatusBarColor(DEAD_BAR_COLOR.r, DEAD_BAR_COLOR.g, DEAD_BAR_COLOR.b)
+		bar:SetMinMaxValues(0, 1)
+		bar:SetValue(0)
+		bar.valueText:SetText("")
+		return
+	end
+
+	bar:SetStatusBarColor(HEALTH_BAR_COLOR.r, HEALTH_BAR_COLOR.g, HEALTH_BAR_COLOR.b)
 	XFrames:SetBarValues(bar, UnitHealth(frame.unit), UnitHealthMax(frame.unit))
 end
 
@@ -302,17 +349,45 @@ function Raid:UpdatePower(frame)
 		return
 	end
 
-	local _, color = XFrames:GetUnitPowerPresentation(frame.unit, true)
-	bar:SetStatusBarColor(color.r, color.g, color.b)
-
 	if not UnitExists(frame.unit) then
+		local _, color = XFrames:GetUnitPowerPresentation(frame.unit, true)
+		bar:SetStatusBarColor(color.r, color.g, color.b)
 		bar:SetMinMaxValues(0, 1)
 		bar:SetValue(0)
 		bar.valueText:SetText("")
 		return
 	end
 
+	if self:IsDead(frame) then
+		bar:SetStatusBarColor(DEAD_BAR_COLOR.r, DEAD_BAR_COLOR.g, DEAD_BAR_COLOR.b)
+		bar:SetMinMaxValues(0, 1)
+		bar:SetValue(0)
+		bar.valueText:SetText("")
+		return
+	end
+
+	local _, color = XFrames:GetUnitPowerPresentation(frame.unit, true)
+	bar:SetStatusBarColor(color.r, color.g, color.b)
 	XFrames:SetBarValues(bar, UnitPower(frame.unit), UnitPowerMax(frame.unit))
+end
+
+function Raid:UpdateDeadState(frame)
+	if not frame then
+		return
+	end
+
+	if self:IsDead(frame) then
+		frame:SetBackdropColor(unpack(DEAD_BACKDROP_COLOR))
+		frame:SetBackdropBorderColor(unpack(DEAD_BORDER_COLOR))
+		frame.deadOverlay:Show()
+		frame.deadText:Show()
+		return
+	end
+
+	frame:SetBackdropColor(unpack(BACKDROP_COLOR))
+	frame:SetBackdropBorderColor(unpack(BORDER_COLOR))
+	frame.deadOverlay:Hide()
+	frame.deadText:Hide()
 end
 
 function Raid:RefreshFrame(frame)
@@ -323,6 +398,7 @@ function Raid:RefreshFrame(frame)
 	if not UnitExists(frame.unit) and not self:GetDemoData(frame) then
 		if XFrames:IsFramesUnlocked() then
 			frame:Show()
+			self:UpdateDeadState(frame)
 			self:UpdateFrameBorder(frame)
 			self:UpdateName(frame)
 			self:UpdateLevel(frame)
@@ -336,6 +412,7 @@ function Raid:RefreshFrame(frame)
 	end
 
 	frame:Show()
+	self:UpdateDeadState(frame)
 	self:UpdateFrameBorder(frame)
 	self:UpdateName(frame)
 	self:UpdateLevel(frame)
@@ -413,6 +490,7 @@ function Raid:RegisterEvents()
 	frame:RegisterUnitEvent("UNIT_POWER_UPDATE", unpack(units))
 	frame:RegisterUnitEvent("UNIT_MAXPOWER", unpack(units))
 	frame:RegisterUnitEvent("UNIT_DISPLAYPOWER", unpack(units))
+	frame:RegisterUnitEvent("UNIT_FLAGS", unpack(units))
 	frame:RegisterUnitEvent("UNIT_LEVEL", unpack(units))
 	frame:SetScript("OnEvent", function(_, eventName, ...)
 		XFrames:SafeCall("module Raid:OnEvent", self.OnEvent, self, eventName, ...)
