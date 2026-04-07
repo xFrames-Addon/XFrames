@@ -513,3 +513,34 @@ args = <table> {
  3 = true
  4 = false
 }
+Message: module Player:OnEvent failed: ...ace/AddOns/XFrames/Modules/Player/XFrames_Player.lua:200: attempt to compare local 'displayCount' (a secret string value tainted by 'XFrames')
+Time: Tue Apr  7 16:42:46 2026
+Count: 32
+Stack:
+[Interface/AddOns/XFrames/Core/XFrames.lua]:217: in function 'SafeCall'
+[Interface/AddOns/XFrames/Modules/Player/XFrames_Player.lua]:647: in function <...ace/AddOns/XFrames/Modules/Player/XFrames_Player.lua:646>
+
+Locals:
+self = Frame {
+ modules = <table> {
+ }
+ db = <table> {
+ }
+ events = <table> {
+ }
+ minimapButton = XFramesMinimapButton {
+ }
+ settingsFrame = Frame {
+ }
+ initialized = true
+ name = "XFrames"
+}
+scope = "module Player:OnEvent"
+args = <table> {
+ 1 = <table> {
+ }
+ 2 = "UNIT_AURA"
+ 3 = "player"
+ 4 = <table> {
+ }
+}
