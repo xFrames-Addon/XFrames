@@ -775,7 +775,7 @@ function Target:OnEvent(event, unit)
 		return
 	end
 
-	if unit and unit:match("^boss%d+$") then
+	if type(unit) == "string" and unit:match("^boss%d+$") then
 		self:RefreshBossFrames()
 		return
 	end
