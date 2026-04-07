@@ -230,42 +230,23 @@ function Raid:CreateAnchorFrame()
 	end
 
 	local config = XFrames.db.profile.raid
-	local frame = CreateFrame("Frame", "XFramesRaidAnchor", UIParent)
-	frame:SetFrameStrata("MEDIUM")
-	frame:SetFrameLevel(20)
-	frame:Hide()
-
-	self.anchorFrame = frame
-	XFrames:RegisterMovableFrame(frame, config.position, "Raid")
-	self:ApplyLayout()
-	return frame
-end
-
-function Raid:ApplyLayout()
-	if not self.anchorFrame then
-		return
-	end
-
-	local config = XFrames.db.profile.raid
 	local columns = config.columns or 5
 	local maxUnits = config.maxUnits or 20
 	local rows = math.ceil(maxUnits / columns)
 	local width = (config.width * columns) + (config.spacingX * (columns - 1))
 	local height = (config.height * rows) + (config.spacingY * (rows - 1))
 
-	self.anchorFrame:SetSize(width, height)
-	self.anchorFrame:SetScale(config.scale or 1)
+	local frame = CreateFrame("Frame", "XFramesRaidAnchor", UIParent)
+	frame:SetSize(width, height)
+	frame:SetScale(config.scale or 1)
+	frame:SetPoint(config.position.point, UIParent, config.position.relativePoint, config.position.x, config.position.y)
+	frame:SetFrameStrata("MEDIUM")
+	frame:SetFrameLevel(20)
+	frame:Hide()
 
-	for index = 1, maxUnits do
-		local frame = self.frames and self.frames[index]
-		if frame then
-			local col = (index - 1) % columns
-			local row = math.floor((index - 1) / columns)
-			frame:SetSize(config.width, config.height)
-			frame:ClearAllPoints()
-			frame:SetPoint("TOPLEFT", self.anchorFrame, "TOPLEFT", col * (config.width + config.spacingX), -(row * (config.height + config.spacingY)))
-		end
-	end
+	self.anchorFrame = frame
+	XFrames:RegisterMovableFrame(frame, config.position, "Raid")
+	return frame
 end
 
 function Raid:CreateUnitFrame(index)
@@ -276,12 +257,16 @@ function Raid:CreateUnitFrame(index)
 
 	local config = XFrames.db.profile.raid
 	local anchor = self:CreateAnchorFrame()
+	local columns = config.columns or 5
+	local col = (index - 1) % columns
+	local row = math.floor((index - 1) / columns)
 
 	local frame = CreateFrame("Button", "XFramesRaidMemberFrame" .. index, anchor, "SecureUnitButtonTemplate,BackdropTemplate")
 	frame.unit = "raid" .. index
 	frame.demoIndex = index
 	frame.fallbackLabel = "Raid " .. index
 	frame:SetSize(config.width, config.height)
+	frame:SetPoint("TOPLEFT", anchor, "TOPLEFT", col * (config.width + config.spacingX), -(row * (config.height + config.spacingY)))
 	frame:SetFrameStrata("MEDIUM")
 	frame:SetFrameLevel(anchor:GetFrameLevel() + index)
 	frame:SetBackdrop({
@@ -603,8 +588,6 @@ function Raid:RefreshAnchor()
 end
 
 function Raid:RefreshAll()
-	self:ApplyLayout()
-
 	local maxUnits = XFrames.db.profile.raid.maxUnits or 20
 
 	if not XFrames:IsRaidFramesEnabled() then

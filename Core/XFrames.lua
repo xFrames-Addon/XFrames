@@ -430,18 +430,6 @@ function XFrames:RegisterSlashCommands()
 				self:ToggleRaidFramesEnabled()
 				return
 			end
-			if arg == "layout" then
-				printf("|cff33ff99XFrames|r raid layout: %s", self:GetRaidLayoutMode())
-				return
-			end
-			if arg == "1x5" then
-				self:SetRaidLayoutMode("1x5")
-				return
-			end
-			if arg == "5x1" or arg == "5x5" then
-				self:SetRaidLayoutMode("5x1")
-				return
-			end
 			if arg == "on" or arg == "enable" then
 				self:SetRaidFramesEnabled(true)
 				return
@@ -454,7 +442,7 @@ function XFrames:RegisterSlashCommands()
 				printf("|cff33ff99XFrames|r raid frames: %s", self:IsRaidFramesEnabled() and "on" or "off")
 				return
 			end
-			printf("|cff33ff99XFrames|r raid commands: on, off, toggle, status, layout, 1x5, 5x1")
+			printf("|cff33ff99XFrames|r raid commands: on, off, toggle, status")
 			return
 		end
 
@@ -660,33 +648,6 @@ end
 
 function XFrames:ToggleRaidFramesEnabled()
 	self:SetRaidFramesEnabled(not self:IsRaidFramesEnabled())
-end
-
-function XFrames:GetRaidLayoutMode()
-	local columns = self.db and self.db.profile and self.db.profile.raid and self.db.profile.raid.columns or 5
-	if columns == 1 then
-		return "1x5"
-	end
-
-	return "5x1"
-end
-
-function XFrames:SetRaidLayoutMode(mode)
-	if mode ~= "1x5" and mode ~= "5x1" then
-		return
-	end
-
-	if not (self.db and self.db.profile and self.db.profile.raid) then
-		return
-	end
-
-	self.db.profile.raid.columns = mode == "1x5" and 1 or 5
-	local raidModule = self:GetModule("Raid")
-	if raidModule and type(raidModule.RefreshAll) == "function" then
-		raidModule:RefreshAll()
-	end
-	self:Info(string.format("Raid layout set to %s", mode))
-	self:RefreshSettingsPanel()
 end
 
 function XFrames:IsTankFramesEnabled()
