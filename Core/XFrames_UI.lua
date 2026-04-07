@@ -431,7 +431,7 @@ function XFrames:CreateSettingsPanel()
 		return self.settingsFrame
 	end
 
-	local frame = createPanel(UIParent, 280, 522, "CENTER", UIParent, "CENTER", 0, 0)
+	local frame = createPanel(UIParent, 280, 556, "CENTER", UIParent, "CENTER", 0, 0)
 	local ui = self:GetUISettings()
 	frame:SetFrameStrata("DIALOG")
 	frame:SetMovable(true)
@@ -479,6 +479,14 @@ function XFrames:CreateSettingsPanel()
 
 		XFrames:SetPartySubtitleMode("performance")
 	end, 220)
+	frame.partyLayoutButton = createButton(frame, "Party Layout: 1x5", 118, "TOPLEFT", frame.partyModeButton, "BOTTOMLEFT", 0, -10, function()
+		if XFrames:GetPartyLayoutMode() == "1x5" then
+			XFrames:SetPartyLayoutMode("5x1")
+			return
+		end
+
+		XFrames:SetPartyLayoutMode("1x5")
+	end, 220)
 	frame.meterModeButton = createButton(frame, "OOC Meter: Segment", 118, "TOPLEFT", frame.meterModeText, "BOTTOMLEFT", 0, -10, function()
 		if XFrames:GetOutOfCombatMeterMode() == "overall" then
 			XFrames:SetOutOfCombatMeterMode("segment")
@@ -487,7 +495,7 @@ function XFrames:CreateSettingsPanel()
 
 		XFrames:SetOutOfCombatMeterMode("overall")
 	end, 220)
-	frame.blizzardButton = createButton(frame, "Hide Blizzard", 118, "TOPLEFT", frame.meterModeButton, "BOTTOMLEFT", 0, -10, function()
+	frame.blizzardButton = createButton(frame, "Hide Blizzard", 118, "TOPLEFT", frame.partyLayoutButton, "BOTTOMLEFT", 0, -10, function()
 		XFrames:ToggleBlizzardFrames()
 	end, 220)
 	frame.castBarsButton = createButton(frame, "Hide Cast Bars", 118, "TOPLEFT", frame.blizzardButton, "BOTTOMLEFT", 0, -10, function()
@@ -537,6 +545,7 @@ function XFrames:RefreshSettingsPanel()
 	self.settingsFrame.partyModeText:SetText("Show DPS in player and party frames.")
 	self.settingsFrame.meterModeText:SetText("Out-of-combat meter source.")
 	setButtonLabel(self.settingsFrame.partyModeButton, self:GetPartySubtitleMode() == "performance" and "Show DPS: On" or "Show DPS: Off")
+	setButtonLabel(self.settingsFrame.partyLayoutButton, self:GetPartyLayoutMode() == "1x5" and "Party Layout: 1x5" or "Party Layout: 5x1")
 	setButtonLabel(self.settingsFrame.meterModeButton, self:GetOutOfCombatMeterMode() == "overall" and "OOC Meter: Overall" or "OOC Meter: Segment")
 	setButtonLabel(self.settingsFrame.blizzardButton, ui and ui.hideBlizzard ~= false and "Show Blizzard" or "Hide Blizzard")
 	setButtonLabel(self.settingsFrame.castBarsButton, ui and ui.hideBlizzardCastBars ~= false and "Show Cast Bars" or "Hide Cast Bars")

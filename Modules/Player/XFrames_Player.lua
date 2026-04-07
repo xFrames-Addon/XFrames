@@ -425,7 +425,6 @@ function Player:UpdateDebuffs()
 	end
 
 	local buttons = frame.debuffFrame.buttons
-	local unlocked = XFrames:IsFramesUnlocked()
 	local maxDebuffs = debuffConfig.max or #buttons
 	local debuffs = getDebuffData("player", "HARMFUL", maxDebuffs)
 	local dispellableAuras = {}
@@ -457,15 +456,6 @@ function Player:UpdateDebuffs()
 			end
 
 			button:Show()
-		elseif unlocked then
-			button.auraInstanceID = nil
-			button.icon:SetTexture("Interface\\Buttons\\WHITE8x8")
-			button.icon:SetTexCoord(0, 1, 0, 1)
-			button.icon:SetVertexColor(DEBUFF_PLACEHOLDER_COLOR.r, DEBUFF_PLACEHOLDER_COLOR.g, DEBUFF_PLACEHOLDER_COLOR.b, DEBUFF_PLACEHOLDER_COLOR.a)
-			button.countText:SetText("")
-			button.dispelGlow:Hide()
-			button:SetBackdropBorderColor(DEBUFF_BORDER_COLOR.r, DEBUFF_BORDER_COLOR.g, DEBUFF_BORDER_COLOR.b, 0.6)
-			button:Show()
 		else
 			button.auraInstanceID = nil
 			button.dispelGlow:Hide()
@@ -473,7 +463,7 @@ function Player:UpdateDebuffs()
 		end
 	end
 
-	frame.debuffFrame:SetShown(unlocked or #debuffs > 0)
+	frame.debuffFrame:SetShown(#debuffs > 0)
 end
 
 function Player:StopCastBar()

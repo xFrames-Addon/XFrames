@@ -134,6 +134,7 @@ local defaults = {
 			height = 96,
 			spacing = 10,
 			scale = 1,
+			layoutMode = "1x5",
 			subtitleMode = "status",
 			outOfCombatMeterMode = "segment",
 			position = {
