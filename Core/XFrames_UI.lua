@@ -134,12 +134,15 @@ function XFrames:GetBlizzardUnitFrames()
 		end
 	end
 
-	if self:IsRaidFramesEnabled() then
-		for _, frameName in ipairs(BLIZZARD_RAID_FRAME_NAMES) do
-			local frame = _G[frameName]
-			if frame then
-				frames[#frames + 1] = frame
-			end
+	return frames
+end
+
+function XFrames:GetBlizzardRaidFrames()
+	local frames = {}
+	for _, frameName in ipairs(BLIZZARD_RAID_FRAME_NAMES) do
+		local frame = _G[frameName]
+		if frame then
+			frames[#frames + 1] = frame
 		end
 	end
 
@@ -336,6 +339,18 @@ function XFrames:ApplyBlizzardFrameVisibility()
 	local hidden = ui.hideBlizzard ~= false
 	for _, frame in ipairs(self:GetBlizzardUnitFrames()) do
 		if hidden then
+			RegisterStateDriver(frame, "visibility", "hide")
+		else
+			UnregisterStateDriver(frame, "visibility")
+			if not (InCombatLockdown and InCombatLockdown()) then
+				frame:Show()
+			end
+		end
+	end
+
+	local raidHidden = hidden and self:IsRaidFramesEnabled()
+	for _, frame in ipairs(self:GetBlizzardRaidFrames()) do
+		if raidHidden then
 			RegisterStateDriver(frame, "visibility", "hide")
 		else
 			UnregisterStateDriver(frame, "visibility")
