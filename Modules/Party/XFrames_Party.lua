@@ -6,12 +6,7 @@ local Party = {}
 local RAID_CLASS_COLORS = RAID_CLASS_COLORS
 
 local CreateFrame = CreateFrame
-local CanInspect = CanInspect
-local ClearInspectPlayer = ClearInspectPlayer
-local GetInspectSpecialization = GetInspectSpecialization
-local GetSpecializationInfoByID = GetSpecializationInfoByID
 local InCombatLockdown = InCombatLockdown
-local NotifyInspect = NotifyInspect
 local UnitClass = UnitClass
 local UnitCreatureType = UnitCreatureType
 local UnitExists = UnitExists
@@ -19,7 +14,6 @@ local UnitGroupRolesAssigned = UnitGroupRolesAssigned
 local UnitHealth = UnitHealth
 local UnitHealthMax = UnitHealthMax
 local UnitIsPlayer = UnitIsPlayer
-local UnitGUID = UnitGUID
 local UnitLevel = UnitLevel
 local UnitName = UnitName
 local UnitPower = UnitPower
@@ -214,49 +208,16 @@ function Party:CreateAnchorFrame()
 
 	local config = XFrames.db.profile.party
 	local frame = CreateFrame("Frame", "XFramesPartyAnchor", UIParent)
+	frame:SetSize(config.width, (config.height * 4) + (config.spacing * 3))
+	frame:SetScale(config.scale or 1)
+	frame:SetPoint(config.position.point, UIParent, config.position.relativePoint, config.position.x, config.position.y)
 	frame:SetFrameStrata("MEDIUM")
 	frame:SetFrameLevel(20)
 	frame:Hide()
 
 	self.anchorFrame = frame
 	XFrames:RegisterMovableFrame(frame, config.position, "Party")
-	self:ApplyLayout()
 	return frame
-end
-
-function Party:ApplyLayout()
-	if not self.anchorFrame then
-		return
-	end
-
-	local config = XFrames.db.profile.party
-	local horizontal = XFrames:GetPartyLayoutMode() == "5x1"
-	local width
-	local height
-
-	if horizontal then
-		width = (config.width * 4) + (config.spacing * 3)
-		height = config.height
-	else
-		width = config.width
-		height = (config.height * 4) + (config.spacing * 3)
-	end
-
-	self.anchorFrame:SetSize(width, height)
-	self.anchorFrame:SetScale(config.scale or 1)
-
-	for index = 1, 4 do
-		local frame = self.frames and self.frames[index]
-		if frame then
-			frame:SetSize(config.width, config.height)
-			frame:ClearAllPoints()
-			if horizontal then
-				frame:SetPoint("TOPLEFT", self.anchorFrame, "TOPLEFT", (index - 1) * (config.width + config.spacing), 0)
-			else
-				frame:SetPoint("TOPLEFT", self.anchorFrame, "TOPLEFT", 0, -((index - 1) * (config.height + config.spacing)))
-			end
-		end
-	end
 end
 
 function Party:CreateUnitFrame(index)
@@ -274,6 +235,7 @@ function Party:CreateUnitFrame(index)
 	frame.demoIndex = index
 	frame.fallbackLabel = fallbackLabel
 	frame:SetSize(config.width, config.height)
+	frame:SetPoint("TOPLEFT", anchor, "TOPLEFT", 0, -((index - 1) * (config.height + config.spacing)))
 	frame:SetFrameStrata("MEDIUM")
 	frame:SetFrameLevel(anchor:GetFrameLevel() + index)
 	frame:SetBackdrop({
@@ -292,11 +254,6 @@ function Party:CreateUnitFrame(index)
 	frame.portraitTexture:SetPoint("TOPLEFT", frame.portraitFrame, "TOPLEFT", 2, -2)
 	frame.portraitTexture:SetSize(48, 48)
 	frame.portraitTexture:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-	frame.specText = createText(frame, "OVERLAY", "GameFontHighlightSmall", 10, "TOP", frame.portraitFrame, "BOTTOM", 0, -4, "CENTER")
-	frame.specText:SetWidth(52)
-	frame.specText:SetWordWrap(false)
-	frame.specText:SetMaxLines(1)
-	frame.specText:SetJustifyH("CENTER")
 
 	frame.nameText = createText(frame, "OVERLAY", "GameFontNormalLarge", 13, "TOPLEFT", frame, "TOPLEFT", 64, -10, "LEFT")
 	frame.nameText:SetWidth(config.width - 124)
@@ -568,7 +525,6 @@ function Party:RefreshFrame(frame)
 			self:UpdateStatus(frame)
 			self:UpdateRank(frame)
 			self:UpdatePortrait(frame)
-			self:UpdateSpec(frame)
 			self:UpdateHealth(frame)
 			self:UpdatePower(frame)
 		else
@@ -586,13 +542,8 @@ function Party:RefreshFrame(frame)
 	self:UpdateStatus(frame)
 	self:UpdateRank(frame)
 	self:UpdatePortrait(frame)
-	self:UpdateSpec(frame)
 	self:UpdateHealth(frame)
 	self:UpdatePower(frame)
-
-	if not demoData and UnitExists(frame.unit) and UnitIsPlayer(frame.unit) and self:GetInspectSpecName(frame.unit) == "" then
-		self:QueueInspect(frame.unit)
-	end
 end
 
 function Party:RefreshAnchor()
@@ -621,7 +572,6 @@ function Party:RefreshAnchor()
 end
 
 function Party:RefreshAll()
-	self:ApplyLayout()
 	for index = 1, 4 do
 		self:RefreshFrame(self.frames and self.frames[index])
 	end
@@ -653,17 +603,6 @@ function Party:RefreshPerformanceMode()
 end
 
 function Party:OnEvent(event, unit)
-	if event == "INSPECT_READY" then
-		self:HandleInspectReady(unit)
-		return
-	end
-
-	if event == "PLAYER_REGEN_ENABLED" then
-		self:ProcessInspectQueue()
-		self:RefreshAll()
-		return
-	end
-
 	if event == "GROUP_ROSTER_UPDATE" or event == "PLAYER_ENTERING_WORLD" then
 		self:RefreshAll()
 		XFrames:ApplyBlizzardFrameVisibility()
@@ -687,101 +626,6 @@ function Party:OnEvent(event, unit)
 	self:RefreshAll()
 end
 
-function Party:GetInspectSpecName(unit)
-	local guid = unit and UnitGUID and UnitGUID(unit)
-	return guid and self.inspectCache and self.inspectCache[guid] or ""
-end
-
-function Party:UpdateSpec(frame)
-	if not frame.specText then
-		return
-	end
-
-	local demoData = self:GetDemoData(frame)
-	if demoData then
-		frame.specText:SetText(XFrames:FormatSpecLabel(demoData.className))
-		return
-	end
-
-	if not UnitExists(frame.unit) or not UnitIsPlayer(frame.unit) then
-		frame.specText:SetText("")
-		return
-	end
-
-	frame.specText:SetText(self:GetInspectSpecName(frame.unit))
-end
-
-function Party:QueueInspect(unit)
-	if not NotifyInspect or not CanInspect or not UnitExists(unit) or not UnitIsPlayer(unit) then
-		return
-	end
-
-	local guid = UnitGUID(unit)
-	if not guid then
-		return
-	end
-
-	self.inspectCache = self.inspectCache or {}
-	self.inspectQueue = self.inspectQueue or {}
-	self.inspectQueued = self.inspectQueued or {}
-
-	if self.inspectCache[guid] or self.inspectPendingGUID == guid or self.inspectQueued[guid] then
-		return
-	end
-
-	self.inspectQueue[#self.inspectQueue + 1] = {guid = guid, unit = unit}
-	self.inspectQueued[guid] = true
-	self:ProcessInspectQueue()
-end
-
-function Party:ProcessInspectQueue()
-	if self.inspectPendingGUID or (InCombatLockdown and InCombatLockdown()) then
-		return
-	end
-
-	while self.inspectQueue and #self.inspectQueue > 0 do
-		local item = table.remove(self.inspectQueue, 1)
-		self.inspectQueued[item.guid] = nil
-		if UnitExists(item.unit) and UnitGUID(item.unit) == item.guid and CanInspect and CanInspect(item.unit) then
-			NotifyInspect(item.unit)
-			self.inspectPendingGUID = item.guid
-			return
-		end
-	end
-end
-
-function Party:HandleInspectReady(inspectGUID)
-	if inspectGUID == nil or not GetInspectSpecialization then
-		return
-	end
-
-	for index = 1, 4 do
-		local unit = "party" .. index
-		if UnitExists(unit) and UnitGUID(unit) == inspectGUID then
-			local specID = GetInspectSpecialization(unit)
-			if specID and specID > 0 and GetSpecializationInfoByID then
-				local _, name = GetSpecializationInfoByID(specID)
-				if name then
-					self.inspectCache = self.inspectCache or {}
-					self.inspectCache[inspectGUID] = XFrames:FormatSpecLabel(name)
-				end
-			end
-			break
-		end
-	end
-
-	if ClearInspectPlayer then
-		ClearInspectPlayer()
-	end
-
-	if self.inspectPendingGUID == inspectGUID then
-		self.inspectPendingGUID = nil
-	end
-
-	self:ProcessInspectQueue()
-	self:RefreshAll()
-end
-
 function Party:RegisterEvents()
 	self.eventFrame = self.eventFrame or CreateFrame("Frame")
 	local frame = self.eventFrame
@@ -791,8 +635,6 @@ function Party:RegisterEvents()
 	frame:RegisterEvent("READY_CHECK_FINISHED")
 	frame:RegisterEvent("PLAYER_ROLES_ASSIGNED")
 	frame:RegisterEvent("PLAYER_ENTERING_WORLD")
-	frame:RegisterEvent("PLAYER_REGEN_ENABLED")
-	frame:RegisterEvent("INSPECT_READY")
 	frame:RegisterUnitEvent("UNIT_NAME_UPDATE", "party1", "party2", "party3", "party4")
 	frame:RegisterUnitEvent("UNIT_OTHER_PARTY_CHANGED", "party1", "party2", "party3", "party4")
 	frame:RegisterUnitEvent("UNIT_PORTRAIT_UPDATE", "party1", "party2", "party3", "party4")
@@ -815,7 +657,6 @@ function Party:Initialize()
 	partyConfig.width = playerConfig.width
 	partyConfig.height = playerConfig.height
 	partyConfig.scale = playerConfig.scale
-	partyConfig.layoutMode = partyConfig.layoutMode or "1x5"
 	self.enabled = XFrames.db.profile.party.enabled
 end
 

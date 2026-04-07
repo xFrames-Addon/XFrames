@@ -412,18 +412,6 @@ function XFrames:RegisterSlashCommands()
 				printf("|cff33ff99XFrames|r party subtitle mode: %s", self:GetPartySubtitleMode())
 				return
 			end
-			if arg == "layout" then
-				printf("|cff33ff99XFrames|r party layout: %s", self:GetPartyLayoutMode())
-				return
-			end
-			if arg == "1x5" then
-				self:SetPartyLayoutMode("1x5")
-				return
-			end
-			if arg == "5x1" or arg == "5x5" then
-				self:SetPartyLayoutMode("5x1")
-				return
-			end
 			if arg == "status" then
 				self:SetPartySubtitleMode("status")
 				return
@@ -432,7 +420,7 @@ function XFrames:RegisterSlashCommands()
 				self:SetPartySubtitleMode("performance")
 				return
 			end
-			printf("|cff33ff99XFrames|r party commands: status, performance, mode, layout, 1x5, 5x1")
+			printf("|cff33ff99XFrames|r party commands: status, performance, mode")
 			return
 		end
 
@@ -846,34 +834,6 @@ end
 
 function XFrames:GetPartySubtitleMode()
 	return self.db and self.db.profile and self.db.profile.party and self.db.profile.party.subtitleMode or "status"
-end
-
-function XFrames:GetPartyLayoutMode()
-	local mode = self.db and self.db.profile and self.db.profile.party and self.db.profile.party.layoutMode
-	if mode == "5x1" then
-		return "5x1"
-	end
-
-	return "1x5"
-end
-
-function XFrames:SetPartyLayoutMode(mode)
-	if mode ~= "1x5" and mode ~= "5x1" then
-		self:Warn(string.format("Unknown party layout mode: %s", safeToString(mode)))
-		return
-	end
-
-	if not (self.db and self.db.profile and self.db.profile.party) then
-		return
-	end
-
-	self.db.profile.party.layoutMode = mode
-	local party = self:GetModule("Party")
-	if party and type(party.RefreshAll) == "function" then
-		party:RefreshAll()
-	end
-	self:Info(string.format("Party layout set to %s", mode))
-	self:RefreshSettingsPanel()
 end
 
 function XFrames:SetPartySubtitleMode(mode)
