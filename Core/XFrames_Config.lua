@@ -159,7 +159,7 @@ local defaults = {
 				y = 120,
 			},
 			tanks = {
-				enabled = false,
+				enabled = true,
 				width = 266,
 				height = 96,
 				scale = 1,
@@ -230,7 +230,6 @@ function XFrames:InitializeDatabase()
 			self.db.profile.raid.enabled = false
 		end
 		if self.db.profile.raid.tanks then
-			self.db.profile.raid.tanks.enabled = false
 			self.db.profile.raid.tanks.width = 266
 			self.db.profile.raid.tanks.height = 96
 			self.db.profile.raid.tanks.maxUnits = self.db.profile.raid.tanks.maxUnits or 4
@@ -238,7 +237,6 @@ function XFrames:InitializeDatabase()
 			if type(self.db.profile.raid.tanks.targets) ~= "table" then
 				self.db.profile.raid.tanks.targets = {}
 			end
-			self.db.profile.raid.tanks.targets.enabled = false
 			self.db.profile.raid.tanks.targets.width = self.db.profile.raid.tanks.targets.width or 180
 			self.db.profile.raid.tanks.targets.height = self.db.profile.raid.tanks.targets.height or 56
 			self.db.profile.raid.tanks.targets.scale = self.db.profile.raid.tanks.targets.scale or 0.9
