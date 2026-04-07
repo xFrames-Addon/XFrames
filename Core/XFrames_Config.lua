@@ -202,6 +202,7 @@ function XFrames:InitializeDatabase()
 	XFramesDB = XFramesDB or {}
 	copyDefaults(defaults, XFramesDB)
 	self.db = XFramesDB
+	self.db.profile.ui.unlocked = false
 	self.db.profile.diagnostics.logs = self.db.profile.diagnostics.logs or {}
 
 	if self.db.profile.party then

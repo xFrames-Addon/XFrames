@@ -558,22 +558,7 @@ function Party:RefreshFrame(frame)
 
 	local demoData = self:GetDemoData(frame)
 	if not UnitExists(frame.unit) and not demoData then
-		if XFrames:IsFramesUnlocked() then
-			frame:Show()
-			self:UpdateFrameBorder(frame)
-			self:UpdateName(frame)
-			self:UpdateLevel(frame)
-			self:UpdateRole(frame)
-			self:UpdateReadyCheck(frame)
-			self:UpdateStatus(frame)
-			self:UpdateRank(frame)
-			self:UpdatePortrait(frame)
-			self:UpdateSpec(frame)
-			self:UpdateHealth(frame)
-			self:UpdatePower(frame)
-		else
-			frame:Hide()
-		end
+		frame:Hide()
 		return
 	end
 
