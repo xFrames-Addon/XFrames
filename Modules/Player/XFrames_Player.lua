@@ -192,25 +192,16 @@ local function getAuraCountText(aura)
 		return ""
 	end
 
-	local applications = aura.applications
-	if applications == nil then
+	if not (C_UnitAuras and C_UnitAuras.GetAuraApplicationDisplayCount and aura.auraInstanceID) then
 		return ""
 	end
 
-	if canaccessvalue then
-		if not canaccessvalue(applications) then
-			return ""
-		end
-	elseif issecretvalue and issecretvalue(applications) then
+	local ok, displayCount = pcall(C_UnitAuras.GetAuraApplicationDisplayCount, "player", aura.auraInstanceID)
+	if not ok or displayCount == nil or displayCount == "" then
 		return ""
 	end
 
-	local ok, countValue = pcall(tonumber, applications)
-	if not ok or not countValue or countValue <= 1 then
-		return ""
-	end
-
-	return countValue
+	return displayCount
 end
 
 local function getCastInfo(unit)
