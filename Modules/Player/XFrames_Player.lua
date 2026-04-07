@@ -197,7 +197,7 @@ local function getAuraCountText(aura)
 	end
 
 	local ok, displayCount = pcall(C_UnitAuras.GetAuraApplicationDisplayCount, "player", aura.auraInstanceID)
-	if not ok or displayCount == nil or displayCount == "" then
+	if not ok or displayCount == nil then
 		return ""
 	end
 
