@@ -481,3 +481,35 @@ args = <table> {
  4 = <table> {
  }
 }
+Message: module Target:OnEvent failed: ...ace/AddOns/XFrames/Modules/Target/XFrames_Target.lua:778: attempt to index local 'unit' (a boolean value)
+Time: Mon Apr  6 20:40:39 2026
+Count: 1
+Stack:
+[Interface/AddOns/XFrames/Core/XFrames.lua]:217: in function 'SafeCall'
+[Interface/AddOns/XFrames/Modules/Target/XFrames_Target.lua]:811: in function <...ace/AddOns/XFrames/Modules/Target/XFrames_Target.lua:810>
+
+Locals:
+self = Frame {
+ modules = <table> {
+ }
+ db = <table> {
+ }
+ events = <table> {
+ }
+ minimapButton = XFramesMinimapButton {
+ }
+ settingsFrame = Frame {
+ }
+ nativeMeterCache = <table> {
+ }
+ initialized = true
+ name = "XFrames"
+}
+scope = "module Target:OnEvent"
+args = <table> {
+ 1 = <table> {
+ }
+ 2 = "PLAYER_ENTERING_WORLD"
+ 3 = true
+ 4 = false
+}
