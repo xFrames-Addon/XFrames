@@ -127,6 +127,20 @@ local defaults = {
 					y = -125,
 				},
 			},
+			boss = {
+				enabled = true,
+				width = 188,
+				height = 60,
+				scale = 0.92,
+				spacing = 8,
+				maxUnits = 5,
+				position = {
+					point = "TOPRIGHT",
+					relativePoint = "TOPRIGHT",
+					x = -28,
+					y = -220,
+				},
+			},
 		},
 		party = {
 			enabled = true,
