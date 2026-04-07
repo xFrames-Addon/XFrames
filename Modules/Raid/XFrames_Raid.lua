@@ -536,19 +536,7 @@ function Raid:RefreshFrame(frame)
 	end
 
 	if not UnitExists(frame.unit) and not self:GetDemoData(frame) then
-		if XFrames:IsFramesUnlocked() then
-			frame:Show()
-			self:UpdateDeadState(frame)
-			self:UpdateFrameBorder(frame)
-			self:UpdateName(frame)
-			self:UpdateLevel(frame)
-			self:UpdateStatus(frame)
-			self:UpdateReadyCheck(frame)
-			self:UpdateHealth(frame)
-			self:UpdatePower(frame)
-		else
-			frame:Hide()
-		end
+		frame:Hide()
 		return
 	end
 
