@@ -499,7 +499,15 @@ function XFrames:CreateSettingsPanel()
 	frame.raidFramesButton = createButton(frame, "Raid Frames: On", 118, "TOPLEFT", frame.portraitsButton, "BOTTOMLEFT", 0, -10, function()
 		XFrames:ToggleRaidFramesEnabled()
 	end, 220)
-	frame.tankFramesButton = createButton(frame, "Tank Frames: On", 118, "TOPLEFT", frame.raidFramesButton, "BOTTOMLEFT", 0, -10, function()
+	frame.raidLayoutButton = createButton(frame, "Raid Layout: 5x1", 118, "TOPLEFT", frame.raidFramesButton, "BOTTOMLEFT", 0, -10, function()
+		if XFrames:GetRaidLayoutMode() == "1x5" then
+			XFrames:SetRaidLayoutMode("5x1")
+			return
+		end
+
+		XFrames:SetRaidLayoutMode("1x5")
+	end, 220)
+	frame.tankFramesButton = createButton(frame, "Tank Frames: On", 118, "TOPLEFT", frame.raidLayoutButton, "BOTTOMLEFT", 0, -10, function()
 		XFrames:ToggleTankFramesEnabled()
 	end, 220)
 	frame.tankTargetsButton = createButton(frame, "Tank Targets: On", 118, "TOPLEFT", frame.tankFramesButton, "BOTTOMLEFT", 0, -10, function()
@@ -534,6 +542,7 @@ function XFrames:RefreshSettingsPanel()
 	setButtonLabel(self.settingsFrame.castBarsButton, ui and ui.hideBlizzardCastBars ~= false and "Show Cast Bars" or "Hide Cast Bars")
 	setButtonLabel(self.settingsFrame.portraitsButton, self:GetPortraitStyle() == "class" and "Portraits: Class" or "Portraits: Live")
 	setButtonLabel(self.settingsFrame.raidFramesButton, self:IsRaidFramesEnabled() and "Raid Frames: On" or "Raid Frames: Off")
+	setButtonLabel(self.settingsFrame.raidLayoutButton, self:GetRaidLayoutMode() == "1x5" and "Raid Layout: 1x5" or "Raid Layout: 5x1")
 	setButtonLabel(self.settingsFrame.tankFramesButton, self:IsTankFramesEnabled() and "Tank Frames: On" or "Tank Frames: Off")
 	setButtonLabel(self.settingsFrame.tankTargetsButton, self:IsTankTargetsEnabled() and "Tank Targets: On" or "Tank Targets: Off")
 end
