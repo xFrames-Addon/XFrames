@@ -217,30 +217,13 @@ function XFrames:RefreshDragState(frame)
 	end
 end
 
-function XFrames:AssignInteractiveUnit(frame, unit)
-	if not frame or type(frame.SetAttribute) ~= "function" then
-		return false
-	end
-
-	if frame.unit == unit then
-		return true
-	end
-
-	if InCombatLockdown and InCombatLockdown() then
-		return false
+function XFrames:RegisterInteractiveUnitFrame(frame, unit, useUnitWatch)
+	if not frame or not unit or type(frame.SetAttribute) ~= "function" then
+		return
 	end
 
 	frame.unit = unit
 	frame:SetAttribute("unit", unit)
-	return true
-end
-
-function XFrames:RegisterInteractiveUnitFrame(frame, unit, useUnitWatch)
-	if not frame or type(frame.SetAttribute) ~= "function" then
-		return
-	end
-
-	self:AssignInteractiveUnit(frame, unit)
 	frame:SetAttribute("*type1", "target")
 	frame:SetAttribute("*type2", "togglemenu")
 	frame:RegisterForClicks("AnyUp")
@@ -431,7 +414,7 @@ function XFrames:CreateSettingsPanel()
 		return self.settingsFrame
 	end
 
-	local frame = createPanel(UIParent, 280, 522, "CENTER", UIParent, "CENTER", 0, 0)
+	local frame = createPanel(UIParent, 280, 458, "CENTER", UIParent, "CENTER", 0, 0)
 	local ui = self:GetUISettings()
 	frame:SetFrameStrata("DIALOG")
 	frame:SetMovable(true)
@@ -499,12 +482,6 @@ function XFrames:CreateSettingsPanel()
 	frame.raidFramesButton = createButton(frame, "Raid Frames: On", 118, "TOPLEFT", frame.portraitsButton, "BOTTOMLEFT", 0, -10, function()
 		XFrames:ToggleRaidFramesEnabled()
 	end, 220)
-	frame.tankFramesButton = createButton(frame, "Tank Frames: On", 118, "TOPLEFT", frame.raidFramesButton, "BOTTOMLEFT", 0, -10, function()
-		XFrames:ToggleTankFramesEnabled()
-	end, 220)
-	frame.tankTargetsButton = createButton(frame, "Tank Targets: On", 118, "TOPLEFT", frame.tankFramesButton, "BOTTOMLEFT", 0, -10, function()
-		XFrames:ToggleTankTargetsEnabled()
-	end, 220)
 	frame.reloadButton = createButton(frame, "Reload UI", 78, "LEFT", frame.lockButton, "RIGHT", 8, 0, function()
 		ReloadUI()
 	end)
@@ -534,8 +511,6 @@ function XFrames:RefreshSettingsPanel()
 	setButtonLabel(self.settingsFrame.castBarsButton, ui and ui.hideBlizzardCastBars ~= false and "Show Cast Bars" or "Hide Cast Bars")
 	setButtonLabel(self.settingsFrame.portraitsButton, self:GetPortraitStyle() == "class" and "Portraits: Class" or "Portraits: Live")
 	setButtonLabel(self.settingsFrame.raidFramesButton, self:IsRaidFramesEnabled() and "Raid Frames: On" or "Raid Frames: Off")
-	setButtonLabel(self.settingsFrame.tankFramesButton, self:IsTankFramesEnabled() and "Tank Frames: On" or "Tank Frames: Off")
-	setButtonLabel(self.settingsFrame.tankTargetsButton, self:IsTankTargetsEnabled() and "Tank Targets: On" or "Tank Targets: Off")
 end
 
 function XFrames:ToggleSettings()

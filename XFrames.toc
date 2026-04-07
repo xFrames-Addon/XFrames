@@ -13,5 +13,4 @@ Modules/Player/XFrames_Player.lua
 Modules/Player/XFrames_PlayerPet.lua
 Modules/Party/XFrames_Party.lua
 Modules/Target/XFrames_Target.lua
-Modules/Raid/XFrames_Tanks.lua
 Modules/Raid/XFrames_Raid.lua
