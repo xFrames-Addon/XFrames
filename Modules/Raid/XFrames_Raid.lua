@@ -193,8 +193,7 @@ function Raid:IsDemoModeActive()
 		return true
 	end
 
-	local unlocked = XFrames:IsFramesUnlocked()
-	if not unlocked and not XFrames:IsRaidFramesEnabled() then
+	if not XFrames:IsRaidFramesEnabled() then
 		return false
 	end
 
@@ -205,7 +204,7 @@ function Raid:IsDemoModeActive()
 		end
 	end
 
-	return unlocked or XFrames:IsRaidFramesEnabled()
+	return true
 end
 
 function Raid:GetDemoData(frame)
