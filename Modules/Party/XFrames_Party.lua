@@ -6,10 +6,16 @@ local Party = {}
 local RAID_CLASS_COLORS = RAID_CLASS_COLORS
 
 local CreateFrame = CreateFrame
+local CanInspect = CanInspect
+local ClearInspectPlayer = ClearInspectPlayer
+local GetInspectSpecialization = GetInspectSpecialization
+local GetSpecializationInfoByID = GetSpecializationInfoByID
 local InCombatLockdown = InCombatLockdown
+local NotifyInspect = NotifyInspect
 local UnitClass = UnitClass
 local UnitCreatureType = UnitCreatureType
 local UnitExists = UnitExists
+local UnitGUID = UnitGUID
 local UnitGroupRolesAssigned = UnitGroupRolesAssigned
 local UnitHealth = UnitHealth
 local UnitHealthMax = UnitHealthMax
@@ -139,6 +145,15 @@ local function getRoleInfo(unit)
 	return nil
 end
 
+local function getSpecText(module, unit)
+	if not UnitExists(unit) or not UnitIsPlayer(unit) then
+		return ""
+	end
+
+	local guid = UnitGUID(unit)
+	return guid and module.inspectCache and module.inspectCache[guid] or ""
+end
+
 local function setRoleIcon(texture, role)
 	if not texture then
 		return false
@@ -254,6 +269,11 @@ function Party:CreateUnitFrame(index)
 	frame.portraitTexture:SetPoint("TOPLEFT", frame.portraitFrame, "TOPLEFT", 2, -2)
 	frame.portraitTexture:SetSize(48, 48)
 	frame.portraitTexture:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+	frame.specText = createText(frame, "OVERLAY", "GameFontHighlightSmall", 10, "TOP", frame.portraitFrame, "BOTTOM", 0, -4, "CENTER")
+	frame.specText:SetWidth(52)
+	frame.specText:SetWordWrap(false)
+	frame.specText:SetMaxLines(1)
+	frame.specText:SetJustifyH("CENTER")
 
 	frame.nameText = createText(frame, "OVERLAY", "GameFontNormalLarge", 13, "TOPLEFT", frame, "TOPLEFT", 64, -10, "LEFT")
 	frame.nameText:SetWidth(config.width - 124)
@@ -425,11 +445,7 @@ function Party:UpdateStatus(frame)
 	if demoData then
 		frame.statusText:SetText(demoData.className)
 	else
-		if XFrames:GetPartySubtitleMode() == "performance" and UnitExists(frame.unit) then
-			frame.statusText:SetText(XFrames:GetPerformanceTextForUnit(frame.unit) or "")
-		else
-			frame.statusText:SetText(getStatusText(frame.unit, frame.fallbackLabel))
-		end
+		frame.statusText:SetText(getStatusText(frame.unit, frame.fallbackLabel))
 	end
 	frame.statusText:SetTextColor(unpack(SECONDARY_TEXT_COLOR))
 end
@@ -439,11 +455,92 @@ function Party:UpdateRank(frame)
 	if demoData then
 		frame.rankText:SetText("")
 	elseif XFrames:GetPartySubtitleMode() == "performance" and UnitExists(frame.unit) then
-		frame.rankText:SetText(XFrames:GetPerformanceRankText(frame.unit))
+		frame.rankText:SetText(XFrames:GetPerformanceTextForUnit(frame.unit) or "")
 	else
 		frame.rankText:SetText("")
 	end
 	frame.rankText:SetTextColor(unpack(SECONDARY_TEXT_COLOR))
+end
+
+function Party:UpdateSpec(frame)
+	local demoData = self:GetDemoData(frame)
+	if demoData then
+		frame.specText:SetText("")
+		return
+	end
+
+	frame.specText:SetText(getSpecText(self, frame.unit))
+end
+
+function Party:QueueInspect(unit)
+	if not NotifyInspect or not CanInspect or not UnitExists(unit) or not UnitIsPlayer(unit) then
+		return
+	end
+
+	local guid = UnitGUID(unit)
+	if not guid then
+		return
+	end
+
+	self.inspectCache = self.inspectCache or {}
+	self.inspectQueue = self.inspectQueue or {}
+	self.inspectQueued = self.inspectQueued or {}
+
+	if self.inspectCache[guid] or self.inspectPendingGUID == guid or self.inspectQueued[guid] then
+		return
+	end
+
+	self.inspectQueue[#self.inspectQueue + 1] = {guid = guid, unit = unit}
+	self.inspectQueued[guid] = true
+	self:ProcessInspectQueue()
+end
+
+function Party:ProcessInspectQueue()
+	if self.inspectPendingGUID or (InCombatLockdown and InCombatLockdown()) then
+		return
+	end
+
+	while self.inspectQueue and #self.inspectQueue > 0 do
+		local item = table.remove(self.inspectQueue, 1)
+		self.inspectQueued[item.guid] = nil
+
+		if UnitExists(item.unit) and UnitGUID(item.unit) == item.guid and UnitIsPlayer(item.unit) and CanInspect(item.unit, false) then
+			NotifyInspect(item.unit)
+			self.inspectPendingGUID = item.guid
+			return
+		end
+	end
+end
+
+function Party:HandleInspectReady(inspectGUID)
+	if inspectGUID == nil or not GetInspectSpecialization then
+		return
+	end
+
+	for index = 1, 4 do
+		local unit = "party" .. index
+		if UnitExists(unit) and UnitGUID(unit) == inspectGUID then
+			local specID = GetInspectSpecialization(unit)
+			if specID ~= nil and GetSpecializationInfoByID then
+				local ok, _, name = pcall(GetSpecializationInfoByID, specID)
+				if ok and name then
+					self.inspectCache = self.inspectCache or {}
+					self.inspectCache[inspectGUID] = XFrames:FormatSpecLabel(name)
+				end
+			end
+		end
+	end
+
+	if ClearInspectPlayer then
+		ClearInspectPlayer()
+	end
+
+	if self.inspectPendingGUID == inspectGUID then
+		self.inspectPendingGUID = nil
+	end
+
+	self:RefreshAll()
+	self:ProcessInspectQueue()
 end
 
 function Party:UpdatePortrait(frame)
@@ -524,6 +621,7 @@ function Party:RefreshFrame(frame)
 			self:UpdateReadyCheck(frame)
 			self:UpdateStatus(frame)
 			self:UpdateRank(frame)
+			self:UpdateSpec(frame)
 			self:UpdatePortrait(frame)
 			self:UpdateHealth(frame)
 			self:UpdatePower(frame)
@@ -541,9 +639,13 @@ function Party:RefreshFrame(frame)
 	self:UpdateReadyCheck(frame)
 	self:UpdateStatus(frame)
 	self:UpdateRank(frame)
+	self:UpdateSpec(frame)
 	self:UpdatePortrait(frame)
 	self:UpdateHealth(frame)
 	self:UpdatePower(frame)
+	if UnitExists(frame.unit) then
+		self:QueueInspect(frame.unit)
+	end
 end
 
 function Party:RefreshAnchor()
@@ -603,6 +705,16 @@ function Party:RefreshPerformanceMode()
 end
 
 function Party:OnEvent(event, unit)
+	if event == "INSPECT_READY" then
+		self:HandleInspectReady(unit)
+		return
+	end
+
+	if event == "PLAYER_REGEN_ENABLED" then
+		self:ProcessInspectQueue()
+		return
+	end
+
 	if event == "GROUP_ROSTER_UPDATE" or event == "PLAYER_ENTERING_WORLD" then
 		self:RefreshAll()
 		XFrames:ApplyBlizzardFrameVisibility()
@@ -635,6 +747,8 @@ function Party:RegisterEvents()
 	frame:RegisterEvent("READY_CHECK_FINISHED")
 	frame:RegisterEvent("PLAYER_ROLES_ASSIGNED")
 	frame:RegisterEvent("PLAYER_ENTERING_WORLD")
+	frame:RegisterEvent("INSPECT_READY")
+	frame:RegisterEvent("PLAYER_REGEN_ENABLED")
 	frame:RegisterUnitEvent("UNIT_NAME_UPDATE", "party1", "party2", "party3", "party4")
 	frame:RegisterUnitEvent("UNIT_OTHER_PARTY_CHANGED", "party1", "party2", "party3", "party4")
 	frame:RegisterUnitEvent("UNIT_PORTRAIT_UPDATE", "party1", "party2", "party3", "party4")

@@ -355,17 +355,12 @@ function Player:UpdateLevel()
 end
 
 function Player:UpdateStatus()
-	if XFrames:GetPartySubtitleMode() == "performance" then
-		self.frame.statusText:SetText(XFrames:GetPerformanceTextForUnit("player") or getStatusText())
-		return
-	end
-
 	self.frame.statusText:SetText(getStatusText())
 end
 
 function Player:UpdateRank()
 	if XFrames:GetPartySubtitleMode() == "performance" then
-		self.frame.rankText:SetText(XFrames:GetPerformanceRankText("player"))
+		self.frame.rankText:SetText(XFrames:GetPerformanceTextForUnit("player") or "")
 		return
 	end
 
