@@ -172,6 +172,26 @@ local defaults = {
 				x = 210,
 				y = 120,
 			},
+			tanks = {
+				enabled = false,
+				width = 96,
+				height = 40,
+				scale = 1,
+				spacing = 6,
+				maxUnits = 4,
+				position = {
+					point = "TOPLEFT",
+					relativePoint = "TOPLEFT",
+					x = 28,
+					y = -220,
+				},
+				targets = {
+					enabled = false,
+					width = 96,
+					height = 40,
+					xOffset = 8,
+				},
+			},
 		},
 	},
 }
@@ -218,6 +238,24 @@ function XFrames:InitializeDatabase()
 		end
 		self.db.profile.raid.spacingX = 8
 		self.db.profile.raid.spacingY = 6
+		self.db.profile.raid.tanks = self.db.profile.raid.tanks or {}
+		self.db.profile.raid.tanks.width = self.db.profile.raid.width
+		self.db.profile.raid.tanks.height = self.db.profile.raid.height
+		self.db.profile.raid.tanks.scale = 1
+		self.db.profile.raid.tanks.spacing = self.db.profile.raid.tanks.spacing or 6
+		self.db.profile.raid.tanks.maxUnits = self.db.profile.raid.tanks.maxUnits or 4
+		self.db.profile.raid.tanks.enabled = self.db.profile.raid.tanks.enabled == true
+		self.db.profile.raid.tanks.position = self.db.profile.raid.tanks.position or {
+			point = "TOPLEFT",
+			relativePoint = "TOPLEFT",
+			x = 28,
+			y = -220,
+		}
+		self.db.profile.raid.tanks.targets = self.db.profile.raid.tanks.targets or {}
+		self.db.profile.raid.tanks.targets.width = self.db.profile.raid.width
+		self.db.profile.raid.tanks.targets.height = self.db.profile.raid.height
+		self.db.profile.raid.tanks.targets.xOffset = self.db.profile.raid.tanks.targets.xOffset or 8
+		self.db.profile.raid.tanks.targets.enabled = self.db.profile.raid.tanks.targets.enabled == true
 		if not (IsInRaid and IsInRaid()) then
 			self.db.profile.raid.enabled = false
 		end
