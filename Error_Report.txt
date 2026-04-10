@@ -544,3 +544,12 @@ args = <table> {
  4 = <table> {
  }
 }
+Message: module Party:Enable failed: Interface/AddOns/XFrames/Core/XFrames.lua:795: attempt to compare local 'inRange' (a secret boolean value tainted by 'XFrames')
+Time: Thu Apr  9 18:11:08 2026
+Count: 1
+Stack:
+[C]: in function 'xpcall'
+[Interface/AddOns/XFrames/Core/XFrames.lua]:220: in function 'SafeCall'
+[Interface/AddOns/XFrames/Core/XFrames.lua]:1041: in function <Interface/AddOns/XFrames/Core/XFrames.lua:1038>
+
+Locals:
