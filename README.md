@@ -8,17 +8,23 @@ It replaces the legacy ZPerl salvage approach with a clean rebuild that:
 - keeps module boundaries small and explicit
 - prioritizes Retail safety and maintainability over feature parity
 
-## Initial Scope
+## Current Scope
 
-The first build targets:
+The current test build includes:
 
 - player frame
+- player buff and debuff rows
+- player cast bar
 - target frame
+- focus frame
+- micro boss frames
 - target-of-target
+- focus-target
 - player pet
+- party frames
+- raid frames
+- optional tank frames
 - a small modern options surface
-
-Raid frames are planned, but they will be built fresh after the core frame architecture is stable.
 
 ## Testing Module
 
@@ -43,11 +49,3 @@ Built-in debugging is part of the core design.
 See:
 
 - `DEBUGGING.md`
-
-## Cross-Machine Handoff
-
-If you are working from more than one Codex chat or machine, use:
-
-- `SESSION_HANDOFF.md`
-- `HANDOFF_PROTOCOL.md`
-- `handoff/`

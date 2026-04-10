@@ -1,3 +1,7 @@
 .DS_Store
 .vscode/
 Build/
+Error_Report*.txt
+handoff/
+frame_idea.jpg
+raid frames.jpg
