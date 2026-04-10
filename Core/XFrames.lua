@@ -25,6 +25,9 @@ local UnitExists = UnitExists
 local UnitGroupRolesAssigned = UnitGroupRolesAssigned
 local UnitGUID = UnitGUID
 local UnitIsPlayer = UnitIsPlayer
+local UnitIsVisible = UnitIsVisible
+local UnitInRange = UnitInRange
+local UnitPhaseReason = UnitPhaseReason
 local UnitPowerType = UnitPowerType
 local UnitSelectionColor = UnitSelectionColor
 local SetPortraitTexture = SetPortraitTexture
@@ -773,6 +776,35 @@ function XFrames:GetUnitAccentColor(unit)
 	end
 
 	return DEFAULT_UNIT_ACCENT_COLOR
+end
+
+function XFrames:IsUnitOutOfRange(unit)
+	if not unit or not UnitExists(unit) then
+		return false
+	end
+
+	if UnitPhaseReason then
+		local ok, reason = pcall(UnitPhaseReason, unit)
+		if ok and reason ~= nil then
+			return true
+		end
+	end
+
+	if UnitInRange then
+		local ok, inRange = pcall(UnitInRange, unit)
+		if ok and inRange == false then
+			return true
+		end
+	end
+
+	if UnitIsVisible then
+		local ok, visible = pcall(UnitIsVisible, unit)
+		if ok and visible == false then
+			return true
+		end
+	end
+
+	return false
 end
 
 function XFrames:FormatSpecLabel(name)

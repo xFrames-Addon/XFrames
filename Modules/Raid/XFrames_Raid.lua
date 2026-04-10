@@ -31,6 +31,11 @@ local READY_CHECK_READY_TEX = "Interface\\RaidFrame\\ReadyCheck-Ready"
 local READY_CHECK_NOT_READY_TEX = "Interface\\RaidFrame\\ReadyCheck-NotReady"
 local READY_CHECK_WAITING_TEX = "Interface\\RaidFrame\\ReadyCheck-Waiting"
 local ROLE_ICON_TEXTURE = "Interface\\LFGFrame\\UI-LFG-ICON-ROLES"
+local DIM_BACKDROP_COLOR = {0.04, 0.04, 0.05, 0.94}
+local DIM_BORDER_COLOR = {0.18, 0.18, 0.20, 0.95}
+local DIM_TEXT_COLOR = {0.55, 0.57, 0.60}
+local DIM_BAR_COLOR = {r = 0.16, g = 0.16, b = 0.18}
+local RANGE_UPDATE_INTERVAL = 0.25
 local DEMO_TEMPLATES = {
 	{className = "Warrior", classToken = "WARRIOR", role = "TANK", name = "Tankard", health = 920000, healthMax = 1000000, power = 35, powerMax = 100, powerColor = {r = 0.78, g = 0.24, b = 0.18}},
 	{className = "Priest", classToken = "PRIEST", role = "HEALER", name = "Mendra", health = 760000, healthMax = 820000, power = 220000, powerMax = 250000, powerColor = {r = 0.20, g = 0.44, b = 0.86}},
@@ -347,6 +352,11 @@ function Raid:UpdateFrameBorder(frame)
 		return
 	end
 
+	if self:IsOutOfRange(frame) then
+		frame.accentFrame:SetBackdropBorderColor(DIM_BORDER_COLOR[1], DIM_BORDER_COLOR[2], DIM_BORDER_COLOR[3], 1)
+		return
+	end
+
 	local color = getRaidAccentColor(frame.unit, self:GetDemoData(frame))
 	frame.accentFrame:SetBackdropBorderColor(color.r, color.g, color.b, 1)
 end
@@ -362,6 +372,14 @@ function Raid:IsDead(frame)
 	end
 
 	return UnitExists(frame.unit) and UnitIsDeadOrGhost and UnitIsDeadOrGhost(frame.unit) or false
+end
+
+function Raid:IsOutOfRange(frame)
+	if not frame or self:GetDemoData(frame) or self:IsDead(frame) then
+		return false
+	end
+
+	return UnitExists(frame.unit) and XFrames:IsUnitOutOfRange(frame.unit) or false
 end
 
 function Raid:UpdateName(frame)
@@ -471,6 +489,12 @@ function Raid:UpdateHealth(frame)
 		return
 	end
 
+	if self:IsOutOfRange(frame) then
+		bar:SetStatusBarColor(DIM_BAR_COLOR.r, DIM_BAR_COLOR.g, DIM_BAR_COLOR.b)
+		XFrames:SetBarValues(bar, UnitHealth(frame.unit), UnitHealthMax(frame.unit))
+		return
+	end
+
 	bar:SetStatusBarColor(HEALTH_BAR_COLOR.r, HEALTH_BAR_COLOR.g, HEALTH_BAR_COLOR.b)
 	XFrames:SetBarValues(bar, UnitHealth(frame.unit), UnitHealthMax(frame.unit))
 end
@@ -508,6 +532,12 @@ function Raid:UpdatePower(frame)
 		return
 	end
 
+	if self:IsOutOfRange(frame) then
+		bar:SetStatusBarColor(DIM_BAR_COLOR.r, DIM_BAR_COLOR.g, DIM_BAR_COLOR.b)
+		XFrames:SetBarValues(bar, UnitPower(frame.unit), UnitPowerMax(frame.unit))
+		return
+	end
+
 	local _, color = XFrames:GetUnitPowerPresentation(frame.unit, true)
 	bar:SetStatusBarColor(color.r, color.g, color.b)
 	XFrames:SetBarValues(bar, UnitPower(frame.unit), UnitPowerMax(frame.unit))
@@ -525,9 +555,25 @@ function Raid:UpdateDeadState(frame)
 		return
 	end
 
+	if self:IsOutOfRange(frame) then
+		frame:SetBackdropColor(unpack(DIM_BACKDROP_COLOR))
+		frame:SetBackdropBorderColor(unpack(DIM_BORDER_COLOR))
+		frame.deadFrame:Hide()
+		return
+	end
+
 	frame:SetBackdropColor(unpack(BACKDROP_COLOR))
 	frame:SetBackdropBorderColor(unpack(BORDER_COLOR))
 	frame.deadFrame:Hide()
+end
+
+function Raid:UpdateRangeText(frame)
+	if not frame or self:IsDead(frame) or not self:IsOutOfRange(frame) then
+		return
+	end
+
+	frame.nameText:SetTextColor(unpack(DIM_TEXT_COLOR))
+	frame.statusText:SetTextColor(unpack(DIM_TEXT_COLOR))
 end
 
 function Raid:RefreshFrame(frame)
@@ -561,6 +607,7 @@ function Raid:RefreshFrame(frame)
 	self:UpdateReadyCheck(frame)
 	self:UpdateHealth(frame)
 	self:UpdatePower(frame)
+	self:UpdateRangeText(frame)
 end
 
 function Raid:RefreshAnchor()
@@ -649,6 +696,15 @@ function Raid:RegisterEvents()
 	frame:RegisterUnitEvent("UNIT_LEVEL", unpack(units))
 	frame:SetScript("OnEvent", function(_, eventName, ...)
 		XFrames:SafeCall("module Raid:OnEvent", self.OnEvent, self, eventName, ...)
+	end)
+	frame:SetScript("OnUpdate", function(_, elapsed)
+		self.rangeElapsed = (self.rangeElapsed or 0) + elapsed
+		if self.rangeElapsed < RANGE_UPDATE_INTERVAL then
+			return
+		end
+
+		self.rangeElapsed = 0
+		self:RefreshAll()
 	end)
 end
 

@@ -38,6 +38,11 @@ local ROLE_BG_COLOR = {0.12, 0.14, 0.18, 0.96}
 local READY_CHECK_READY_TEX = "Interface\\RaidFrame\\ReadyCheck-Ready"
 local READY_CHECK_NOT_READY_TEX = "Interface\\RaidFrame\\ReadyCheck-NotReady"
 local READY_CHECK_WAITING_TEX = "Interface\\RaidFrame\\ReadyCheck-Waiting"
+local DIM_BACKDROP_COLOR = {0.04, 0.04, 0.05, 0.94}
+local DIM_BORDER_COLOR = {0.18, 0.18, 0.20, 0.95}
+local DIM_TEXT_COLOR = {0.55, 0.57, 0.60}
+local DIM_BAR_COLOR = {r = 0.16, g = 0.16, b = 0.18}
+local RANGE_UPDATE_INTERVAL = 0.25
 local DEMO_MEMBERS = {
 	{className = "Warrior", classToken = "WARRIOR", role = "TANK", name = "Tankard", level = 80, health = 920000, healthMax = 1000000, power = 35, powerMax = 100, powerColor = {r = 0.78, g = 0.24, b = 0.18}},
 	{className = "Priest", classToken = "PRIEST", role = "HEALER", name = "Mendra", level = 80, health = 760000, healthMax = 820000, power = 220000, powerMax = 250000, powerColor = {r = 0.20, g = 0.44, b = 0.86}},
@@ -342,6 +347,14 @@ function Party:UpdatePortraitBorder(frame)
 	frame.portraitFrame:SetBackdropBorderColor(color.r, color.g, color.b, 1)
 end
 
+function Party:IsOutOfRange(frame)
+	if not frame or self:GetDemoData(frame) then
+		return false
+	end
+
+	return UnitExists(frame.unit) and XFrames:IsUnitOutOfRange(frame.unit) or false
+end
+
 function Party:IsDemoModeActive()
 	if XFrames:IsTestingPreviewActive("party") then
 		return true
@@ -605,6 +618,39 @@ function Party:UpdatePower(frame)
 	XFrames:SetBarValues(bar, UnitPower(frame.unit), UnitPowerMax(frame.unit))
 end
 
+function Party:UpdateRangeState(frame)
+	if not frame then
+		return
+	end
+
+	if self:IsOutOfRange(frame) then
+		frame:SetBackdropColor(unpack(DIM_BACKDROP_COLOR))
+		frame:SetBackdropBorderColor(unpack(DIM_BORDER_COLOR))
+		frame.accentFrame:SetBackdropBorderColor(DIM_BORDER_COLOR[1], DIM_BORDER_COLOR[2], DIM_BORDER_COLOR[3], 1)
+		frame.portraitFrame:SetBackdropBorderColor(DIM_BORDER_COLOR[1], DIM_BORDER_COLOR[2], DIM_BORDER_COLOR[3], 1)
+		frame.nameText:SetTextColor(unpack(DIM_TEXT_COLOR))
+		frame.levelText:SetTextColor(unpack(DIM_TEXT_COLOR))
+		frame.statusText:SetTextColor(unpack(DIM_TEXT_COLOR))
+		frame.specText:SetTextColor(unpack(DIM_TEXT_COLOR))
+		frame.rankText:SetTextColor(unpack(DIM_TEXT_COLOR))
+		frame.healthBar:SetStatusBarColor(DIM_BAR_COLOR.r, DIM_BAR_COLOR.g, DIM_BAR_COLOR.b)
+		frame.powerBar:SetStatusBarColor(DIM_BAR_COLOR.r, DIM_BAR_COLOR.g, DIM_BAR_COLOR.b)
+		return
+	end
+
+	frame:SetBackdropColor(unpack(BACKDROP_COLOR))
+	frame:SetBackdropBorderColor(unpack(BORDER_COLOR))
+	self:UpdateFrameBorder(frame)
+	self:UpdatePortraitBorder(frame)
+	self:UpdateName(frame)
+	self:UpdateLevel(frame)
+	self:UpdateStatus(frame)
+	self:UpdateSpec(frame)
+	self:UpdateRank(frame)
+	self:UpdateHealth(frame)
+	self:UpdatePower(frame)
+end
+
 function Party:RefreshFrame(frame)
 	if not frame then
 		return
@@ -625,6 +671,7 @@ function Party:RefreshFrame(frame)
 			self:UpdatePortrait(frame)
 			self:UpdateHealth(frame)
 			self:UpdatePower(frame)
+			self:UpdateRangeState(frame)
 		else
 			frame:Hide()
 		end
@@ -643,6 +690,7 @@ function Party:RefreshFrame(frame)
 	self:UpdatePortrait(frame)
 	self:UpdateHealth(frame)
 	self:UpdatePower(frame)
+	self:UpdateRangeState(frame)
 	if UnitExists(frame.unit) then
 		self:QueueInspect(frame.unit)
 	end
@@ -682,24 +730,33 @@ end
 
 function Party:RefreshPerformanceMode()
 	self.performanceElapsed = 0
+	self.rangeElapsed = 0
 
 	if not self.eventFrame then
 		return
 	end
 
-	if XFrames:GetPartySubtitleMode() == "performance" then
-		self.eventFrame:SetScript("OnUpdate", function(_, elapsed)
-			self.performanceElapsed = (self.performanceElapsed or 0) + elapsed
-			if self.performanceElapsed < PERFORMANCE_UPDATE_INTERVAL then
-				return
-			end
+	self.eventFrame:SetScript("OnUpdate", function(_, elapsed)
+		local shouldRefresh
 
-			self.performanceElapsed = 0
+		self.rangeElapsed = (self.rangeElapsed or 0) + elapsed
+		if self.rangeElapsed >= RANGE_UPDATE_INTERVAL then
+			self.rangeElapsed = 0
+			shouldRefresh = true
+		end
+
+		if XFrames:GetPartySubtitleMode() == "performance" then
+			self.performanceElapsed = (self.performanceElapsed or 0) + elapsed
+			if self.performanceElapsed >= PERFORMANCE_UPDATE_INTERVAL then
+				self.performanceElapsed = 0
+				shouldRefresh = true
+			end
+		end
+
+		if shouldRefresh then
 			self:RefreshAll()
-		end)
-	else
-		self.eventFrame:SetScript("OnUpdate", nil)
-	end
+		end
+	end)
 
 	self:RefreshAll()
 end
