@@ -26,7 +26,6 @@ local UnitGroupRolesAssigned = UnitGroupRolesAssigned
 local UnitGUID = UnitGUID
 local UnitIsPlayer = UnitIsPlayer
 local UnitIsVisible = UnitIsVisible
-local UnitInRange = UnitInRange
 local UnitPhaseReason = UnitPhaseReason
 local UnitPowerType = UnitPowerType
 local UnitSelectionColor = UnitSelectionColor
@@ -786,13 +785,6 @@ function XFrames:IsUnitOutOfRange(unit)
 	if UnitPhaseReason then
 		local ok, reason = pcall(UnitPhaseReason, unit)
 		if ok and reason ~= nil then
-			return true
-		end
-	end
-
-	if UnitInRange then
-		local ok, inRange = pcall(UnitInRange, unit)
-		if ok and inRange == false then
 			return true
 		end
 	end
