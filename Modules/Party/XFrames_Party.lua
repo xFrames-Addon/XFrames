@@ -6,10 +6,16 @@ local Party = {}
 local RAID_CLASS_COLORS = RAID_CLASS_COLORS
 
 local CreateFrame = CreateFrame
+local CanInspect = CanInspect
+local ClearInspectPlayer = ClearInspectPlayer
+local GetInspectSpecialization = GetInspectSpecialization
+local GetSpecializationInfoByID = GetSpecializationInfoByID
 local InCombatLockdown = InCombatLockdown
+local NotifyInspect = NotifyInspect
 local UnitClass = UnitClass
 local UnitCreatureType = UnitCreatureType
 local UnitExists = UnitExists
+local UnitGUID = UnitGUID
 local UnitGroupRolesAssigned = UnitGroupRolesAssigned
 local UnitHealth = UnitHealth
 local UnitHealthMax = UnitHealthMax
@@ -18,6 +24,7 @@ local UnitLevel = UnitLevel
 local UnitName = UnitName
 local UnitPower = UnitPower
 local UnitPowerMax = UnitPowerMax
+local GetReadyCheckStatus = GetReadyCheckStatus
 
 local PERFORMANCE_UPDATE_INTERVAL = 0.5
 
@@ -28,7 +35,14 @@ local PORTRAIT_BG_COLOR = {0.10, 0.11, 0.14, 0.98}
 local SECONDARY_TEXT_COLOR = {0.72, 0.77, 0.84}
 local LEVEL_TEXT_COLOR = {0.90, 0.92, 0.96}
 local ROLE_BG_COLOR = {0.12, 0.14, 0.18, 0.96}
-local ROLE_ICON_TEXTURE = "Interface\\LFGFrame\\UI-LFG-ICON-ROLES"
+local READY_CHECK_READY_TEX = "Interface\\RaidFrame\\ReadyCheck-Ready"
+local READY_CHECK_NOT_READY_TEX = "Interface\\RaidFrame\\ReadyCheck-NotReady"
+local READY_CHECK_WAITING_TEX = "Interface\\RaidFrame\\ReadyCheck-Waiting"
+local DIM_BACKDROP_COLOR = {0.04, 0.04, 0.05, 0.94}
+local DIM_BORDER_COLOR = {0.18, 0.18, 0.20, 0.95}
+local DIM_TEXT_COLOR = {0.55, 0.57, 0.60}
+local DIM_BAR_COLOR = {r = 0.16, g = 0.16, b = 0.18}
+local RANGE_UPDATE_INTERVAL = 0.25
 local DEMO_MEMBERS = {
 	{className = "Warrior", classToken = "WARRIOR", role = "TANK", name = "Tankard", level = 80, health = 920000, healthMax = 1000000, power = 35, powerMax = 100, powerColor = {r = 0.78, g = 0.24, b = 0.18}},
 	{className = "Priest", classToken = "PRIEST", role = "HEALER", name = "Mendra", level = 80, health = 760000, healthMax = 820000, power = 220000, powerMax = 250000, powerColor = {r = 0.20, g = 0.44, b = 0.86}},
@@ -136,34 +150,75 @@ local function getRoleInfo(unit)
 	return nil
 end
 
+local function getSpecText(module, unit)
+	if not UnitExists(unit) or not UnitIsPlayer(unit) then
+		return ""
+	end
+
+	local guid = UnitGUID(unit)
+	return guid and module.inspectCache and module.inspectCache[guid] or ""
+end
+
 local function setRoleIcon(texture, role)
 	if not texture then
-		return
+		return false
 	end
 
 	if role == "TANK" then
-		texture:SetTexture(ROLE_ICON_TEXTURE)
-		texture:SetTexCoord(0, 19 / 64, 22 / 64, 41 / 64)
+		if texture.SetAtlas then
+			texture:SetAtlas("UI-LFG-RoleIcon-Tank", false)
+		end
 		texture:SetVertexColor(1, 1, 1, 1)
 		texture:Show()
-		return
+		return true
 	end
 	if role == "HEALER" then
-		texture:SetTexture(ROLE_ICON_TEXTURE)
-		texture:SetTexCoord(20 / 64, 39 / 64, 1 / 64, 20 / 64)
+		if texture.SetAtlas then
+			texture:SetAtlas("UI-LFG-RoleIcon-Healer", false)
+		end
 		texture:SetVertexColor(1, 1, 1, 1)
 		texture:Show()
-		return
+		return true
 	end
 	if role == "DAMAGER" then
-		texture:SetTexture(ROLE_ICON_TEXTURE)
-		texture:SetTexCoord(20 / 64, 39 / 64, 22 / 64, 41 / 64)
+		if texture.SetAtlas then
+			texture:SetAtlas("UI-LFG-RoleIcon-DPS", false)
+		end
 		texture:SetVertexColor(1, 1, 1, 1)
 		texture:Show()
-		return
+		return true
 	end
 
 	texture:Hide()
+	return false
+end
+
+local function setReadyCheckIcon(texture, status)
+	if not texture then
+		return false
+	end
+
+	if status == "ready" then
+		texture:SetTexture(READY_CHECK_READY_TEX)
+		texture:SetTexCoord(0, 1, 0, 1)
+		texture:Show()
+		return true
+	end
+	if status == "notready" then
+		texture:SetTexture(READY_CHECK_NOT_READY_TEX)
+		texture:SetTexCoord(0, 1, 0, 1)
+		texture:Show()
+		return true
+	end
+	if status == "waiting" then
+		texture:SetTexture(READY_CHECK_WAITING_TEX)
+		texture:SetTexCoord(0, 1, 0, 1)
+		texture:Show()
+		return true
+	end
+
+	texture:Hide()
+	return false
 end
 
 function Party:CreateAnchorFrame()
@@ -219,6 +274,11 @@ function Party:CreateUnitFrame(index)
 	frame.portraitTexture:SetPoint("TOPLEFT", frame.portraitFrame, "TOPLEFT", 2, -2)
 	frame.portraitTexture:SetSize(48, 48)
 	frame.portraitTexture:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+	frame.specText = createText(frame, "OVERLAY", "GameFontHighlightSmall", 10, "TOP", frame.portraitFrame, "BOTTOM", 0, -4, "CENTER")
+	frame.specText:SetWidth(52)
+	frame.specText:SetWordWrap(false)
+	frame.specText:SetMaxLines(1)
+	frame.specText:SetJustifyH("CENTER")
 
 	frame.nameText = createText(frame, "OVERLAY", "GameFontNormalLarge", 13, "TOPLEFT", frame, "TOPLEFT", 64, -10, "LEFT")
 	frame.nameText:SetWidth(config.width - 124)
@@ -226,10 +286,14 @@ function Party:CreateUnitFrame(index)
 	frame.levelText = createText(frame, "OVERLAY", "GameFontHighlight", 12, "TOPRIGHT", frame, "TOPRIGHT", -10, -10, "RIGHT")
 	frame.levelText:SetTextColor(unpack(LEVEL_TEXT_COLOR))
 	frame.roleFrame = createBackdropFrame(nil, frame, 20, 20, "RIGHT", frame.levelText, "LEFT", -8, 0, ROLE_BG_COLOR)
-	frame.roleIcon = frame:CreateTexture(nil, "OVERLAY")
+	frame.roleIcon = frame.roleFrame:CreateTexture(nil, "OVERLAY")
 	frame.roleIcon:SetSize(18, 18)
 	frame.roleIcon:SetPoint("CENTER", frame.roleFrame, "CENTER")
 	frame.roleIcon:Hide()
+	frame.readyCheckIcon = frame:CreateTexture(nil, "OVERLAY")
+	frame.readyCheckIcon:SetSize(18, 18)
+	frame.readyCheckIcon:SetPoint("RIGHT", frame.roleFrame, "LEFT", -6, 0)
+	frame.readyCheckIcon:Hide()
 	frame.statusText = createText(frame, "OVERLAY", "GameFontHighlightSmall", 10, "TOPLEFT", frame.nameText, "BOTTOMLEFT", 0, -2, "LEFT")
 	frame.statusText:SetWidth(config.width - 154)
 	frame.statusText:SetWordWrap(false)
@@ -283,7 +347,19 @@ function Party:UpdatePortraitBorder(frame)
 	frame.portraitFrame:SetBackdropBorderColor(color.r, color.g, color.b, 1)
 end
 
+function Party:IsOutOfRange(frame)
+	if not frame or self:GetDemoData(frame) then
+		return false
+	end
+
+	return UnitExists(frame.unit) and XFrames:IsUnitOutOfRange(frame.unit) or false
+end
+
 function Party:IsDemoModeActive()
+	if XFrames:IsTestingPreviewActive("party") then
+		return true
+	end
+
 	if not XFrames:IsFramesUnlocked() then
 		return false
 	end
@@ -298,7 +374,16 @@ function Party:IsDemoModeActive()
 end
 
 function Party:GetDemoData(frame)
-	if not frame or not frame.demoIndex or not self:IsDemoModeActive() then
+	if not frame or not frame.demoIndex then
+		return nil
+	end
+
+	local testingData = XFrames:GetTestingPreviewData("party", frame.demoIndex)
+	if testingData then
+		return testingData
+	end
+
+	if not self:IsDemoModeActive() then
 		return nil
 	end
 
@@ -350,12 +435,22 @@ end
 function Party:UpdateRole(frame)
 	local demoData = self:GetDemoData(frame)
 	local role = demoData and demoData.role or getRoleInfo(frame.unit)
-	if role then
-		frame.roleFrame:Show()
-	else
-		frame.roleFrame:Hide()
+	frame.roleFrame:SetShown(setRoleIcon(frame.roleIcon, role))
+end
+
+function Party:UpdateReadyCheck(frame)
+	local demoData = self:GetDemoData(frame)
+	if demoData then
+		setReadyCheckIcon(frame.readyCheckIcon, demoData.readyCheckStatus)
+		return
 	end
-	setRoleIcon(frame.roleIcon, role)
+
+	if not UnitExists(frame.unit) or not GetReadyCheckStatus then
+		frame.readyCheckIcon:Hide()
+		return
+	end
+
+	setReadyCheckIcon(frame.readyCheckIcon, GetReadyCheckStatus(frame.unit))
 end
 
 function Party:UpdateStatus(frame)
@@ -363,11 +458,7 @@ function Party:UpdateStatus(frame)
 	if demoData then
 		frame.statusText:SetText(demoData.className)
 	else
-		if XFrames:GetPartySubtitleMode() == "performance" and UnitExists(frame.unit) then
-			frame.statusText:SetText(XFrames:GetPerformanceTextForUnit(frame.unit) or "")
-		else
-			frame.statusText:SetText(getStatusText(frame.unit, frame.fallbackLabel))
-		end
+		frame.statusText:SetText(getStatusText(frame.unit, frame.fallbackLabel))
 	end
 	frame.statusText:SetTextColor(unpack(SECONDARY_TEXT_COLOR))
 end
@@ -377,11 +468,92 @@ function Party:UpdateRank(frame)
 	if demoData then
 		frame.rankText:SetText("")
 	elseif XFrames:GetPartySubtitleMode() == "performance" and UnitExists(frame.unit) then
-		frame.rankText:SetText(XFrames:GetPerformanceRankText(frame.unit))
+		frame.rankText:SetText(XFrames:GetPerformanceTextForUnit(frame.unit) or "")
 	else
 		frame.rankText:SetText("")
 	end
 	frame.rankText:SetTextColor(unpack(SECONDARY_TEXT_COLOR))
+end
+
+function Party:UpdateSpec(frame)
+	local demoData = self:GetDemoData(frame)
+	if demoData then
+		frame.specText:SetText("")
+		return
+	end
+
+	frame.specText:SetText(getSpecText(self, frame.unit))
+end
+
+function Party:QueueInspect(unit)
+	if not NotifyInspect or not CanInspect or not UnitExists(unit) or not UnitIsPlayer(unit) then
+		return
+	end
+
+	local guid = UnitGUID(unit)
+	if not guid then
+		return
+	end
+
+	self.inspectCache = self.inspectCache or {}
+	self.inspectQueue = self.inspectQueue or {}
+	self.inspectQueued = self.inspectQueued or {}
+
+	if self.inspectCache[guid] or self.inspectPendingGUID == guid or self.inspectQueued[guid] then
+		return
+	end
+
+	self.inspectQueue[#self.inspectQueue + 1] = {guid = guid, unit = unit}
+	self.inspectQueued[guid] = true
+	self:ProcessInspectQueue()
+end
+
+function Party:ProcessInspectQueue()
+	if self.inspectPendingGUID or (InCombatLockdown and InCombatLockdown()) then
+		return
+	end
+
+	while self.inspectQueue and #self.inspectQueue > 0 do
+		local item = table.remove(self.inspectQueue, 1)
+		self.inspectQueued[item.guid] = nil
+
+		if UnitExists(item.unit) and UnitGUID(item.unit) == item.guid and UnitIsPlayer(item.unit) and CanInspect(item.unit, false) then
+			NotifyInspect(item.unit)
+			self.inspectPendingGUID = item.guid
+			return
+		end
+	end
+end
+
+function Party:HandleInspectReady(inspectGUID)
+	if inspectGUID == nil or not GetInspectSpecialization then
+		return
+	end
+
+	for index = 1, 4 do
+		local unit = "party" .. index
+		if UnitExists(unit) and UnitGUID(unit) == inspectGUID then
+			local specID = GetInspectSpecialization(unit)
+			if specID ~= nil and GetSpecializationInfoByID then
+				local ok, _, name = pcall(GetSpecializationInfoByID, specID)
+				if ok and name then
+					self.inspectCache = self.inspectCache or {}
+					self.inspectCache[inspectGUID] = XFrames:FormatSpecLabel(name)
+				end
+			end
+		end
+	end
+
+	if ClearInspectPlayer then
+		ClearInspectPlayer()
+	end
+
+	if self.inspectPendingGUID == inspectGUID then
+		self.inspectPendingGUID = nil
+	end
+
+	self:RefreshAll()
+	self:ProcessInspectQueue()
 end
 
 function Party:UpdatePortrait(frame)
@@ -446,23 +618,60 @@ function Party:UpdatePower(frame)
 	XFrames:SetBarValues(bar, UnitPower(frame.unit), UnitPowerMax(frame.unit))
 end
 
+function Party:UpdateRangeState(frame)
+	if not frame then
+		return
+	end
+
+	if self:IsOutOfRange(frame) then
+		frame:SetBackdropColor(unpack(DIM_BACKDROP_COLOR))
+		frame:SetBackdropBorderColor(unpack(DIM_BORDER_COLOR))
+		frame.accentFrame:SetBackdropBorderColor(DIM_BORDER_COLOR[1], DIM_BORDER_COLOR[2], DIM_BORDER_COLOR[3], 1)
+		frame.portraitFrame:SetBackdropBorderColor(DIM_BORDER_COLOR[1], DIM_BORDER_COLOR[2], DIM_BORDER_COLOR[3], 1)
+		frame.nameText:SetTextColor(unpack(DIM_TEXT_COLOR))
+		frame.levelText:SetTextColor(unpack(DIM_TEXT_COLOR))
+		frame.statusText:SetTextColor(unpack(DIM_TEXT_COLOR))
+		frame.specText:SetTextColor(unpack(DIM_TEXT_COLOR))
+		frame.rankText:SetTextColor(unpack(DIM_TEXT_COLOR))
+		frame.healthBar:SetStatusBarColor(DIM_BAR_COLOR.r, DIM_BAR_COLOR.g, DIM_BAR_COLOR.b)
+		frame.powerBar:SetStatusBarColor(DIM_BAR_COLOR.r, DIM_BAR_COLOR.g, DIM_BAR_COLOR.b)
+		return
+	end
+
+	frame:SetBackdropColor(unpack(BACKDROP_COLOR))
+	frame:SetBackdropBorderColor(unpack(BORDER_COLOR))
+	self:UpdateFrameBorder(frame)
+	self:UpdatePortraitBorder(frame)
+	self:UpdateName(frame)
+	self:UpdateLevel(frame)
+	self:UpdateStatus(frame)
+	self:UpdateSpec(frame)
+	self:UpdateRank(frame)
+	self:UpdateHealth(frame)
+	self:UpdatePower(frame)
+end
+
 function Party:RefreshFrame(frame)
 	if not frame then
 		return
 	end
 
-	if not UnitExists(frame.unit) then
+	local demoData = self:GetDemoData(frame)
+	if not UnitExists(frame.unit) and not demoData then
 		if XFrames:IsFramesUnlocked() then
 			frame:Show()
 			self:UpdateFrameBorder(frame)
 			self:UpdateName(frame)
 			self:UpdateLevel(frame)
 			self:UpdateRole(frame)
+			self:UpdateReadyCheck(frame)
 			self:UpdateStatus(frame)
 			self:UpdateRank(frame)
+			self:UpdateSpec(frame)
 			self:UpdatePortrait(frame)
 			self:UpdateHealth(frame)
 			self:UpdatePower(frame)
+			self:UpdateRangeState(frame)
 		else
 			frame:Hide()
 		end
@@ -474,11 +683,17 @@ function Party:RefreshFrame(frame)
 	self:UpdateName(frame)
 	self:UpdateLevel(frame)
 	self:UpdateRole(frame)
+	self:UpdateReadyCheck(frame)
 	self:UpdateStatus(frame)
 	self:UpdateRank(frame)
+	self:UpdateSpec(frame)
 	self:UpdatePortrait(frame)
 	self:UpdateHealth(frame)
 	self:UpdatePower(frame)
+	self:UpdateRangeState(frame)
+	if UnitExists(frame.unit) then
+		self:QueueInspect(frame.unit)
+	end
 end
 
 function Party:RefreshAnchor()
@@ -487,6 +702,11 @@ function Party:RefreshAnchor()
 	end
 
 	if XFrames:IsFramesUnlocked() then
+		self.anchorFrame:Show()
+		return
+	end
+
+	if XFrames:IsTestingPreviewActive("party") then
 		self.anchorFrame:Show()
 		return
 	end
@@ -510,29 +730,48 @@ end
 
 function Party:RefreshPerformanceMode()
 	self.performanceElapsed = 0
+	self.rangeElapsed = 0
 
 	if not self.eventFrame then
 		return
 	end
 
-	if XFrames:GetPartySubtitleMode() == "performance" then
-		self.eventFrame:SetScript("OnUpdate", function(_, elapsed)
-			self.performanceElapsed = (self.performanceElapsed or 0) + elapsed
-			if self.performanceElapsed < PERFORMANCE_UPDATE_INTERVAL then
-				return
-			end
+	self.eventFrame:SetScript("OnUpdate", function(_, elapsed)
+		local shouldRefresh
 
-			self.performanceElapsed = 0
+		self.rangeElapsed = (self.rangeElapsed or 0) + elapsed
+		if self.rangeElapsed >= RANGE_UPDATE_INTERVAL then
+			self.rangeElapsed = 0
+			shouldRefresh = true
+		end
+
+		if XFrames:GetPartySubtitleMode() == "performance" then
+			self.performanceElapsed = (self.performanceElapsed or 0) + elapsed
+			if self.performanceElapsed >= PERFORMANCE_UPDATE_INTERVAL then
+				self.performanceElapsed = 0
+				shouldRefresh = true
+			end
+		end
+
+		if shouldRefresh then
 			self:RefreshAll()
-		end)
-	else
-		self.eventFrame:SetScript("OnUpdate", nil)
-	end
+		end
+	end)
 
 	self:RefreshAll()
 end
 
 function Party:OnEvent(event, unit)
+	if event == "INSPECT_READY" then
+		self:HandleInspectReady(unit)
+		return
+	end
+
+	if event == "PLAYER_REGEN_ENABLED" then
+		self:ProcessInspectQueue()
+		return
+	end
+
 	if event == "GROUP_ROSTER_UPDATE" or event == "PLAYER_ENTERING_WORLD" then
 		self:RefreshAll()
 		XFrames:ApplyBlizzardFrameVisibility()
@@ -560,8 +799,13 @@ function Party:RegisterEvents()
 	self.eventFrame = self.eventFrame or CreateFrame("Frame")
 	local frame = self.eventFrame
 	frame:RegisterEvent("GROUP_ROSTER_UPDATE")
+	frame:RegisterEvent("READY_CHECK")
+	frame:RegisterEvent("READY_CHECK_CONFIRM")
+	frame:RegisterEvent("READY_CHECK_FINISHED")
 	frame:RegisterEvent("PLAYER_ROLES_ASSIGNED")
 	frame:RegisterEvent("PLAYER_ENTERING_WORLD")
+	frame:RegisterEvent("INSPECT_READY")
+	frame:RegisterEvent("PLAYER_REGEN_ENABLED")
 	frame:RegisterUnitEvent("UNIT_NAME_UPDATE", "party1", "party2", "party3", "party4")
 	frame:RegisterUnitEvent("UNIT_OTHER_PARTY_CHANGED", "party1", "party2", "party3", "party4")
 	frame:RegisterUnitEvent("UNIT_PORTRAIT_UPDATE", "party1", "party2", "party3", "party4")

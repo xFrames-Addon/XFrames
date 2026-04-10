@@ -36,10 +36,13 @@ local BACKDROP_COLOR = {0.08, 0.09, 0.11, 0.92}
 local BORDER_COLOR = {0.24, 0.27, 0.31, 0.95}
 local POWER_BAR_COLOR = {r = 0.24, g = 0.28, b = 0.36}
 local PORTRAIT_BG_COLOR = {0.10, 0.11, 0.14, 0.98}
+local AURA_BORDER_COLOR = {r = 0.18, g = 0.20, b = 0.24}
+local AURA_PLACEHOLDER_COLOR = {r = 0.10, g = 0.11, b = 0.14, a = 0.55}
 local CAST_BAR_COLOR = {r = 0.22, g = 0.78, b = 0.32}
 local CHANNEL_BAR_COLOR = {r = 0.22, g = 0.78, b = 0.32}
 local TIMER_DIRECTION = Enum and Enum.StatusBarTimerDirection
 local BAR_INTERPOLATION = Enum and Enum.StatusBarInterpolation
+local BOSS_HEALTH_BAR_COLOR = {r = 0.78, g = 0.22, b = 0.22}
 
 local function createText(parent, layer, template, size, anchorPoint, relativeTo, relativePoint, x, y, justify)
 	local text = parent:CreateFontString(nil, layer, template)
@@ -170,6 +173,25 @@ function Target:CreateUnitFrame(key, unit, config, accent)
 	frame.powerBar = createBar(frame, 12, "TOPLEFT", frame.healthBar, "BOTTOMLEFT", 0, -6)
 	frame.powerBar:SetPoint("RIGHT", frame, "RIGHT", -10, 0)
 
+	local buffConfig = config.buffs or {}
+	if buffConfig.max and buffConfig.max > 0 then
+		local buffFrame = CreateFrame("Frame", nil, frame)
+		buffFrame:SetPoint("BOTTOMRIGHT", frame, "TOPRIGHT", -(buffConfig.xOffset or 6), buffConfig.yOffset or 8)
+		buffFrame:SetSize(((buffConfig.size or 22) * (buffConfig.max or 8)) + ((buffConfig.spacing or 4) * math.max((buffConfig.max or 8) - 1, 0)), buffConfig.size or 22)
+		buffFrame.buttons = {}
+		buffFrame.spacing = buffConfig.spacing or 4
+		frame.buffFrame = buffFrame
+
+		for index = 1, (buffConfig.max or 8) do
+			buffFrame.buttons[index] = XFrames:CreateAuraButton(buffFrame, index, buffConfig.size or 22, {
+				backgroundColor = PORTRAIT_BG_COLOR,
+				borderColor = AURA_BORDER_COLOR,
+				placeholderColor = AURA_PLACEHOLDER_COLOR,
+				tooltipAnchor = "ANCHOR_BOTTOM",
+			})
+		end
+	end
+
 	XFrames:RegisterInteractiveUnitFrame(frame, unit, true)
 	XFrames:RegisterMovableFrame(frame, config.position, frame.fallbackLabel)
 	return frame
@@ -270,6 +292,110 @@ function Target:CreateCompactUnitFrame(key, unit, config, accent)
 	return frame
 end
 
+function Target:CreateBossAnchor()
+	if self.bossAnchor then
+		return self.bossAnchor
+	end
+
+	local config = XFrames.db.profile.target.boss
+	local frame = CreateFrame("Frame", "XFramesBossAnchor", UIParent)
+	frame:SetFrameStrata("MEDIUM")
+	frame:SetFrameLevel(20)
+	frame:Hide()
+
+	self.bossAnchor = frame
+	XFrames:RegisterMovableFrame(frame, config.position, "Bosses")
+	self:ApplyBossLayout()
+	return frame
+end
+
+function Target:ApplyBossLayout()
+	if not self.bossAnchor then
+		return
+	end
+
+	local config = XFrames.db.profile.target.boss
+	local maxUnits = config.maxUnits or 5
+	local spacing = config.spacing or 8
+	local width = config.width or 188
+	local height = config.height or 60
+
+	self.bossAnchor:SetSize(width, (height * maxUnits) + (spacing * math.max(maxUnits - 1, 0)))
+	self.bossAnchor:SetScale(config.scale or 1)
+
+	for index = 1, maxUnits do
+		local frame = self.bossFrames and self.bossFrames[index]
+		if frame then
+			frame:SetSize(width, height)
+			frame:ClearAllPoints()
+			frame:SetPoint("TOPRIGHT", self.bossAnchor, "TOPRIGHT", 0, -((index - 1) * (height + spacing)))
+		end
+	end
+end
+
+function Target:CreateBossFrame(index)
+	self.bossFrames = self.bossFrames or {}
+	if self.bossFrames[index] then
+		return self.bossFrames[index]
+	end
+
+	local config = XFrames.db.profile.target.boss
+	local anchor = self:CreateBossAnchor()
+	local unit = "boss" .. index
+	local frame = CreateFrame("Button", "XFramesBossFrame" .. index, anchor, "SecureUnitButtonTemplate,BackdropTemplate")
+	frame.unit = unit
+	frame.unitKey = unit
+	frame.fallbackLabel = "Boss " .. index
+	frame.isCompact = true
+	frame.isBoss = true
+	frame:SetSize(config.width, config.height)
+	frame:SetFrameStrata("MEDIUM")
+	frame:SetFrameLevel(anchor:GetFrameLevel() + index)
+	frame:SetBackdrop({
+		bgFile = "Interface\\Buttons\\WHITE8x8",
+		edgeFile = "Interface\\Buttons\\WHITE8x8",
+		edgeSize = 1,
+		insets = {left = 1, right = 1, top = 1, bottom = 1},
+	})
+	frame:SetBackdropColor(unpack(BACKDROP_COLOR))
+	frame:SetBackdropBorderColor(unpack(BORDER_COLOR))
+	frame.accentFrame = XFrames:CreateAccentFrame(frame, 2, 3)
+	frame:Hide()
+
+	frame.nameText = createText(frame, "OVERLAY", "GameFontNormal", 12, "TOPLEFT", frame, "TOPLEFT", 8, -8, "LEFT")
+	frame.nameText:SetWidth((config.width or 188) - 48)
+	frame.nameText:SetWordWrap(false)
+	frame.levelText = createText(frame, "OVERLAY", "GameFontHighlightSmall", 10, "TOPRIGHT", frame, "TOPRIGHT", -8, -9, "RIGHT")
+	frame.statusText = createText(frame, "OVERLAY", "GameFontHighlightSmall", 9, "TOPLEFT", frame.nameText, "BOTTOMLEFT", 0, -2, "LEFT")
+	frame.statusText:SetWidth((config.width or 188) - 16)
+	frame.statusText:SetWordWrap(false)
+	frame.healthBar = createBar(frame, 10, "TOPLEFT", frame, "TOPLEFT", 8, -24)
+	frame.healthBar:SetPoint("RIGHT", frame, "RIGHT", -8, 0)
+	frame.healthAccent = BOSS_HEALTH_BAR_COLOR
+	frame.powerBar = createBar(frame, 8, "TOPLEFT", frame.healthBar, "BOTTOMLEFT", 0, -4)
+	frame.powerBar:SetPoint("RIGHT", frame, "RIGHT", -8, 0)
+
+	self.bossFrames[index] = frame
+	XFrames:RegisterInteractiveUnitFrame(frame, unit, true)
+	frame:RegisterForDrag("LeftButton")
+	frame:SetScript("OnDragStart", function()
+		if not XFrames:IsFramesUnlocked() then
+			return
+		end
+		if InCombatLockdown and InCombatLockdown() then
+			return
+		end
+
+		anchor:StartMoving()
+	end)
+	frame:SetScript("OnDragStop", function()
+		anchor:StopMovingOrSizing()
+		XFrames:SaveFramePosition(anchor)
+	end)
+
+	return frame
+end
+
 function Target:UpdateName(frame)
 	if not UnitExists(frame.unit) then
 		frame.nameText:SetText(frame.fallbackLabel)
@@ -347,16 +473,16 @@ function Target:ProcessInspectQueue()
 end
 
 function Target:HandleInspectReady(inspectGUID)
-	if not inspectGUID or not GetInspectSpecialization then
+	if inspectGUID == nil or not GetInspectSpecialization then
 		return
 	end
 
 	for _, unit in ipairs({"target", "focus"}) do
 		if UnitExists(unit) and UnitGUID(unit) == inspectGUID then
 			local specID = GetInspectSpecialization(unit)
-			if specID and specID > 0 and GetSpecializationInfoByID then
-				local _, name = GetSpecializationInfoByID(specID)
-				if name then
+			if specID ~= nil and GetSpecializationInfoByID then
+				local ok, _, name = pcall(GetSpecializationInfoByID, specID)
+				if ok and name then
 					self.inspectCache = self.inspectCache or {}
 					self.inspectCache[inspectGUID] = XFrames:FormatSpecLabel(name)
 				end
@@ -446,6 +572,52 @@ function Target:UpdatePower(frame)
 	XFrames:SetBarValues(bar, value, maxValue)
 end
 
+function Target:UpdateBuffs(frame)
+	if not frame or not frame.buffFrame then
+		return
+	end
+
+	local buffConfig = (frame.unitKey == "target" and XFrames.db.profile.target and XFrames.db.profile.target.buffs) or {}
+	if buffConfig.enabled == false or not XFrames:AreBuffBarsEnabled() then
+		frame.buffFrame:Hide()
+		for _, button in ipairs(frame.buffFrame.buttons) do
+			button:Hide()
+		end
+		return
+	end
+
+	local buttons = frame.buffFrame.buttons
+	local unlocked = XFrames:IsFramesUnlocked()
+	local unit = frame.unit
+	local maxBuffs = buffConfig.max or #buttons
+	local buffs = UnitExists(unit) and XFrames:CollectAuraData(unit, "HELPFUL", maxBuffs) or {}
+
+	for index, button in ipairs(buttons) do
+		local aura = buffs[index]
+		if aura then
+			XFrames:ApplyAuraButton(button, unit, aura, {
+				borderColor = AURA_BORDER_COLOR,
+			})
+		elseif unlocked then
+			XFrames:ResetAuraButton(button, {
+				unit = unit,
+				borderColor = AURA_BORDER_COLOR,
+				placeholderColor = AURA_PLACEHOLDER_COLOR,
+			})
+			button:Show()
+		else
+			XFrames:ResetAuraButton(button, {
+				unit = unit,
+				borderColor = AURA_BORDER_COLOR,
+				placeholderColor = AURA_PLACEHOLDER_COLOR,
+			})
+			button:Hide()
+		end
+	end
+
+	frame.buffFrame:SetShown(unlocked or #buffs > 0)
+end
+
 function Target:RefreshCastState()
 	local castFrame = self.castFrame
 	if not castFrame then
@@ -519,6 +691,7 @@ function Target:RefreshFrame(frame)
 			self:UpdatePortrait(frame)
 			self:UpdateHealth(frame)
 			self:UpdatePower(frame)
+			self:UpdateBuffs(frame)
 		end
 		return
 	end
@@ -534,6 +707,7 @@ function Target:RefreshFrame(frame)
 	self:UpdatePortrait(frame)
 	self:UpdateHealth(frame)
 	self:UpdatePower(frame)
+	self:UpdateBuffs(frame)
 
 	if frame.specText then
 		self:QueueInspect(frame.unit)
@@ -541,11 +715,73 @@ function Target:RefreshFrame(frame)
 end
 
 function Target:RefreshAll()
+	self:ApplyBossLayout()
 	self:RefreshFrame(self.targetFrame)
 	self:RefreshFrame(self.focusFrame)
 	self:RefreshFrame(self.targetTargetFrame)
 	self:RefreshFrame(self.focusTargetFrame)
+	self:RefreshBossFrames()
 	self:RefreshCastState()
+end
+
+function Target:RefreshBossFrames()
+	if not self.bossAnchor then
+		return
+	end
+
+	local enabled = XFrames.db.profile.target.boss and XFrames.db.profile.target.boss.enabled ~= false
+	if not enabled then
+		self.bossAnchor:Hide()
+		for index = 1, (XFrames.db.profile.target.boss.maxUnits or 5) do
+			local frame = self.bossFrames and self.bossFrames[index]
+			if frame then
+				frame:Hide()
+			end
+		end
+		return
+	end
+
+	local anyVisible = false
+	local maxUnits = XFrames.db.profile.target.boss.maxUnits or 5
+	for index = 1, maxUnits do
+		local frame = self.bossFrames and self.bossFrames[index]
+		if frame then
+			if UnitExists(frame.unit) then
+				frame:Show()
+				self:UpdateFrameBorder(frame)
+				self:UpdateName(frame)
+				self:UpdateLevel(frame)
+				frame.statusText:SetText("Boss")
+				self:UpdateHealth(frame)
+				self:UpdatePower(frame)
+				anyVisible = true
+			elseif XFrames:IsFramesUnlocked() then
+				frame:Show()
+				frame.nameText:SetText(frame.fallbackLabel)
+				frame.nameText:SetTextColor(1, 1, 1)
+				frame.levelText:SetText("")
+				frame.statusText:SetText("Boss")
+				frame.accentFrame:SetBackdropBorderColor(BOSS_HEALTH_BAR_COLOR.r, BOSS_HEALTH_BAR_COLOR.g, BOSS_HEALTH_BAR_COLOR.b, 1)
+				frame.healthBar:SetStatusBarColor(BOSS_HEALTH_BAR_COLOR.r, BOSS_HEALTH_BAR_COLOR.g, BOSS_HEALTH_BAR_COLOR.b)
+				frame.healthBar:SetMinMaxValues(0, 1)
+				frame.healthBar:SetValue(0)
+				frame.healthBar.valueText:SetText("")
+				frame.powerBar:SetStatusBarColor(POWER_BAR_COLOR.r, POWER_BAR_COLOR.g, POWER_BAR_COLOR.b)
+				frame.powerBar:SetMinMaxValues(0, 1)
+				frame.powerBar:SetValue(0)
+				frame.powerBar.valueText:SetText("")
+				anyVisible = true
+			else
+				frame:Hide()
+			end
+		end
+	end
+
+	if anyVisible then
+		self.bossAnchor:Show()
+	else
+		self.bossAnchor:Hide()
+	end
 end
 
 function Target:OnEvent(event, unit)
@@ -562,6 +798,7 @@ function Target:OnEvent(event, unit)
 	if event == "PLAYER_TARGET_CHANGED" then
 		self:RefreshFrame(self.targetFrame)
 		self:RefreshFrame(self.targetTargetFrame)
+		self:RefreshBossFrames()
 		self:RefreshCastState()
 		return
 	end
@@ -607,6 +844,11 @@ function Target:OnEvent(event, unit)
 		return
 	end
 
+	if type(unit) == "string" and unit:match("^boss%d+$") then
+		self:RefreshBossFrames()
+		return
+	end
+
 	self:RefreshAll()
 end
 
@@ -618,14 +860,15 @@ function Target:RegisterEvents()
 	frame:RegisterEvent("PLAYER_FOCUS_CHANGED")
 	frame:RegisterEvent("PLAYER_REGEN_ENABLED")
 	frame:RegisterUnitEvent("UNIT_TARGET", "target", "focus")
-	frame:RegisterUnitEvent("UNIT_HEALTH", "target", "focus", "targettarget", "focustarget")
-	frame:RegisterUnitEvent("UNIT_MAXHEALTH", "target", "focus", "targettarget", "focustarget")
-	frame:RegisterUnitEvent("UNIT_LEVEL", "target", "focus", "targettarget", "focustarget")
-	frame:RegisterUnitEvent("UNIT_NAME_UPDATE", "target", "focus", "targettarget", "focustarget")
+	frame:RegisterUnitEvent("UNIT_HEALTH", "target", "focus", "targettarget", "focustarget", "boss1", "boss2", "boss3", "boss4", "boss5")
+	frame:RegisterUnitEvent("UNIT_MAXHEALTH", "target", "focus", "targettarget", "focustarget", "boss1", "boss2", "boss3", "boss4", "boss5")
+	frame:RegisterUnitEvent("UNIT_LEVEL", "target", "focus", "targettarget", "focustarget", "boss1", "boss2", "boss3", "boss4", "boss5")
+	frame:RegisterUnitEvent("UNIT_NAME_UPDATE", "target", "focus", "targettarget", "focustarget", "boss1", "boss2", "boss3", "boss4", "boss5")
 	frame:RegisterUnitEvent("UNIT_PORTRAIT_UPDATE", "target", "focus", "targettarget", "focustarget")
-	frame:RegisterUnitEvent("UNIT_POWER_UPDATE", "target", "focus", "targettarget", "focustarget")
-	frame:RegisterUnitEvent("UNIT_MAXPOWER", "target", "focus", "targettarget", "focustarget")
-	frame:RegisterUnitEvent("UNIT_DISPLAYPOWER", "target", "focus", "targettarget", "focustarget")
+	frame:RegisterUnitEvent("UNIT_POWER_UPDATE", "target", "focus", "targettarget", "focustarget", "boss1", "boss2", "boss3", "boss4", "boss5")
+	frame:RegisterUnitEvent("UNIT_MAXPOWER", "target", "focus", "targettarget", "focustarget", "boss1", "boss2", "boss3", "boss4", "boss5")
+	frame:RegisterUnitEvent("UNIT_DISPLAYPOWER", "target", "focus", "targettarget", "focustarget", "boss1", "boss2", "boss3", "boss4", "boss5")
+	frame:RegisterUnitEvent("UNIT_AURA", "target")
 	frame:RegisterUnitEvent("UNIT_SPELLCAST_START", "target")
 	frame:RegisterUnitEvent("UNIT_SPELLCAST_STOP", "target")
 	frame:RegisterUnitEvent("UNIT_SPELLCAST_FAILED", "target")
@@ -662,6 +905,12 @@ function Target:Enable()
 	if self.focusTargetEnabled then
 		self.focusTargetFrame = self:CreateCompactUnitFrame("focustarget", "focustarget", XFrames.db.profile.target.focustarget, FOCUS_TARGET_HEALTH_BAR_COLOR)
 	end
+	if XFrames.db.profile.target.boss and XFrames.db.profile.target.boss.enabled ~= false then
+		self:CreateBossAnchor()
+		for index = 1, (XFrames.db.profile.target.boss.maxUnits or 5) do
+			self:CreateBossFrame(index)
+		end
+	end
 	self.eventFrame = self.eventFrame or CreateFrame("Frame")
 	self:RegisterEvents()
 	self:RefreshAll()
@@ -675,6 +924,9 @@ function Target:Enable()
 	end
 	if self.focusTargetFrame then
 		XFrames:Info("Focus-target shell enabled")
+	end
+	if self.bossFrames and self.bossFrames[1] then
+		XFrames:Info("Boss shell enabled")
 	end
 end
 
@@ -693,6 +945,16 @@ function Target:ForEachFrame(callback)
 	end
 	if self.focusTargetFrame then
 		callback(self.focusTargetFrame)
+	end
+	if self.bossAnchor then
+		callback(self.bossAnchor)
+	end
+	if self.bossFrames then
+		for index = 1, (XFrames.db.profile.target.boss.maxUnits or 5) do
+			if self.bossFrames[index] then
+				callback(self.bossFrames[index])
+			end
+		end
 	end
 end
 

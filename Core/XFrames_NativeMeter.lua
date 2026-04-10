@@ -118,6 +118,37 @@ function XFrames:GetPartySubtitleMode()
 	return self.db and self.db.profile and self.db.profile.party and self.db.profile.party.subtitleMode or "status"
 end
 
+function XFrames:GetOutOfCombatMeterMode()
+	return self.db and self.db.profile and self.db.profile.party and self.db.profile.party.outOfCombatMeterMode or "segment"
+end
+
+function XFrames:SetOutOfCombatMeterMode(mode)
+	if mode ~= "segment" and mode ~= "overall" then
+		self:Warn(string.format("Unknown out-of-combat meter mode: %s", tostring(mode)))
+		return
+	end
+
+	if not (self.db and self.db.profile and self.db.profile.party) then
+		return
+	end
+
+	self.db.profile.party.outOfCombatMeterMode = mode
+	self:Info(string.format("Out-of-combat meter mode set to %s", mode))
+	self:InvalidateMeterCache()
+
+	local party = self:GetModule("Party")
+	if party and type(party.RefreshPerformanceMode) == "function" then
+		party:RefreshPerformanceMode()
+	end
+
+	local player = self:GetModule("Player")
+	if player and type(player.Refresh) == "function" then
+		player:Refresh()
+	end
+
+	self:RefreshSettingsPanel()
+end
+
 function XFrames:SetPartySubtitleMode(mode)
 	if mode ~= "status" and mode ~= "performance" then
 		self:Warn(string.format("Unknown party subtitle mode: %s", tostring(mode)))
@@ -237,6 +268,70 @@ function XFrames:GetNativeMeterView(sessionType, meterType)
 	return cache.views[cacheKey] or nil
 end
 
+function XFrames:GetLatestCompletedMeterSessionID()
+	if not self:IsNativeMeterAvailable() or not (C_DamageMeter and C_DamageMeter.GetAvailableCombatSessions) then
+		return nil
+	end
+
+	local cache = self.nativeMeterCache or {}
+	cache.latestCompletedSession = cache.latestCompletedSession or {}
+	self.nativeMeterCache = cache
+
+	if cache.latestCompletedSession.id ~= nil then
+		return cache.latestCompletedSession.id or nil
+	end
+
+	local ok, sessions = pcall(C_DamageMeter.GetAvailableCombatSessions)
+	if not ok or type(sessions) ~= "table" then
+		cache.latestCompletedSession.id = false
+		return nil
+	end
+
+	local latestSessionID
+	for _, sessionInfo in ipairs(sessions) do
+		local sessionID = sessionInfo and sessionInfo.sessionID
+		if type(sessionID) == "number" and (not latestSessionID or sessionID > latestSessionID) then
+			latestSessionID = sessionID
+		end
+	end
+
+	cache.latestCompletedSession.id = latestSessionID or false
+	return latestSessionID
+end
+
+function XFrames:GetCompletedMeterView(meterType)
+	if not self:IsNativeMeterAvailable() then
+		return nil
+	end
+
+	local sessionID = self:GetLatestCompletedMeterSessionID()
+	if not sessionID or not (C_DamageMeter and C_DamageMeter.GetCombatSessionFromID) then
+		return nil
+	end
+
+	local cache = self.nativeMeterCache or {}
+	cache.completedViews = cache.completedViews or {}
+	self.nativeMeterCache = cache
+
+	local enumMeterType = meterType
+	if Enum and Enum.DamageMeterType then
+		if meterType == DAMAGE_METER_TYPE_DPS and Enum.DamageMeterType.Dps then
+			enumMeterType = Enum.DamageMeterType.Dps
+		elseif meterType == DAMAGE_METER_TYPE_HPS and Enum.DamageMeterType.Hps then
+			enumMeterType = Enum.DamageMeterType.Hps
+		end
+	end
+
+	local cacheKey = tostring(sessionID) .. ":" .. tostring(enumMeterType)
+	if cache.completedViews[cacheKey] ~= nil then
+		return cache.completedViews[cacheKey] or nil
+	end
+
+	local ok, view = pcall(C_DamageMeter.GetCombatSessionFromID, sessionID, enumMeterType)
+	cache.completedViews[cacheKey] = ok and view or false
+	return cache.completedViews[cacheKey] or nil
+end
+
 function XFrames:GetNativeMeterSourceForUnit(unit, meterType)
 	if not unit or not meterType or not UnitExists(unit) or not self:IsNativeMeterAvailable() then
 		return nil
@@ -257,20 +352,24 @@ function XFrames:GetNativeMeterSourceForUnit(unit, meterType)
 		return nil
 	end
 
-	local sessionType = self:GetMeterSessionType()
-	if sessionType == DAMAGE_METER_SESSION_CURRENT then
-		sessionType = currentSessionType
-	else
-		sessionType = totalSessionType
+	if not (InCombatLockdown and InCombatLockdown()) and self:GetOutOfCombatMeterMode() == "segment" and C_DamageMeter.GetCombatSessionSourceFromID then
+		local sessionID = self:GetLatestCompletedMeterSessionID()
+		if sessionID then
+			local ok, source = pcall(C_DamageMeter.GetCombatSessionSourceFromID, sessionID, enumMeterType, unitGUID, unitCreatureID)
+			if ok and type(source) == "table" then
+				return source
+			end
+		end
 	end
 
+	local sessionType = currentSessionType
 	local ok, source = pcall(C_DamageMeter.GetCombatSessionSourceFromType, sessionType, enumMeterType, unitGUID, unitCreatureID)
 	if ok and type(source) == "table" then
 		return source
 	end
 
-	if sessionType ~= currentSessionType then
-		ok, source = pcall(C_DamageMeter.GetCombatSessionSourceFromType, currentSessionType, enumMeterType, unitGUID, unitCreatureID)
+	if totalSessionType and totalSessionType ~= currentSessionType then
+		ok, source = pcall(C_DamageMeter.GetCombatSessionSourceFromType, totalSessionType, enumMeterType, unitGUID, unitCreatureID)
 		if ok and type(source) == "table" then
 			return source
 		end
@@ -285,7 +384,52 @@ function XFrames:GetPerformanceRankForUnit(unit)
 		return nil
 	end
 
-	local source = self:GetNativeMeterSourceForUnit(unit, meterType)
+	if InCombatLockdown and InCombatLockdown() then
+		return nil
+	end
+
+	local mode = self:GetOutOfCombatMeterMode()
+	local view
+	if mode == "overall" then
+		view = self:GetNativeMeterView(DAMAGE_METER_SESSION_TOTAL, meterType)
+	else
+		view = self:GetCompletedMeterView(meterType)
+	end
+	if not view or type(view) ~= "table" or type(view.combatSources) ~= "table" then
+		return nil
+	end
+
+	local enumMeterType = self:GetNativeMeterContext(meterType)
+	local unitGUID = UnitGUID(unit)
+	local unitCreatureID = getCreatureIDFromGUID(unitGUID)
+	local source
+	if unitGUID and C_DamageMeter then
+		if mode == "overall" and C_DamageMeter.GetCombatSessionSourceFromType then
+			local _, _, totalSessionType = self:GetNativeMeterContext(meterType)
+			local ok, resolvedSource = pcall(C_DamageMeter.GetCombatSessionSourceFromType, totalSessionType, enumMeterType, unitGUID, unitCreatureID)
+			if ok and type(resolvedSource) == "table" then
+				source = resolvedSource
+			end
+		elseif mode ~= "overall" and C_DamageMeter.GetCombatSessionSourceFromID then
+			local sessionID = self:GetLatestCompletedMeterSessionID()
+			if sessionID then
+				local ok, resolvedSource = pcall(C_DamageMeter.GetCombatSessionSourceFromID, sessionID, enumMeterType, unitGUID, unitCreatureID)
+				if ok and type(resolvedSource) == "table" then
+					source = resolvedSource
+				end
+			end
+		end
+	end
+
+	if not source and unit == "player" then
+		for _, candidate in ipairs(view.combatSources) do
+			if type(candidate) == "table" and candidate.isLocalPlayer then
+				source = candidate
+				break
+			end
+		end
+	end
+
 	if not source then
 		return nil
 	end
@@ -295,18 +439,7 @@ function XFrames:GetPerformanceRankForUnit(unit)
 		return directRank
 	end
 
-	local sessionType = self:GetMeterSessionType()
-	local view = self:GetNativeMeterView(sessionType, meterType)
-	if not view and sessionType ~= DAMAGE_METER_SESSION_CURRENT then
-		view = self:GetNativeMeterView(DAMAGE_METER_SESSION_CURRENT, meterType)
-	end
-	if not view or type(view) ~= "table" or type(view.combatSources) ~= "table" then
-		return nil
-	end
-
-	local unitGUID = UnitGUID(unit)
 	local unitName = UnitName(unit)
-	local unitCreatureID = getCreatureIDFromGUID(unitGUID)
 	local sourceIdentity = getSourceIdentity(source)
 	local sourceRate = getComparableNumber(getSourceRate(source))
 	local sourceClass = getSafeSourceField(source, "classFilename", "class")
@@ -387,6 +520,17 @@ end
 function XFrames:FormatNativeMeterText(value, label)
 	if value == nil or not label then
 		return nil
+	end
+
+	local allowCompact = not (InCombatLockdown and InCombatLockdown()) and canCompareValue(value)
+	if allowCompact and type(self.FormatCompactNumber) == "function" then
+		local ok, compactValue = pcall(self.FormatCompactNumber, self, value)
+		if ok and compactValue and compactValue ~= "" then
+			local okText, compactText = pcall(string.format, "%s %s", compactValue, label)
+			if okText then
+				return compactText
+			end
+		end
 	end
 
 	local ok, displayText = pcall(string.format, "%.0f %s", value, label)

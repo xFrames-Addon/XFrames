@@ -4,6 +4,7 @@ local XFrames = ns.XFrames
 
 local CreateFrame = CreateFrame
 local InCombatLockdown = InCombatLockdown
+local ceil = math.ceil
 local RegisterStateDriver = RegisterStateDriver
 local ReloadUI = ReloadUI
 local UIParent = UIParent
@@ -26,13 +27,21 @@ local BLIZZARD_UNIT_FRAME_NAMES = {
 	"CompactPartyFrameMemberFrame3",
 	"CompactPartyFrameMemberFrame4",
 	"CompactPartyFrameMemberFrame5",
-	"CompactRaidFrameContainer",
 	"PartyMemberFrame1",
 	"PartyMemberFrame2",
 	"PartyMemberFrame3",
 	"PartyMemberFrame4",
+	"BossTargetFrameContainer",
+	"Boss1TargetFrame",
+	"Boss2TargetFrame",
+	"Boss3TargetFrame",
+	"Boss4TargetFrame",
+	"Boss5TargetFrame",
 	"TargetFrameToT",
 	"FocusFrameToT",
+}
+local BLIZZARD_RAID_FRAME_NAMES = {
+	"CompactRaidFrameContainer",
 }
 local BLIZZARD_CAST_BAR_NAMES = {
 	"PlayerCastingBarFrame",
@@ -70,11 +79,44 @@ local function createText(parent, template, size, anchorPoint, relativeTo, relat
 	return text
 end
 
-local function createButton(parent, label, width, anchorPoint, relativeTo, relativePoint, x, y, onClick)
+local function fitButtonToText(button)
+	if not button then
+		return
+	end
+
+	local fontString = button:GetFontString()
+	if not fontString then
+		return
+	end
+
+	local width = button.xfMinWidth or button:GetWidth() or 80
+	local textWidth = fontString.GetUnboundedStringWidth and fontString:GetUnboundedStringWidth() or fontString:GetStringWidth()
+	if type(textWidth) == "number" then
+		width = math.max(width, ceil(textWidth) + (button.xfPadding or 28))
+	end
+	if button.xfMaxWidth then
+		width = math.min(width, button.xfMaxWidth)
+	end
+	button:SetWidth(width)
+end
+
+local function setButtonLabel(button, label)
+	if not button then
+		return
+	end
+
+	button:SetText(label or "")
+	fitButtonToText(button)
+end
+
+local function createButton(parent, label, width, anchorPoint, relativeTo, relativePoint, x, y, onClick, maxWidth)
 	local button = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
 	button:SetSize(width, 24)
 	button:SetPoint(anchorPoint, relativeTo, relativePoint, x, y)
-	button:SetText(label)
+	button.xfMinWidth = width
+	button.xfMaxWidth = maxWidth
+	button.xfPadding = 28
+	setButtonLabel(button, label)
 	button:SetScript("OnClick", onClick)
 	return button
 end
@@ -86,6 +128,18 @@ end
 function XFrames:GetBlizzardUnitFrames()
 	local frames = {}
 	for _, frameName in ipairs(BLIZZARD_UNIT_FRAME_NAMES) do
+		local frame = _G[frameName]
+		if frame then
+			frames[#frames + 1] = frame
+		end
+	end
+
+	return frames
+end
+
+function XFrames:GetBlizzardRaidFrames()
+	local frames = {}
+	for _, frameName in ipairs(BLIZZARD_RAID_FRAME_NAMES) do
 		local frame = _G[frameName]
 		if frame then
 			frames[#frames + 1] = frame
@@ -140,9 +194,17 @@ function XFrames:RefreshDragState(frame)
 	end
 
 	local unlocked = self:IsFramesUnlocked()
+	local previewActive = false
+	if frame.unit and type(frame.unit) == "string" then
+		if frame.unit:match("^party%d+$") and self:IsTestingPreviewActive("party") then
+			previewActive = true
+		elseif frame.unit:match("^raid%d+$") and self:IsTestingPreviewActive("raid") then
+			previewActive = true
+		end
+	end
 
 	if frame.xfUnitWatch then
-		if unlocked then
+		if unlocked or previewActive then
 			if frame.xfUnitWatchActive and not (InCombatLockdown and InCombatLockdown()) then
 				UnregisterUnitWatch(frame)
 				frame.xfUnitWatchActive = nil
@@ -286,6 +348,18 @@ function XFrames:ApplyBlizzardFrameVisibility()
 		end
 	end
 
+	local raidHidden = hidden and self:IsRaidFramesEnabled()
+	for _, frame in ipairs(self:GetBlizzardRaidFrames()) do
+		if raidHidden then
+			RegisterStateDriver(frame, "visibility", "hide")
+		else
+			UnregisterStateDriver(frame, "visibility")
+			if not (InCombatLockdown and InCombatLockdown()) then
+				frame:Show()
+			end
+		end
+	end
+
 	self:RefreshSettingsPanel()
 end
 
@@ -361,7 +435,7 @@ function XFrames:CreateSettingsPanel()
 		return self.settingsFrame
 	end
 
-	local frame = createPanel(UIParent, 280, 458, "CENTER", UIParent, "CENTER", 0, 0)
+	local frame = createPanel(UIParent, 280, 552, "CENTER", UIParent, "CENTER", 0, 0)
 	local ui = self:GetUISettings()
 	frame:SetFrameStrata("DIALOG")
 	frame:SetMovable(true)
@@ -394,6 +468,9 @@ function XFrames:CreateSettingsPanel()
 	frame.partyModeText = createText(frame, "GameFontHighlightSmall", 10, "TOPLEFT", frame.helpText, "BOTTOMLEFT", 0, -12, "LEFT")
 	frame.partyModeText:SetWidth(256)
 	frame.partyModeText:SetWordWrap(true)
+	frame.meterModeText = createText(frame, "GameFontHighlightSmall", 10, "TOPLEFT", frame.partyModeText, "BOTTOMLEFT", 0, -12, "LEFT")
+	frame.meterModeText:SetWidth(256)
+	frame.meterModeText:SetWordWrap(true)
 
 	frame.lockButton = createButton(frame, "Unlock Frames", 118, "BOTTOMLEFT", frame, "BOTTOMLEFT", 12, 18, function()
 		XFrames:ToggleFrameLocks()
@@ -405,16 +482,36 @@ function XFrames:CreateSettingsPanel()
 		end
 
 		XFrames:SetPartySubtitleMode("performance")
-	end)
-	frame.blizzardButton = createButton(frame, "Hide Blizzard", 118, "TOPLEFT", frame.partyModeButton, "BOTTOMLEFT", 0, -10, function()
+	end, 220)
+	frame.meterModeButton = createButton(frame, "OOC Meter: Segment", 118, "TOPLEFT", frame.meterModeText, "BOTTOMLEFT", 0, -10, function()
+		if XFrames:GetOutOfCombatMeterMode() == "overall" then
+			XFrames:SetOutOfCombatMeterMode("segment")
+			return
+		end
+
+		XFrames:SetOutOfCombatMeterMode("overall")
+	end, 220)
+	frame.blizzardButton = createButton(frame, "Hide Blizzard", 118, "TOPLEFT", frame.meterModeButton, "BOTTOMLEFT", 0, -10, function()
 		XFrames:ToggleBlizzardFrames()
-	end)
+	end, 220)
 	frame.castBarsButton = createButton(frame, "Hide Cast Bars", 118, "TOPLEFT", frame.blizzardButton, "BOTTOMLEFT", 0, -10, function()
 		XFrames:ToggleBlizzardCastBars()
-	end)
+	end, 220)
 	frame.portraitsButton = createButton(frame, "Portraits: Live", 118, "TOPLEFT", frame.castBarsButton, "BOTTOMLEFT", 0, -10, function()
 		XFrames:TogglePortraitStyle()
-	end)
+	end, 220)
+	frame.buffBarsButton = createButton(frame, "Buff Bars: On", 118, "TOPLEFT", frame.portraitsButton, "BOTTOMLEFT", 0, -10, function()
+		XFrames:ToggleBuffBarsEnabled()
+	end, 220)
+	frame.raidFramesButton = createButton(frame, "Raid Frames: On", 118, "TOPLEFT", frame.buffBarsButton, "BOTTOMLEFT", 0, -10, function()
+		XFrames:ToggleRaidFramesEnabled()
+	end, 220)
+	frame.tankFramesButton = createButton(frame, "Tank Frames: Off", 118, "TOPLEFT", frame.raidFramesButton, "BOTTOMLEFT", 0, -10, function()
+		XFrames:ToggleTankFramesEnabled()
+	end, 220)
+	frame.tankTargetsButton = createButton(frame, "Tank Targets: Off", 118, "TOPLEFT", frame.tankFramesButton, "BOTTOMLEFT", 0, -10, function()
+		XFrames:ToggleTankTargetsEnabled()
+	end, 220)
 	frame.reloadButton = createButton(frame, "Reload UI", 78, "LEFT", frame.lockButton, "RIGHT", 8, 0, function()
 		ReloadUI()
 	end)
@@ -435,12 +532,18 @@ function XFrames:RefreshSettingsPanel()
 	local unlocked = self:IsFramesUnlocked()
 	local ui = self:GetUISettings()
 	self.settingsFrame.statusText:SetText(unlocked and "Frames are unlocked" or "Frames are locked")
-	self.settingsFrame.lockButton:SetText(unlocked and "Lock Frames" or "Unlock Frames")
+	setButtonLabel(self.settingsFrame.lockButton, unlocked and "Lock Frames" or "Unlock Frames")
 	self.settingsFrame.partyModeText:SetText("Show DPS in player and party frames.")
-	self.settingsFrame.partyModeButton:SetText(self:GetPartySubtitleMode() == "performance" and "Show DPS: On" or "Show DPS: Off")
-	self.settingsFrame.blizzardButton:SetText(ui and ui.hideBlizzard ~= false and "Show Blizzard" or "Hide Blizzard")
-	self.settingsFrame.castBarsButton:SetText(ui and ui.hideBlizzardCastBars ~= false and "Show Cast Bars" or "Hide Cast Bars")
-	self.settingsFrame.portraitsButton:SetText(self:GetPortraitStyle() == "class" and "Portraits: Class" or "Portraits: Live")
+	self.settingsFrame.meterModeText:SetText("Out-of-combat meter source.")
+	setButtonLabel(self.settingsFrame.partyModeButton, self:GetPartySubtitleMode() == "performance" and "Show DPS: On" or "Show DPS: Off")
+	setButtonLabel(self.settingsFrame.meterModeButton, self:GetOutOfCombatMeterMode() == "overall" and "OOC Meter: Overall" or "OOC Meter: Segment")
+	setButtonLabel(self.settingsFrame.blizzardButton, ui and ui.hideBlizzard ~= false and "Show Blizzard" or "Hide Blizzard")
+	setButtonLabel(self.settingsFrame.castBarsButton, ui and ui.hideBlizzardCastBars ~= false and "Show Cast Bars" or "Hide Cast Bars")
+	setButtonLabel(self.settingsFrame.portraitsButton, self:GetPortraitStyle() == "class" and "Portraits: Class" or "Portraits: Live")
+	setButtonLabel(self.settingsFrame.buffBarsButton, self:AreBuffBarsEnabled() and "Buff Bars: On" or "Buff Bars: Off")
+	setButtonLabel(self.settingsFrame.raidFramesButton, self:IsRaidFramesEnabled() and "Raid Frames: On" or "Raid Frames: Off")
+	setButtonLabel(self.settingsFrame.tankFramesButton, self:IsTankFramesEnabled() and "Tank Frames: On" or "Tank Frames: Off")
+	setButtonLabel(self.settingsFrame.tankTargetsButton, self:IsTankTargetsEnabled() and "Tank Targets: On" or "Tank Targets: Off")
 end
 
 function XFrames:ToggleSettings()

@@ -2,6 +2,7 @@ local addonName, ns = ...
 
 local XFrames = CreateFrame("Frame")
 ns.XFrames = XFrames
+_G.XFrames = XFrames
 
 XFrames.name = addonName
 XFrames.modules = {}
@@ -24,6 +25,8 @@ local UnitExists = UnitExists
 local UnitGroupRolesAssigned = UnitGroupRolesAssigned
 local UnitGUID = UnitGUID
 local UnitIsPlayer = UnitIsPlayer
+local UnitIsVisible = UnitIsVisible
+local UnitPhaseReason = UnitPhaseReason
 local UnitPowerType = UnitPowerType
 local UnitSelectionColor = UnitSelectionColor
 local SetPortraitTexture = SetPortraitTexture
@@ -100,6 +103,48 @@ function XFrames:RegisterModule(name, module)
 
 	module.name = name
 	self.modules[name] = module
+end
+
+function XFrames:SetTestingPreview(kind, data)
+	if kind ~= "party" and kind ~= "raid" then
+		return
+	end
+
+	self.testingPreview = self.testingPreview or {}
+
+	if type(data) == "table" and next(data) ~= nil then
+		self.testingPreview[kind] = data
+	else
+		self.testingPreview[kind] = nil
+	end
+
+	self:RefreshAllFrameLocks()
+end
+
+function XFrames:ClearTestingPreview(kind)
+	if kind ~= "party" and kind ~= "raid" then
+		return
+	end
+
+	if self.testingPreview then
+		self.testingPreview[kind] = nil
+	end
+
+	self:RefreshAllFrameLocks()
+end
+
+function XFrames:IsTestingPreviewActive(kind)
+	local preview = self.testingPreview and self.testingPreview[kind]
+	return type(preview) == "table" and next(preview) ~= nil
+end
+
+function XFrames:GetTestingPreviewData(kind, index)
+	local preview = self.testingPreview and self.testingPreview[kind]
+	if type(preview) ~= "table" then
+		return nil
+	end
+
+	return preview[index]
 end
 
 function XFrames:GetModule(name)
@@ -358,6 +403,28 @@ function XFrames:RegisterSlashCommands()
 			return
 		end
 
+		if command == "buffs" or command == "buffbar" or command == "buffbars" then
+			arg = trim(arg)
+			if arg == "" or arg == "toggle" then
+				self:ToggleBuffBarsEnabled()
+				return
+			end
+			if arg == "on" or arg == "show" or arg == "enable" then
+				self:SetBuffBarsEnabled(true)
+				return
+			end
+			if arg == "off" or arg == "hide" or arg == "disable" then
+				self:SetBuffBarsEnabled(false)
+				return
+			end
+			if arg == "status" then
+				printf("|cff33ff99XFrames|r buff bars: %s", self:AreBuffBarsEnabled() and "on" or "off")
+				return
+			end
+			printf("|cff33ff99XFrames|r buff commands: on, off, toggle, status")
+			return
+		end
+
 		if command == "reload" then
 			ReloadUI()
 			return
@@ -378,6 +445,72 @@ function XFrames:RegisterSlashCommands()
 				return
 			end
 			printf("|cff33ff99XFrames|r party commands: status, performance, mode")
+			return
+		end
+
+		if command == "raid" then
+			arg = trim(arg)
+			if arg == "" or arg == "toggle" then
+				self:ToggleRaidFramesEnabled()
+				return
+			end
+			if arg == "on" or arg == "enable" then
+				self:SetRaidFramesEnabled(true)
+				return
+			end
+			if arg == "off" or arg == "disable" then
+				self:SetRaidFramesEnabled(false)
+				return
+			end
+			if arg == "status" then
+				printf("|cff33ff99XFrames|r raid frames: %s", self:IsRaidFramesEnabled() and "on" or "off")
+				return
+			end
+			printf("|cff33ff99XFrames|r raid commands: on, off, toggle, status")
+			return
+		end
+
+		if command == "tanks" or command == "tankframes" then
+			arg = trim(arg)
+			if arg == "" or arg == "toggle" then
+				self:ToggleTankFramesEnabled()
+				return
+			end
+			if arg == "on" or arg == "enable" then
+				self:SetTankFramesEnabled(true)
+				return
+			end
+			if arg == "off" or arg == "disable" then
+				self:SetTankFramesEnabled(false)
+				return
+			end
+			if arg == "status" then
+				printf("|cff33ff99XFrames|r tank frames: %s", self:IsTankFramesEnabled() and "on" or "off")
+				return
+			end
+			printf("|cff33ff99XFrames|r tank commands: on, off, toggle, status")
+			return
+		end
+
+		if command == "tanktargets" or command == "tanktarget" then
+			arg = trim(arg)
+			if arg == "" or arg == "toggle" then
+				self:ToggleTankTargetsEnabled()
+				return
+			end
+			if arg == "on" or arg == "enable" then
+				self:SetTankTargetsEnabled(true)
+				return
+			end
+			if arg == "off" or arg == "disable" then
+				self:SetTankTargetsEnabled(false)
+				return
+			end
+			if arg == "status" then
+				printf("|cff33ff99XFrames|r tank targets: %s", self:IsTankTargetsEnabled() and "on" or "off")
+				return
+			end
+			printf("|cff33ff99XFrames|r tank target commands: on, off, toggle, status")
 			return
 		end
 
@@ -415,7 +548,7 @@ function XFrames:RegisterSlashCommands()
 			return
 		end
 
-		printf("|cff33ff99XFrames|r commands: status, settings, lock, unlock, toggle, blizzard, party, reload, debug")
+		printf("|cff33ff99XFrames|r commands: status, settings, lock, unlock, toggle, blizzard, castbars, portraits, buffs, party, raid, tanks, tanktargets, reload, debug")
 	end
 end
 
@@ -487,6 +620,26 @@ function XFrames:GetPortraitStyle()
 	return "portrait"
 end
 
+function XFrames:AreBuffBarsEnabled()
+	local ui = self:GetUISettings()
+	return not (ui and ui.showBuffBars == false)
+end
+
+function XFrames:SetBuffBarsEnabled(enabled)
+	local ui = self:GetUISettings()
+	if not ui then
+		return
+	end
+
+	ui.showBuffBars = not not enabled
+	self:Info(string.format("Buff bars %s", ui.showBuffBars and "enabled" or "disabled"))
+	self:RefreshAllFrameLocks()
+end
+
+function XFrames:ToggleBuffBarsEnabled()
+	self:SetBuffBarsEnabled(not self:AreBuffBarsEnabled())
+end
+
 function XFrames:SetPortraitStyle(style)
 	style = trim(style):lower()
 	if style ~= "portrait" and style ~= "class" then
@@ -511,6 +664,85 @@ function XFrames:TogglePortraitStyle()
 	end
 
 	self:SetPortraitStyle("class")
+end
+
+function XFrames:IsRaidFramesEnabled()
+	return self.db and self.db.profile and self.db.profile.raid and self.db.profile.raid.enabled ~= false
+end
+
+function XFrames:SetRaidFramesEnabled(enabled)
+	if not (self.db and self.db.profile and self.db.profile.raid) then
+		return
+	end
+
+	self.db.profile.raid.enabled = not not enabled
+	local raidModule = self:GetModule("Raid")
+	if raidModule then
+		raidModule.enabled = self.db.profile.raid.enabled
+		if self.db.profile.raid.enabled and type(raidModule.Enable) == "function" and not raidModule.anchorFrame then
+			raidModule:Enable()
+		elseif type(raidModule.RefreshAll) == "function" then
+			raidModule:RefreshAll()
+		end
+	end
+	self:Info(string.format("Raid frames %s", self.db.profile.raid.enabled and "enabled" or "disabled"))
+	self:ApplyBlizzardFrameVisibility()
+	self:RefreshAllFrameLocks()
+end
+
+function XFrames:ToggleRaidFramesEnabled()
+	self:SetRaidFramesEnabled(not self:IsRaidFramesEnabled())
+end
+
+function XFrames:IsTankFramesEnabled()
+	return self.db and self.db.profile and self.db.profile.raid and self.db.profile.raid.tanks and self.db.profile.raid.tanks.enabled == true
+end
+
+function XFrames:SetTankFramesEnabled(enabled)
+	if not (self.db and self.db.profile and self.db.profile.raid and self.db.profile.raid.tanks) then
+		return
+	end
+
+	self.db.profile.raid.tanks.enabled = not not enabled
+	local module = self:GetModule("RaidTanks")
+	if module then
+		module.enabled = self.db.profile.raid.tanks.enabled
+		if self.db.profile.raid.tanks.enabled and type(module.Enable) == "function" and not module.anchorFrame then
+			module:Enable()
+		elseif type(module.RefreshAll) == "function" then
+			module:RefreshAll()
+		end
+	end
+
+	self:Info(string.format("Tank frames %s", self.db.profile.raid.tanks.enabled and "enabled" or "disabled"))
+	self:RefreshAllFrameLocks()
+end
+
+function XFrames:ToggleTankFramesEnabled()
+	self:SetTankFramesEnabled(not self:IsTankFramesEnabled())
+end
+
+function XFrames:IsTankTargetsEnabled()
+	return self.db and self.db.profile and self.db.profile.raid and self.db.profile.raid.tanks and self.db.profile.raid.tanks.targets and self.db.profile.raid.tanks.targets.enabled == true
+end
+
+function XFrames:SetTankTargetsEnabled(enabled)
+	if not (self.db and self.db.profile and self.db.profile.raid and self.db.profile.raid.tanks and self.db.profile.raid.tanks.targets) then
+		return
+	end
+
+	self.db.profile.raid.tanks.targets.enabled = not not enabled
+	local module = self:GetModule("RaidTanks")
+	if module and type(module.RefreshAll) == "function" then
+		module:RefreshAll()
+	end
+
+	self:Info(string.format("Tank targets %s", self.db.profile.raid.tanks.targets.enabled and "enabled" or "disabled"))
+	self:RefreshSettingsPanel()
+end
+
+function XFrames:ToggleTankTargetsEnabled()
+	self:SetTankTargetsEnabled(not self:IsTankTargetsEnabled())
 end
 
 function XFrames:ApplyClassIcon(texture, classToken, fallbackTexture)
@@ -587,12 +819,44 @@ function XFrames:GetUnitAccentColor(unit)
 	return DEFAULT_UNIT_ACCENT_COLOR
 end
 
+function XFrames:IsUnitOutOfRange(unit)
+	if not unit or not UnitExists(unit) then
+		return false
+	end
+
+	if UnitPhaseReason then
+		local ok, reason = pcall(UnitPhaseReason, unit)
+		if ok and reason ~= nil then
+			return true
+		end
+	end
+
+	if UnitIsVisible then
+		local ok, visible = pcall(UnitIsVisible, unit)
+		if ok and visible == false then
+			return true
+		end
+	end
+
+	return false
+end
+
 function XFrames:FormatSpecLabel(name)
-	if not name or name == "" then
+	if name == nil then
 		return ""
 	end
 
-	return name:match("^[^%s]+") or name
+	local ok, shortName = pcall(string.match, name, "^[^%s]+")
+	if ok and shortName then
+		return shortName
+	end
+
+	ok, shortName = pcall(string.format, "%s", name)
+	if ok then
+		return shortName
+	end
+
+	return ""
 end
 
 function XFrames:GetPartySubtitleMode()

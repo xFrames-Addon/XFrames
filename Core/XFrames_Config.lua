@@ -9,6 +9,7 @@ local defaults = {
 			unlocked = false,
 			hideBlizzard = true,
 			hideBlizzardCastBars = true,
+			showBuffBars = true,
 			portraitStyle = "portrait",
 			settingsPosition = {
 				point = "CENTER",
@@ -31,6 +32,22 @@ local defaults = {
 			width = 266,
 			height = 96,
 			scale = 1,
+			buffs = {
+				enabled = true,
+				size = 22,
+				max = 8,
+				spacing = 4,
+				xOffset = 6,
+				yOffset = 8,
+			},
+			debuffs = {
+				enabled = true,
+				size = 22,
+				max = 8,
+				spacing = 4,
+				xOffset = 6,
+				yOffset = -8,
+			},
 			castBar = {
 				enabled = true,
 				width = 240,
@@ -66,6 +83,14 @@ local defaults = {
 			width = 266,
 			height = 96,
 			scale = 1,
+			buffs = {
+				enabled = true,
+				size = 22,
+				max = 8,
+				spacing = 4,
+				xOffset = 6,
+				yOffset = 8,
+			},
 			castBar = {
 				enabled = true,
 				width = 240,
@@ -119,6 +144,20 @@ local defaults = {
 					y = -125,
 				},
 			},
+			boss = {
+				enabled = true,
+				width = 156,
+				height = 48,
+				scale = 0.9,
+				spacing = 6,
+				maxUnits = 5,
+				position = {
+					point = "TOPRIGHT",
+					relativePoint = "TOPRIGHT",
+					x = -28,
+					y = -220,
+				},
+			},
 		},
 		party = {
 			enabled = true,
@@ -127,6 +166,7 @@ local defaults = {
 			spacing = 10,
 			scale = 1,
 			subtitleMode = "status",
+			outOfCombatMeterMode = "segment",
 			position = {
 				point = "CENTER",
 				relativePoint = "CENTER",
@@ -136,6 +176,39 @@ local defaults = {
 		},
 		raid = {
 			enabled = false,
+			width = 96,
+			height = 40,
+			scale = 1,
+			columns = 5,
+			maxUnits = 40,
+			spacingX = 8,
+			spacingY = 6,
+			position = {
+				point = "CENTER",
+				relativePoint = "CENTER",
+				x = 210,
+				y = 120,
+			},
+			tanks = {
+				enabled = false,
+				width = 96,
+				height = 40,
+				scale = 1,
+				spacing = 6,
+				maxUnits = 4,
+				position = {
+					point = "TOPLEFT",
+					relativePoint = "TOPLEFT",
+					x = 28,
+					y = -220,
+				},
+				targets = {
+					enabled = false,
+					width = 96,
+					height = 40,
+					xOffset = 8,
+				},
+			},
 		},
 	},
 }
@@ -171,6 +244,37 @@ function XFrames:InitializeDatabase()
 		end
 		if self.db.profile.party.spacing == 8 then
 			self.db.profile.party.spacing = 10
+		end
+	end
+
+	if self.db.profile.raid then
+		self.db.profile.raid.width = 96
+		self.db.profile.raid.height = 40
+		if self.db.profile.raid.maxUnits == nil or self.db.profile.raid.maxUnits == 20 then
+			self.db.profile.raid.maxUnits = 40
+		end
+		self.db.profile.raid.spacingX = 8
+		self.db.profile.raid.spacingY = 6
+		self.db.profile.raid.tanks = self.db.profile.raid.tanks or {}
+		self.db.profile.raid.tanks.width = self.db.profile.raid.width
+		self.db.profile.raid.tanks.height = self.db.profile.raid.height
+		self.db.profile.raid.tanks.scale = 1
+		self.db.profile.raid.tanks.spacing = self.db.profile.raid.tanks.spacing or 6
+		self.db.profile.raid.tanks.maxUnits = self.db.profile.raid.tanks.maxUnits or 4
+		self.db.profile.raid.tanks.enabled = self.db.profile.raid.tanks.enabled == true
+		self.db.profile.raid.tanks.position = self.db.profile.raid.tanks.position or {
+			point = "TOPLEFT",
+			relativePoint = "TOPLEFT",
+			x = 28,
+			y = -220,
+		}
+		self.db.profile.raid.tanks.targets = self.db.profile.raid.tanks.targets or {}
+		self.db.profile.raid.tanks.targets.width = self.db.profile.raid.width
+		self.db.profile.raid.tanks.targets.height = self.db.profile.raid.height
+		self.db.profile.raid.tanks.targets.xOffset = self.db.profile.raid.tanks.targets.xOffset or 8
+		self.db.profile.raid.tanks.targets.enabled = self.db.profile.raid.tanks.targets.enabled == true
+		if not (IsInRaid and IsInRaid()) then
+			self.db.profile.raid.enabled = false
 		end
 	end
 end

@@ -4,7 +4,6 @@ local XFrames = ns.XFrames
 local Player = {}
 
 local RAID_CLASS_COLORS = RAID_CLASS_COLORS
-
 local CreateFrame = CreateFrame
 local GetSpecialization = GetSpecialization
 local GetSpecializationInfo = GetSpecializationInfo
@@ -24,11 +23,11 @@ local PERFORMANCE_UPDATE_INTERVAL = 0.5
 local HEALTH_BAR_COLOR = {r = 0.18, g = 0.62, b = 0.32}
 local BACKDROP_COLOR = {0.08, 0.09, 0.11, 0.92}
 local BORDER_COLOR = {0.24, 0.27, 0.31, 0.95}
-local POWER_BAR_COLOR = {r = 0.24, g = 0.28, b = 0.36}
 local PORTRAIT_BG_COLOR = {0.10, 0.11, 0.14, 0.98}
 local CAST_BAR_COLOR = {r = 0.86, g = 0.66, b = 0.22}
 local CHANNEL_BAR_COLOR = {r = 0.28, g = 0.56, b = 0.86}
-local LOCKED_BAR_COLOR = {r = 0.55, g = 0.55, b = 0.58}
+local AURA_BORDER_COLOR = {r = 0.18, g = 0.20, b = 0.24}
+local AURA_PLACEHOLDER_COLOR = {r = 0.10, g = 0.11, b = 0.14, a = 0.55}
 local TIMER_DIRECTION = Enum and Enum.StatusBarTimerDirection
 local BAR_INTERPOLATION = Enum and Enum.StatusBarInterpolation
 
@@ -165,6 +164,41 @@ function Player:CreateFrame()
 	frame.powerBar = createBar(frame, 12, "TOPLEFT", frame.healthBar, "BOTTOMLEFT", 0, -6)
 	frame.powerBar:SetPoint("RIGHT", frame, "RIGHT", -10, 0)
 
+	local buffConfig = config.buffs or {}
+	local buffFrame = CreateFrame("Frame", nil, frame)
+	buffFrame:SetPoint("BOTTOMRIGHT", frame, "TOPRIGHT", -(buffConfig.xOffset or 6), buffConfig.yOffset or 8)
+	buffFrame:SetSize(((buffConfig.size or 22) * (buffConfig.max or 8)) + ((buffConfig.spacing or 4) * math.max((buffConfig.max or 8) - 1, 0)), buffConfig.size or 22)
+	buffFrame.buttons = {}
+	buffFrame.spacing = buffConfig.spacing or 4
+	frame.buffFrame = buffFrame
+
+	for index = 1, (buffConfig.max or 8) do
+		buffFrame.buttons[index] = XFrames:CreateAuraButton(buffFrame, index, buffConfig.size or 22, {
+			backgroundColor = PORTRAIT_BG_COLOR,
+			borderColor = AURA_BORDER_COLOR,
+			placeholderColor = AURA_PLACEHOLDER_COLOR,
+			tooltipAnchor = "ANCHOR_BOTTOM",
+		})
+	end
+
+	local debuffConfig = config.debuffs or {}
+	local debuffFrame = CreateFrame("Frame", nil, frame)
+	debuffFrame:SetPoint("TOPRIGHT", frame, "BOTTOMRIGHT", -(debuffConfig.xOffset or 6), debuffConfig.yOffset or -8)
+	debuffFrame:SetSize(((debuffConfig.size or 22) * (debuffConfig.max or 8)) + ((debuffConfig.spacing or 4) * math.max((debuffConfig.max or 8) - 1, 0)), debuffConfig.size or 22)
+	debuffFrame.buttons = {}
+	debuffFrame.spacing = debuffConfig.spacing or 4
+	frame.debuffFrame = debuffFrame
+
+	for index = 1, (debuffConfig.max or 8) do
+		debuffFrame.buttons[index] = XFrames:CreateAuraButton(debuffFrame, index, debuffConfig.size or 22, {
+			backgroundColor = PORTRAIT_BG_COLOR,
+			borderColor = AURA_BORDER_COLOR,
+			placeholderColor = AURA_PLACEHOLDER_COLOR,
+			showDispelHighlight = true,
+			tooltipAnchor = "ANCHOR_TOP",
+		})
+	end
+
 	self.frame = frame
 	XFrames:RegisterInteractiveUnitFrame(frame, "player", false)
 	XFrames:RegisterMovableFrame(frame, config.position, "Player")
@@ -237,17 +271,12 @@ function Player:UpdateLevel()
 end
 
 function Player:UpdateStatus()
-	if XFrames:GetPartySubtitleMode() == "performance" then
-		self.frame.statusText:SetText(XFrames:GetPerformanceTextForUnit("player") or getStatusText())
-		return
-	end
-
 	self.frame.statusText:SetText(getStatusText())
 end
 
 function Player:UpdateRank()
 	if XFrames:GetPartySubtitleMode() == "performance" then
-		self.frame.rankText:SetText(XFrames:GetPerformanceRankText("player"))
+		self.frame.rankText:SetText(XFrames:GetPerformanceTextForUnit("player") or "")
 		return
 	end
 
@@ -280,6 +309,99 @@ function Player:UpdatePower()
 
 	bar:SetStatusBarColor(color.r, color.g, color.b)
 	XFrames:SetBarValues(bar, value, maxValue)
+end
+
+function Player:UpdateBuffs()
+	local frame = self.frame
+	if not frame or not frame.buffFrame then
+		return
+	end
+
+	local buffConfig = XFrames.db.profile.player.buffs or {}
+	if buffConfig.enabled == false or not XFrames:AreBuffBarsEnabled() then
+		frame.buffFrame:Hide()
+		for _, button in ipairs(frame.buffFrame.buttons) do
+			button:Hide()
+		end
+		return
+	end
+
+	local buttons = frame.buffFrame.buttons
+	local unlocked = XFrames:IsFramesUnlocked()
+	local maxBuffs = buffConfig.max or #buttons
+	local buffs = XFrames:CollectAuraData("player", "HELPFUL", maxBuffs)
+
+	for index, button in ipairs(buttons) do
+		local aura = buffs[index]
+		if aura then
+			XFrames:ApplyAuraButton(button, "player", aura, {
+				borderColor = AURA_BORDER_COLOR,
+			})
+		elseif unlocked then
+			XFrames:ResetAuraButton(button, {
+				unit = "player",
+				borderColor = AURA_BORDER_COLOR,
+				placeholderColor = AURA_PLACEHOLDER_COLOR,
+			})
+			button:Show()
+		else
+			XFrames:ResetAuraButton(button, {
+				unit = "player",
+				borderColor = AURA_BORDER_COLOR,
+				placeholderColor = AURA_PLACEHOLDER_COLOR,
+			})
+			button:Hide()
+		end
+	end
+
+	frame.buffFrame:SetShown(unlocked or #buffs > 0)
+end
+
+function Player:UpdateDebuffs()
+	local frame = self.frame
+	if not frame or not frame.debuffFrame then
+		return
+	end
+
+	local debuffConfig = XFrames.db.profile.player.debuffs or {}
+	if debuffConfig.enabled == false then
+		frame.debuffFrame:Hide()
+		for _, button in ipairs(frame.debuffFrame.buttons) do
+			button:Hide()
+		end
+		return
+	end
+
+	local buttons = frame.debuffFrame.buttons
+	local unlocked = XFrames:IsFramesUnlocked()
+	local maxDebuffs = debuffConfig.max or #buttons
+	local debuffs = XFrames:CollectAuraData("player", "HARMFUL", maxDebuffs)
+
+	for index, button in ipairs(buttons) do
+		local aura = debuffs[index]
+		if aura then
+			XFrames:ApplyAuraButton(button, "player", aura, {
+				borderColor = AURA_BORDER_COLOR,
+				showDispelHighlight = true,
+			})
+		elseif unlocked then
+			XFrames:ResetAuraButton(button, {
+				unit = "player",
+				borderColor = AURA_BORDER_COLOR,
+				placeholderColor = AURA_PLACEHOLDER_COLOR,
+			})
+			button:Show()
+		else
+			XFrames:ResetAuraButton(button, {
+				unit = "player",
+				borderColor = AURA_BORDER_COLOR,
+				placeholderColor = AURA_PLACEHOLDER_COLOR,
+			})
+			button:Hide()
+		end
+	end
+
+	frame.debuffFrame:SetShown(unlocked or #debuffs > 0)
 end
 
 function Player:StopCastBar()
@@ -356,6 +478,8 @@ function Player:Refresh()
 	self:UpdatePortrait()
 	self:UpdateHealth()
 	self:UpdatePower()
+	self:UpdateBuffs()
+	self:UpdateDebuffs()
 	self:RefreshCastState()
 end
 
@@ -415,6 +539,12 @@ function Player:OnEvent(event, unit)
 		return
 	end
 
+	if event == "UNIT_AURA" then
+		self:UpdateBuffs()
+		self:UpdateDebuffs()
+		return
+	end
+
 	if string.find(event, "^UNIT_SPELLCAST") then
 		self:RefreshCastState()
 		return
@@ -443,6 +573,7 @@ function Player:RegisterEvents()
 	frame:RegisterUnitEvent("UNIT_POWER_UPDATE", "player")
 	frame:RegisterUnitEvent("UNIT_MAXPOWER", "player")
 	frame:RegisterUnitEvent("UNIT_DISPLAYPOWER", "player")
+	frame:RegisterUnitEvent("UNIT_AURA", "player")
 	frame:RegisterUnitEvent("UNIT_SPELLCAST_START", "player")
 	frame:RegisterUnitEvent("UNIT_SPELLCAST_STOP", "player")
 	frame:RegisterUnitEvent("UNIT_SPELLCAST_FAILED", "player")
