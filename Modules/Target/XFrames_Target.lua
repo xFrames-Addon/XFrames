@@ -36,6 +36,8 @@ local BACKDROP_COLOR = {0.08, 0.09, 0.11, 0.92}
 local BORDER_COLOR = {0.24, 0.27, 0.31, 0.95}
 local POWER_BAR_COLOR = {r = 0.24, g = 0.28, b = 0.36}
 local PORTRAIT_BG_COLOR = {0.10, 0.11, 0.14, 0.98}
+local AURA_BORDER_COLOR = {r = 0.18, g = 0.20, b = 0.24}
+local AURA_PLACEHOLDER_COLOR = {r = 0.10, g = 0.11, b = 0.14, a = 0.55}
 local CAST_BAR_COLOR = {r = 0.22, g = 0.78, b = 0.32}
 local CHANNEL_BAR_COLOR = {r = 0.22, g = 0.78, b = 0.32}
 local TIMER_DIRECTION = Enum and Enum.StatusBarTimerDirection
@@ -170,6 +172,25 @@ function Target:CreateUnitFrame(key, unit, config, accent)
 
 	frame.powerBar = createBar(frame, 12, "TOPLEFT", frame.healthBar, "BOTTOMLEFT", 0, -6)
 	frame.powerBar:SetPoint("RIGHT", frame, "RIGHT", -10, 0)
+
+	local buffConfig = config.buffs or {}
+	if buffConfig.max and buffConfig.max > 0 then
+		local buffFrame = CreateFrame("Frame", nil, frame)
+		buffFrame:SetPoint("BOTTOMRIGHT", frame, "TOPRIGHT", -(buffConfig.xOffset or 6), buffConfig.yOffset or 8)
+		buffFrame:SetSize(((buffConfig.size or 22) * (buffConfig.max or 8)) + ((buffConfig.spacing or 4) * math.max((buffConfig.max or 8) - 1, 0)), buffConfig.size or 22)
+		buffFrame.buttons = {}
+		buffFrame.spacing = buffConfig.spacing or 4
+		frame.buffFrame = buffFrame
+
+		for index = 1, (buffConfig.max or 8) do
+			buffFrame.buttons[index] = XFrames:CreateAuraButton(buffFrame, index, buffConfig.size or 22, {
+				backgroundColor = PORTRAIT_BG_COLOR,
+				borderColor = AURA_BORDER_COLOR,
+				placeholderColor = AURA_PLACEHOLDER_COLOR,
+				tooltipAnchor = "ANCHOR_BOTTOM",
+			})
+		end
+	end
 
 	XFrames:RegisterInteractiveUnitFrame(frame, unit, true)
 	XFrames:RegisterMovableFrame(frame, config.position, frame.fallbackLabel)
@@ -551,6 +572,52 @@ function Target:UpdatePower(frame)
 	XFrames:SetBarValues(bar, value, maxValue)
 end
 
+function Target:UpdateBuffs(frame)
+	if not frame or not frame.buffFrame then
+		return
+	end
+
+	local buffConfig = (frame.unitKey == "target" and XFrames.db.profile.target and XFrames.db.profile.target.buffs) or {}
+	if buffConfig.enabled == false or not XFrames:AreBuffBarsEnabled() then
+		frame.buffFrame:Hide()
+		for _, button in ipairs(frame.buffFrame.buttons) do
+			button:Hide()
+		end
+		return
+	end
+
+	local buttons = frame.buffFrame.buttons
+	local unlocked = XFrames:IsFramesUnlocked()
+	local unit = frame.unit
+	local maxBuffs = buffConfig.max or #buttons
+	local buffs = UnitExists(unit) and XFrames:CollectAuraData(unit, "HELPFUL", maxBuffs) or {}
+
+	for index, button in ipairs(buttons) do
+		local aura = buffs[index]
+		if aura then
+			XFrames:ApplyAuraButton(button, unit, aura, {
+				borderColor = AURA_BORDER_COLOR,
+			})
+		elseif unlocked then
+			XFrames:ResetAuraButton(button, {
+				unit = unit,
+				borderColor = AURA_BORDER_COLOR,
+				placeholderColor = AURA_PLACEHOLDER_COLOR,
+			})
+			button:Show()
+		else
+			XFrames:ResetAuraButton(button, {
+				unit = unit,
+				borderColor = AURA_BORDER_COLOR,
+				placeholderColor = AURA_PLACEHOLDER_COLOR,
+			})
+			button:Hide()
+		end
+	end
+
+	frame.buffFrame:SetShown(unlocked or #buffs > 0)
+end
+
 function Target:RefreshCastState()
 	local castFrame = self.castFrame
 	if not castFrame then
@@ -624,6 +691,7 @@ function Target:RefreshFrame(frame)
 			self:UpdatePortrait(frame)
 			self:UpdateHealth(frame)
 			self:UpdatePower(frame)
+			self:UpdateBuffs(frame)
 		end
 		return
 	end
@@ -639,6 +707,7 @@ function Target:RefreshFrame(frame)
 	self:UpdatePortrait(frame)
 	self:UpdateHealth(frame)
 	self:UpdatePower(frame)
+	self:UpdateBuffs(frame)
 
 	if frame.specText then
 		self:QueueInspect(frame.unit)
@@ -799,6 +868,7 @@ function Target:RegisterEvents()
 	frame:RegisterUnitEvent("UNIT_POWER_UPDATE", "target", "focus", "targettarget", "focustarget", "boss1", "boss2", "boss3", "boss4", "boss5")
 	frame:RegisterUnitEvent("UNIT_MAXPOWER", "target", "focus", "targettarget", "focustarget", "boss1", "boss2", "boss3", "boss4", "boss5")
 	frame:RegisterUnitEvent("UNIT_DISPLAYPOWER", "target", "focus", "targettarget", "focustarget", "boss1", "boss2", "boss3", "boss4", "boss5")
+	frame:RegisterUnitEvent("UNIT_AURA", "target")
 	frame:RegisterUnitEvent("UNIT_SPELLCAST_START", "target")
 	frame:RegisterUnitEvent("UNIT_SPELLCAST_STOP", "target")
 	frame:RegisterUnitEvent("UNIT_SPELLCAST_FAILED", "target")

@@ -318,7 +318,7 @@ function Player:UpdateBuffs()
 	end
 
 	local buffConfig = XFrames.db.profile.player.buffs or {}
-	if buffConfig.enabled == false then
+	if buffConfig.enabled == false or not XFrames:AreBuffBarsEnabled() then
 		frame.buffFrame:Hide()
 		for _, button in ipairs(frame.buffFrame.buttons) do
 			button:Hide()

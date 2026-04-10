@@ -403,6 +403,28 @@ function XFrames:RegisterSlashCommands()
 			return
 		end
 
+		if command == "buffs" or command == "buffbar" or command == "buffbars" then
+			arg = trim(arg)
+			if arg == "" or arg == "toggle" then
+				self:ToggleBuffBarsEnabled()
+				return
+			end
+			if arg == "on" or arg == "show" or arg == "enable" then
+				self:SetBuffBarsEnabled(true)
+				return
+			end
+			if arg == "off" or arg == "hide" or arg == "disable" then
+				self:SetBuffBarsEnabled(false)
+				return
+			end
+			if arg == "status" then
+				printf("|cff33ff99XFrames|r buff bars: %s", self:AreBuffBarsEnabled() and "on" or "off")
+				return
+			end
+			printf("|cff33ff99XFrames|r buff commands: on, off, toggle, status")
+			return
+		end
+
 		if command == "reload" then
 			ReloadUI()
 			return
@@ -526,7 +548,7 @@ function XFrames:RegisterSlashCommands()
 			return
 		end
 
-		printf("|cff33ff99XFrames|r commands: status, settings, lock, unlock, toggle, blizzard, castbars, portraits, party, raid, tanks, tanktargets, reload, debug")
+		printf("|cff33ff99XFrames|r commands: status, settings, lock, unlock, toggle, blizzard, castbars, portraits, buffs, party, raid, tanks, tanktargets, reload, debug")
 	end
 end
 
@@ -596,6 +618,26 @@ function XFrames:GetPortraitStyle()
 	end
 
 	return "portrait"
+end
+
+function XFrames:AreBuffBarsEnabled()
+	local ui = self:GetUISettings()
+	return not (ui and ui.showBuffBars == false)
+end
+
+function XFrames:SetBuffBarsEnabled(enabled)
+	local ui = self:GetUISettings()
+	if not ui then
+		return
+	end
+
+	ui.showBuffBars = not not enabled
+	self:Info(string.format("Buff bars %s", ui.showBuffBars and "enabled" or "disabled"))
+	self:RefreshAllFrameLocks()
+end
+
+function XFrames:ToggleBuffBarsEnabled()
+	self:SetBuffBarsEnabled(not self:AreBuffBarsEnabled())
 end
 
 function XFrames:SetPortraitStyle(style)
