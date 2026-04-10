@@ -8,6 +8,7 @@
 Core/XFrames.lua
 Core/XFrames_NativeMeter.lua
 Core/XFrames_Config.lua
+Core/XFrames_Auras.lua
 Core/XFrames_UI.lua
 Modules/Player/XFrames_Player.lua
 Modules/Player/XFrames_PlayerPet.lua

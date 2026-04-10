@@ -4,13 +4,9 @@ local XFrames = ns.XFrames
 local Player = {}
 
 local RAID_CLASS_COLORS = RAID_CLASS_COLORS
-local DebuffTypeColor = DebuffTypeColor
-
-local C_UnitAuras = C_UnitAuras
 local CreateFrame = CreateFrame
 local GetSpecialization = GetSpecialization
 local GetSpecializationInfo = GetSpecializationInfo
-local GameTooltip = GameTooltip
 local UnitClass = UnitClass
 local UnitCastingInfo = UnitCastingInfo
 local UnitCastingDuration = UnitCastingDuration
@@ -27,13 +23,11 @@ local PERFORMANCE_UPDATE_INTERVAL = 0.5
 local HEALTH_BAR_COLOR = {r = 0.18, g = 0.62, b = 0.32}
 local BACKDROP_COLOR = {0.08, 0.09, 0.11, 0.92}
 local BORDER_COLOR = {0.24, 0.27, 0.31, 0.95}
-local POWER_BAR_COLOR = {r = 0.24, g = 0.28, b = 0.36}
 local PORTRAIT_BG_COLOR = {0.10, 0.11, 0.14, 0.98}
 local CAST_BAR_COLOR = {r = 0.86, g = 0.66, b = 0.22}
 local CHANNEL_BAR_COLOR = {r = 0.28, g = 0.56, b = 0.86}
-local LOCKED_BAR_COLOR = {r = 0.55, g = 0.55, b = 0.58}
-local DEBUFF_BORDER_COLOR = {r = 0.18, g = 0.20, b = 0.24}
-local DEBUFF_PLACEHOLDER_COLOR = {r = 0.10, g = 0.11, b = 0.14, a = 0.55}
+local AURA_BORDER_COLOR = {r = 0.18, g = 0.20, b = 0.24}
+local AURA_PLACEHOLDER_COLOR = {r = 0.10, g = 0.11, b = 0.14, a = 0.55}
 local TIMER_DIRECTION = Enum and Enum.StatusBarTimerDirection
 local BAR_INTERPOLATION = Enum and Enum.StatusBarInterpolation
 
@@ -103,107 +97,6 @@ local function createBackdropFrame(name, parent, width, height, anchorPoint, rel
 	return frame
 end
 
-local function createDebuffButton(parent, index, size)
-	local button = CreateFrame("Button", nil, parent, "BackdropTemplate")
-	button:SetSize(size, size)
-	if index == 1 then
-		button:SetPoint("TOPRIGHT", parent, "TOPRIGHT", 0, 0)
-	else
-		button:SetPoint("RIGHT", parent.buttons[index - 1], "LEFT", -parent.spacing, 0)
-	end
-
-	button:SetBackdrop({
-		bgFile = "Interface\\Buttons\\WHITE8x8",
-		edgeFile = "Interface\\Buttons\\WHITE8x8",
-		edgeSize = 1,
-		insets = {left = 1, right = 1, top = 1, bottom = 1},
-	})
-	button:SetBackdropColor(unpack(PORTRAIT_BG_COLOR))
-	button:SetBackdropBorderColor(DEBUFF_BORDER_COLOR.r, DEBUFF_BORDER_COLOR.g, DEBUFF_BORDER_COLOR.b, 0.9)
-
-	button.icon = button:CreateTexture(nil, "ARTWORK")
-	button.icon:SetPoint("TOPLEFT", button, "TOPLEFT", 1, -1)
-	button.icon:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -1, 1)
-	button.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-	button.icon:SetColorTexture(DEBUFF_PLACEHOLDER_COLOR.r, DEBUFF_PLACEHOLDER_COLOR.g, DEBUFF_PLACEHOLDER_COLOR.b, DEBUFF_PLACEHOLDER_COLOR.a)
-
-	button.countText = createText(button, "OVERLAY", "GameFontNormalSmall", 10, "BOTTOMRIGHT", button, "BOTTOMRIGHT", -2, 2, "RIGHT")
-	button.countText:SetText("")
-
-	button.dispelGlow = CreateFrame("Frame", nil, button, "BackdropTemplate")
-	button.dispelGlow:SetPoint("TOPLEFT", button, "TOPLEFT", -2, 2)
-	button.dispelGlow:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", 2, -2)
-	button.dispelGlow:SetBackdrop({
-		edgeFile = "Interface\\Buttons\\WHITE8x8",
-		edgeSize = 2,
-	})
-	button.dispelGlow:SetBackdropBorderColor(0.95, 0.95, 0.95, 0)
-	button.dispelGlow:Hide()
-
-	button:SetScript("OnEnter", function(selfButton)
-		if GameTooltip:IsForbidden() or not selfButton.auraInstanceID then
-			return
-		end
-
-		GameTooltip:SetOwner(selfButton, "ANCHOR_TOP")
-		GameTooltip:SetUnitAuraByAuraInstanceID("player", selfButton.auraInstanceID)
-	end)
-
-	button:SetScript("OnLeave", function()
-		if GameTooltip:IsForbidden() then
-			return
-		end
-
-		GameTooltip:Hide()
-	end)
-
-	button:Hide()
-	return button
-end
-
-local function getDispelColor(dispelName)
-	if not dispelName or not DebuffTypeColor then
-		return nil
-	end
-
-	return DebuffTypeColor[dispelName]
-end
-
-local function getDebuffData(unit, filter, maxCount)
-	local results = {}
-	if not C_UnitAuras or not C_UnitAuras.GetAuraDataByIndex then
-		return results
-	end
-
-	for index = 1, maxCount do
-		local aura = C_UnitAuras.GetAuraDataByIndex(unit, index, filter)
-		if not aura then
-			break
-		end
-
-		results[#results + 1] = aura
-	end
-
-	return results
-end
-
-local function getAuraCountText(aura)
-	if not aura then
-		return ""
-	end
-
-	if not (C_UnitAuras and C_UnitAuras.GetAuraApplicationDisplayCount and aura.auraInstanceID) then
-		return ""
-	end
-
-	local ok, displayCount = pcall(C_UnitAuras.GetAuraApplicationDisplayCount, "player", aura.auraInstanceID)
-	if not ok or displayCount == nil then
-		return ""
-	end
-
-	return displayCount
-end
-
 local function getCastInfo(unit)
 	local name = UnitCastingInfo(unit)
 	if name then
@@ -271,6 +164,23 @@ function Player:CreateFrame()
 	frame.powerBar = createBar(frame, 12, "TOPLEFT", frame.healthBar, "BOTTOMLEFT", 0, -6)
 	frame.powerBar:SetPoint("RIGHT", frame, "RIGHT", -10, 0)
 
+	local buffConfig = config.buffs or {}
+	local buffFrame = CreateFrame("Frame", nil, frame)
+	buffFrame:SetPoint("BOTTOMRIGHT", frame, "TOPRIGHT", -(buffConfig.xOffset or 6), buffConfig.yOffset or 8)
+	buffFrame:SetSize(((buffConfig.size or 22) * (buffConfig.max or 8)) + ((buffConfig.spacing or 4) * math.max((buffConfig.max or 8) - 1, 0)), buffConfig.size or 22)
+	buffFrame.buttons = {}
+	buffFrame.spacing = buffConfig.spacing or 4
+	frame.buffFrame = buffFrame
+
+	for index = 1, (buffConfig.max or 8) do
+		buffFrame.buttons[index] = XFrames:CreateAuraButton(buffFrame, index, buffConfig.size or 22, {
+			backgroundColor = PORTRAIT_BG_COLOR,
+			borderColor = AURA_BORDER_COLOR,
+			placeholderColor = AURA_PLACEHOLDER_COLOR,
+			tooltipAnchor = "ANCHOR_BOTTOM",
+		})
+	end
+
 	local debuffConfig = config.debuffs or {}
 	local debuffFrame = CreateFrame("Frame", nil, frame)
 	debuffFrame:SetPoint("TOPRIGHT", frame, "BOTTOMRIGHT", -(debuffConfig.xOffset or 6), debuffConfig.yOffset or -8)
@@ -280,7 +190,13 @@ function Player:CreateFrame()
 	frame.debuffFrame = debuffFrame
 
 	for index = 1, (debuffConfig.max or 8) do
-		debuffFrame.buttons[index] = createDebuffButton(debuffFrame, index, debuffConfig.size or 22)
+		debuffFrame.buttons[index] = XFrames:CreateAuraButton(debuffFrame, index, debuffConfig.size or 22, {
+			backgroundColor = PORTRAIT_BG_COLOR,
+			borderColor = AURA_BORDER_COLOR,
+			placeholderColor = AURA_PLACEHOLDER_COLOR,
+			showDispelHighlight = true,
+			tooltipAnchor = "ANCHOR_TOP",
+		})
 	end
 
 	self.frame = frame
@@ -395,6 +311,52 @@ function Player:UpdatePower()
 	XFrames:SetBarValues(bar, value, maxValue)
 end
 
+function Player:UpdateBuffs()
+	local frame = self.frame
+	if not frame or not frame.buffFrame then
+		return
+	end
+
+	local buffConfig = XFrames.db.profile.player.buffs or {}
+	if buffConfig.enabled == false then
+		frame.buffFrame:Hide()
+		for _, button in ipairs(frame.buffFrame.buttons) do
+			button:Hide()
+		end
+		return
+	end
+
+	local buttons = frame.buffFrame.buttons
+	local unlocked = XFrames:IsFramesUnlocked()
+	local maxBuffs = buffConfig.max or #buttons
+	local buffs = XFrames:CollectAuraData("player", "HELPFUL", maxBuffs)
+
+	for index, button in ipairs(buttons) do
+		local aura = buffs[index]
+		if aura then
+			XFrames:ApplyAuraButton(button, "player", aura, {
+				borderColor = AURA_BORDER_COLOR,
+			})
+		elseif unlocked then
+			XFrames:ResetAuraButton(button, {
+				unit = "player",
+				borderColor = AURA_BORDER_COLOR,
+				placeholderColor = AURA_PLACEHOLDER_COLOR,
+			})
+			button:Show()
+		else
+			XFrames:ResetAuraButton(button, {
+				unit = "player",
+				borderColor = AURA_BORDER_COLOR,
+				placeholderColor = AURA_PLACEHOLDER_COLOR,
+			})
+			button:Hide()
+		end
+	end
+
+	frame.buffFrame:SetShown(unlocked or #buffs > 0)
+end
+
 function Player:UpdateDebuffs()
 	local frame = self.frame
 	if not frame or not frame.debuffFrame then
@@ -413,48 +375,28 @@ function Player:UpdateDebuffs()
 	local buttons = frame.debuffFrame.buttons
 	local unlocked = XFrames:IsFramesUnlocked()
 	local maxDebuffs = debuffConfig.max or #buttons
-	local debuffs = getDebuffData("player", "HARMFUL", maxDebuffs)
-	local dispellableAuras = {}
-
-	for _, aura in ipairs(getDebuffData("player", "HARMFUL|RAID", maxDebuffs)) do
-		if aura.auraInstanceID then
-			dispellableAuras[aura.auraInstanceID] = aura.dispelName or true
-		end
-	end
+	local debuffs = XFrames:CollectAuraData("player", "HARMFUL", maxDebuffs)
 
 	for index, button in ipairs(buttons) do
 		local aura = debuffs[index]
 		if aura then
-			button.icon:SetTexture(aura.icon or 134400)
-			button.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-			button.icon:SetVertexColor(1, 1, 1, 1)
-			button.countText:SetText(getAuraCountText(aura))
-			button.auraInstanceID = aura.auraInstanceID
-			button:SetBackdropBorderColor(DEBUFF_BORDER_COLOR.r, DEBUFF_BORDER_COLOR.g, DEBUFF_BORDER_COLOR.b, 0.9)
-
-			local dispelName = dispellableAuras[aura.auraInstanceID]
-			local dispelColor = getDispelColor(type(dispelName) == "string" and dispelName or aura.dispelName)
-			if dispelName then
-				local color = dispelColor or {r = 0.95, g = 0.95, b = 0.45}
-				button.dispelGlow:SetBackdropBorderColor(color.r, color.g, color.b, 0.95)
-				button.dispelGlow:Show()
-			else
-				button.dispelGlow:Hide()
-			end
-
-			button:Show()
+			XFrames:ApplyAuraButton(button, "player", aura, {
+				borderColor = AURA_BORDER_COLOR,
+				showDispelHighlight = true,
+			})
 		elseif unlocked then
-			button.auraInstanceID = nil
-			button.icon:SetTexture("Interface\\Buttons\\WHITE8x8")
-			button.icon:SetTexCoord(0, 1, 0, 1)
-			button.icon:SetVertexColor(DEBUFF_PLACEHOLDER_COLOR.r, DEBUFF_PLACEHOLDER_COLOR.g, DEBUFF_PLACEHOLDER_COLOR.b, DEBUFF_PLACEHOLDER_COLOR.a)
-			button.countText:SetText("")
-			button.dispelGlow:Hide()
-			button:SetBackdropBorderColor(DEBUFF_BORDER_COLOR.r, DEBUFF_BORDER_COLOR.g, DEBUFF_BORDER_COLOR.b, 0.6)
+			XFrames:ResetAuraButton(button, {
+				unit = "player",
+				borderColor = AURA_BORDER_COLOR,
+				placeholderColor = AURA_PLACEHOLDER_COLOR,
+			})
 			button:Show()
 		else
-			button.auraInstanceID = nil
-			button.dispelGlow:Hide()
+			XFrames:ResetAuraButton(button, {
+				unit = "player",
+				borderColor = AURA_BORDER_COLOR,
+				placeholderColor = AURA_PLACEHOLDER_COLOR,
+			})
 			button:Hide()
 		end
 	end
@@ -536,6 +478,7 @@ function Player:Refresh()
 	self:UpdatePortrait()
 	self:UpdateHealth()
 	self:UpdatePower()
+	self:UpdateBuffs()
 	self:UpdateDebuffs()
 	self:RefreshCastState()
 end
@@ -597,6 +540,7 @@ function Player:OnEvent(event, unit)
 	end
 
 	if event == "UNIT_AURA" then
+		self:UpdateBuffs()
 		self:UpdateDebuffs()
 		return
 	end
