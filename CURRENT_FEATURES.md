@@ -8,11 +8,17 @@ This document describes the feature set in the current stable testing version.
 
 - player frame
 - player pet frame
+- player buff row
+- player debuff row
 - target frame
 - focus frame
+- target buff row
 - target-of-target frame
 - focus-target frame
+- micro boss frames
 - party frames
+- raid frames
+- optional tank frames
 
 ## Live Data
 
@@ -50,7 +56,7 @@ The current build includes:
 Current cast bars are intentionally conservative for Retail safety:
 
 - they show cast state and spell name
-- they do not currently use Blizzard cast duration values for a local timer
+- they use Blizzard-safe duration objects where available
 - they do not currently use protected interruptibility values
 
 ## Frame Interaction
@@ -78,8 +84,10 @@ The settings panel and slash commands can control:
 
 - Blizzard unit frame visibility
 - Blizzard cast bar visibility
+- Blizzard raid frame restoration when custom raid frames are disabled
 - frame locking and unlocking
 - portrait mode
+- buff bar visibility
 - DPS display mode
 - reload UI
 
@@ -100,6 +108,20 @@ When frames are unlocked and you are not in a real party:
 
 This makes layout work possible without needing a live group.
 
+## Raid Support
+
+The current test build includes:
+
+- compact raid frames
+- ready check icons
+- dead-state dimming and `DEAD` overlays
+- role icons
+- greyed out-of-range styling
+- optional raid tank frames
+- micro boss frames
+
+Raid frames are still the newest part of the addon and are the main area still under active polish.
+
 ## Diagnostics
 
 The addon includes built-in diagnostics:
@@ -112,7 +134,7 @@ The addon includes built-in diagnostics:
 
 Known intentional limits in the current stable build:
 
-- raid frames are not implemented yet
-- cast bars are state-only, not timed progress bars
+- raid and tank frames still need more live-raid testing
 - interruptibility coloring is disabled because the current Retail client treats that path as protected in addon code
 - rank display may still depend on what Blizzard exposes for native meter identity in a given encounter
+- buff rows are currently only implemented for player and target
