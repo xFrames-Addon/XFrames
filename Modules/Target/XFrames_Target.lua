@@ -467,6 +467,7 @@ function Target:ProcessInspectQueue()
 		if UnitExists(item.unit) and UnitGUID(item.unit) == item.guid and UnitIsPlayer(item.unit) and CanInspect(item.unit, false) then
 			NotifyInspect(item.unit)
 			self.inspectPendingGUID = item.guid
+			self.inspectPendingUnit = item.unit
 			return
 		end
 	end
@@ -477,14 +478,16 @@ function Target:HandleInspectReady(inspectGUID)
 		return
 	end
 
-	for _, unit in ipairs({"target", "focus"}) do
-		if UnitExists(unit) and UnitGUID(unit) == inspectGUID then
-			local specID = GetInspectSpecialization(unit)
-			if specID ~= nil and GetSpecializationInfoByID then
-				local ok, _, name = pcall(GetSpecializationInfoByID, specID)
-				if ok and name then
+	local pendingUnit = self.inspectPendingUnit
+	if pendingUnit and UnitExists(pendingUnit) then
+		local specID = GetInspectSpecialization(pendingUnit)
+		if specID ~= nil and GetSpecializationInfoByID then
+			local ok, _, name = pcall(GetSpecializationInfoByID, specID)
+			if ok and name then
+				local pendingGUID = self.inspectPendingGUID
+				if pendingGUID then
 					self.inspectCache = self.inspectCache or {}
-					self.inspectCache[inspectGUID] = XFrames:FormatSpecLabel(name)
+					self.inspectCache[pendingGUID] = XFrames:FormatSpecLabel(name)
 				end
 			end
 		end
@@ -494,9 +497,8 @@ function Target:HandleInspectReady(inspectGUID)
 		ClearInspectPlayer()
 	end
 
-	if self.inspectPendingGUID == inspectGUID then
-		self.inspectPendingGUID = nil
-	end
+	self.inspectPendingGUID = nil
+	self.inspectPendingUnit = nil
 
 	self:RefreshFrame(self.targetFrame)
 	self:RefreshFrame(self.focusFrame)
