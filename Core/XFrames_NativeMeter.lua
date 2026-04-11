@@ -338,6 +338,8 @@ function XFrames:GetNativeMeterSourceForUnit(unit, meterType)
 	end
 
 	local enumMeterType, currentSessionType, totalSessionType = self:GetNativeMeterContext(meterType)
+	local unitGUID = UnitGUID(unit)
+	local unitCreatureID = getCreatureIDFromGUID(unitGUID)
 
 	if InCombatLockdown and InCombatLockdown() and C_DamageMeter.GetCurrentCombatSessionSource then
 		local ok, source = pcall(C_DamageMeter.GetCurrentCombatSessionSource, enumMeterType, unit)
@@ -346,8 +348,6 @@ function XFrames:GetNativeMeterSourceForUnit(unit, meterType)
 		end
 	end
 
-	local unitGUID = UnitGUID(unit)
-	local unitCreatureID = getCreatureIDFromGUID(unitGUID)
 	if not unitGUID or not C_DamageMeter.GetCombatSessionSourceFromType then
 		return nil
 	end
@@ -355,23 +355,59 @@ function XFrames:GetNativeMeterSourceForUnit(unit, meterType)
 	if not (InCombatLockdown and InCombatLockdown()) and self:GetOutOfCombatMeterMode() == "segment" and C_DamageMeter.GetCombatSessionSourceFromID then
 		local sessionID = self:GetLatestCompletedMeterSessionID()
 		if sessionID then
-			local ok, source = pcall(C_DamageMeter.GetCombatSessionSourceFromID, sessionID, enumMeterType, unitGUID, unitCreatureID)
+			local ok, source = pcall(C_DamageMeter.GetCombatSessionSourceFromID, sessionID, enumMeterType, unitGUID)
+			if ok and type(source) == "table" then
+				return source
+			end
+			if unitCreatureID then
+				ok, source = pcall(C_DamageMeter.GetCombatSessionSourceFromID, sessionID, enumMeterType, unitGUID, unitCreatureID)
+				if ok and type(source) == "table" then
+					return source
+				end
+			end
+		end
+	end
+
+	local sessionType = currentSessionType
+	local ok, source = pcall(C_DamageMeter.GetCombatSessionSourceFromType, sessionType, enumMeterType, unitGUID)
+	if ok and type(source) == "table" then
+		return source
+	end
+	if unitCreatureID then
+		ok, source = pcall(C_DamageMeter.GetCombatSessionSourceFromType, sessionType, enumMeterType, unitGUID, unitCreatureID)
+		if ok and type(source) == "table" then
+			return source
+		end
+	end
+
+	if totalSessionType and totalSessionType ~= currentSessionType then
+		ok, source = pcall(C_DamageMeter.GetCombatSessionSourceFromType, totalSessionType, enumMeterType, unitGUID)
+		if ok and type(source) == "table" then
+			return source
+		end
+		if unitCreatureID then
+			ok, source = pcall(C_DamageMeter.GetCombatSessionSourceFromType, totalSessionType, enumMeterType, unitGUID, unitCreatureID)
 			if ok and type(source) == "table" then
 				return source
 			end
 		end
 	end
 
-	local sessionType = currentSessionType
-	local ok, source = pcall(C_DamageMeter.GetCombatSessionSourceFromType, sessionType, enumMeterType, unitGUID, unitCreatureID)
-	if ok and type(source) == "table" then
-		return source
+	local view
+	if InCombatLockdown and InCombatLockdown() then
+		view = self:GetNativeMeterView(DAMAGE_METER_SESSION_CURRENT, meterType)
+	elseif self:GetOutOfCombatMeterMode() == "overall" then
+		view = self:GetNativeMeterView(DAMAGE_METER_SESSION_TOTAL, meterType)
+	else
+		view = self:GetCompletedMeterView(meterType)
 	end
-
-	if totalSessionType and totalSessionType ~= currentSessionType then
-		ok, source = pcall(C_DamageMeter.GetCombatSessionSourceFromType, totalSessionType, enumMeterType, unitGUID, unitCreatureID)
-		if ok and type(source) == "table" then
-			return source
+	if type(view) == "table" and type(view.combatSources) == "table" then
+		if unit == "player" then
+			for _, candidate in ipairs(view.combatSources) do
+				if type(candidate) == "table" and candidate.isLocalPlayer then
+					return candidate
+				end
+			end
 		end
 	end
 
@@ -562,10 +598,26 @@ end
 
 function XFrames.events:DAMAGE_METER_CURRENT_SESSION_UPDATED()
 	XFrames:InvalidateMeterCache()
+	local player = XFrames:GetModule("Player")
+	if player and type(player.Refresh) == "function" then
+		player:Refresh()
+	end
+	local party = XFrames:GetModule("Party")
+	if party and type(party.RefreshAll) == "function" then
+		party:RefreshAll()
+	end
 end
 
 function XFrames.events:DAMAGE_METER_COMBAT_SESSION_UPDATED()
 	XFrames:InvalidateMeterCache()
+	local player = XFrames:GetModule("Player")
+	if player and type(player.Refresh) == "function" then
+		player:Refresh()
+	end
+	local party = XFrames:GetModule("Party")
+	if party and type(party.RefreshAll) == "function" then
+		party:RefreshAll()
+	end
 end
 
 XFrames:RegisterEvent("DAMAGE_METER_CURRENT_SESSION_UPDATED")
