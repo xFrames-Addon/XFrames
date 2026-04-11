@@ -598,26 +598,10 @@ end
 
 function XFrames.events:DAMAGE_METER_CURRENT_SESSION_UPDATED()
 	XFrames:InvalidateMeterCache()
-	local player = XFrames:GetModule("Player")
-	if player and type(player.Refresh) == "function" then
-		player:Refresh()
-	end
-	local party = XFrames:GetModule("Party")
-	if party and type(party.RefreshAll) == "function" then
-		party:RefreshAll()
-	end
 end
 
 function XFrames.events:DAMAGE_METER_COMBAT_SESSION_UPDATED()
 	XFrames:InvalidateMeterCache()
-	local player = XFrames:GetModule("Player")
-	if player and type(player.Refresh) == "function" then
-		player:Refresh()
-	end
-	local party = XFrames:GetModule("Party")
-	if party and type(party.RefreshAll) == "function" then
-		party:RefreshAll()
-	end
 end
 
 XFrames:RegisterEvent("DAMAGE_METER_CURRENT_SESSION_UPDATED")
