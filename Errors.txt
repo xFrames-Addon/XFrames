@@ -1,0 +1,62 @@
+Message: module Target:OnEvent failed: ...ace/AddOns/XFrames/Modules/Target/XFrames_Target.lua:481: attempt to compare a secret string value (tainted by 'XFrames')
+Time: Sat Apr 11 14:17:20 2026
+Count: 1
+Stack:
+[Interface/AddOns/XFrames/Core/XFrames.lua]:219: in function 'SafeCall'
+[Interface/AddOns/XFrames/Modules/Target/XFrames_Target.lua]:881: in function <...ace/AddOns/XFrames/Modules/Target/XFrames_Target.lua:880>
+
+Locals:
+self = Frame {
+ modules = <table> {
+ }
+ nativeMeterCache = <table> {
+ }
+ minimapButton = XFramesMinimapButton {
+ }
+ settingsFrame = Frame {
+ }
+ db = <table> {
+ }
+ initialized = true
+ events = <table> {
+ }
+ name = "XFrames"
+}
+scope = "module Target:OnEvent"
+args = <table> {
+ 1 = <table> {
+ }
+ 2 = "INSPECT_READY"
+ 3 = "Player-63-0CC7C24C"
+}
+Message: module Target:OnEvent failed: ...ace/AddOns/XFrames/Modules/Target/XFrames_Target.lua:481: attempt to compare a secret string value (tainted by 'XFrames')
+Time: Sat Apr 11 14:52:25 2026
+Count: 2
+Stack:
+[Interface/AddOns/XFrames/Core/XFrames.lua]:219: in function 'SafeCall'
+[Interface/AddOns/XFrames/Modules/Target/XFrames_Target.lua]:881: in function <...ace/AddOns/XFrames/Modules/Target/XFrames_Target.lua:880>
+
+Locals:
+self = Frame {
+ modules = <table> {
+ }
+ nativeMeterCache = <table> {
+ }
+ minimapButton = XFramesMinimapButton {
+ }
+ settingsFrame = Frame {
+ }
+ db = <table> {
+ }
+ initialized = true
+ events = <table> {
+ }
+ name = "XFrames"
+}
+scope = "module Target:OnEvent"
+args = <table> {
+ 1 = <table> {
+ }
+ 2 = "INSPECT_READY"
+ 3 = "Player-3684-0DFF0F79"
+}
