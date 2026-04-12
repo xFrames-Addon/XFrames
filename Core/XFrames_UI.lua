@@ -435,7 +435,7 @@ function XFrames:CreateSettingsPanel()
 		return self.settingsFrame
 	end
 
-	local frame = createPanel(UIParent, 280, 552, "CENTER", UIParent, "CENTER", 0, 0)
+	local frame = createPanel(UIParent, 280, 586, "CENTER", UIParent, "CENTER", 0, 0)
 	local ui = self:GetUISettings()
 	frame:SetFrameStrata("DIALOG")
 	frame:SetMovable(true)
@@ -503,7 +503,10 @@ function XFrames:CreateSettingsPanel()
 	frame.buffBarsButton = createButton(frame, "Buff Bars: On", 118, "TOPLEFT", frame.portraitsButton, "BOTTOMLEFT", 0, -10, function()
 		XFrames:ToggleBuffBarsEnabled()
 	end, 220)
-	frame.raidFramesButton = createButton(frame, "Raid Frames: On", 118, "TOPLEFT", frame.buffBarsButton, "BOTTOMLEFT", 0, -10, function()
+	frame.cdbButton = createButton(frame, "Open CDB Settings", 118, "TOPLEFT", frame.buffBarsButton, "BOTTOMLEFT", 0, -10, function()
+		XFrames:OpenCDBSettings()
+	end, 220)
+	frame.raidFramesButton = createButton(frame, "Raid Frames: On", 118, "TOPLEFT", frame.cdbButton, "BOTTOMLEFT", 0, -10, function()
 		XFrames:ToggleRaidFramesEnabled()
 	end, 220)
 	frame.tankFramesButton = createButton(frame, "Tank Frames: Off", 118, "TOPLEFT", frame.raidFramesButton, "BOTTOMLEFT", 0, -10, function()
@@ -541,9 +544,20 @@ function XFrames:RefreshSettingsPanel()
 	setButtonLabel(self.settingsFrame.castBarsButton, ui and ui.hideBlizzardCastBars ~= false and "Show Cast Bars" or "Hide Cast Bars")
 	setButtonLabel(self.settingsFrame.portraitsButton, self:GetPortraitStyle() == "class" and "Portraits: Class" or "Portraits: Live")
 	setButtonLabel(self.settingsFrame.buffBarsButton, self:AreBuffBarsEnabled() and "Buff Bars: On" or "Buff Bars: Off")
+	setButtonLabel(self.settingsFrame.cdbButton, _G.CDB and type(_G.CDB.ToggleSettings) == "function" and "Open CDB Settings" or "CDB Not Loaded")
 	setButtonLabel(self.settingsFrame.raidFramesButton, self:IsRaidFramesEnabled() and "Raid Frames: On" or "Raid Frames: Off")
 	setButtonLabel(self.settingsFrame.tankFramesButton, self:IsTankFramesEnabled() and "Tank Frames: On" or "Tank Frames: Off")
 	setButtonLabel(self.settingsFrame.tankTargetsButton, self:IsTankTargetsEnabled() and "Tank Targets: On" or "Tank Targets: Off")
+end
+
+function XFrames:OpenCDBSettings()
+	local cdb = _G.CDB
+	if not cdb or type(cdb.ToggleSettings) ~= "function" then
+		return
+	end
+
+	cdb:ToggleSettings()
+	self:RefreshSettingsPanel()
 end
 
 function XFrames:ToggleSettings()
