@@ -449,68 +449,17 @@ function XFrames:RegisterSlashCommands()
 		end
 
 		if command == "raid" then
-			arg = trim(arg)
-			if arg == "" or arg == "toggle" then
-				self:ToggleRaidFramesEnabled()
-				return
-			end
-			if arg == "on" or arg == "enable" then
-				self:SetRaidFramesEnabled(true)
-				return
-			end
-			if arg == "off" or arg == "disable" then
-				self:SetRaidFramesEnabled(false)
-				return
-			end
-			if arg == "status" then
-				printf("|cff33ff99XFrames|r raid frames: %s", self:IsRaidFramesEnabled() and "on" or "off")
-				return
-			end
-			printf("|cff33ff99XFrames|r raid commands: on, off, toggle, status")
+			printf("|cff33ff99XFrames|r raid frames are temporarily disabled")
 			return
 		end
 
 		if command == "tanks" or command == "tankframes" then
-			arg = trim(arg)
-			if arg == "" or arg == "toggle" then
-				self:ToggleTankFramesEnabled()
-				return
-			end
-			if arg == "on" or arg == "enable" then
-				self:SetTankFramesEnabled(true)
-				return
-			end
-			if arg == "off" or arg == "disable" then
-				self:SetTankFramesEnabled(false)
-				return
-			end
-			if arg == "status" then
-				printf("|cff33ff99XFrames|r tank frames: %s", self:IsTankFramesEnabled() and "on" or "off")
-				return
-			end
-			printf("|cff33ff99XFrames|r tank commands: on, off, toggle, status")
+			printf("|cff33ff99XFrames|r tank frames are temporarily disabled")
 			return
 		end
 
 		if command == "tanktargets" or command == "tanktarget" then
-			arg = trim(arg)
-			if arg == "" or arg == "toggle" then
-				self:ToggleTankTargetsEnabled()
-				return
-			end
-			if arg == "on" or arg == "enable" then
-				self:SetTankTargetsEnabled(true)
-				return
-			end
-			if arg == "off" or arg == "disable" then
-				self:SetTankTargetsEnabled(false)
-				return
-			end
-			if arg == "status" then
-				printf("|cff33ff99XFrames|r tank targets: %s", self:IsTankTargetsEnabled() and "on" or "off")
-				return
-			end
-			printf("|cff33ff99XFrames|r tank target commands: on, off, toggle, status")
+			printf("|cff33ff99XFrames|r tank targets are temporarily disabled")
 			return
 		end
 
@@ -548,7 +497,7 @@ function XFrames:RegisterSlashCommands()
 			return
 		end
 
-		printf("|cff33ff99XFrames|r commands: status, settings, lock, unlock, toggle, blizzard, castbars, portraits, buffs, party, raid, tanks, tanktargets, reload, debug")
+		printf("|cff33ff99XFrames|r commands: status, settings, lock, unlock, toggle, blizzard, castbars, portraits, buffs, party, reload, debug")
 	end
 end
 
@@ -667,7 +616,7 @@ function XFrames:TogglePortraitStyle()
 end
 
 function XFrames:IsRaidFramesEnabled()
-	return self.db and self.db.profile and self.db.profile.raid and self.db.profile.raid.enabled ~= false
+	return false
 end
 
 function XFrames:SetRaidFramesEnabled(enabled)
@@ -675,17 +624,8 @@ function XFrames:SetRaidFramesEnabled(enabled)
 		return
 	end
 
-	self.db.profile.raid.enabled = not not enabled
-	local raidModule = self:GetModule("Raid")
-	if raidModule then
-		raidModule.enabled = self.db.profile.raid.enabled
-		if self.db.profile.raid.enabled and type(raidModule.Enable) == "function" and not raidModule.anchorFrame then
-			raidModule:Enable()
-		elseif type(raidModule.RefreshAll) == "function" then
-			raidModule:RefreshAll()
-		end
-	end
-	self:Info(string.format("Raid frames %s", self.db.profile.raid.enabled and "enabled" or "disabled"))
+	self.db.profile.raid.enabled = false
+	self:Info("Raid frames disabled")
 	self:ApplyBlizzardFrameVisibility()
 	self:RefreshAllFrameLocks()
 end
@@ -695,7 +635,7 @@ function XFrames:ToggleRaidFramesEnabled()
 end
 
 function XFrames:IsTankFramesEnabled()
-	return self.db and self.db.profile and self.db.profile.raid and self.db.profile.raid.tanks and self.db.profile.raid.tanks.enabled == true
+	return false
 end
 
 function XFrames:SetTankFramesEnabled(enabled)
@@ -703,18 +643,8 @@ function XFrames:SetTankFramesEnabled(enabled)
 		return
 	end
 
-	self.db.profile.raid.tanks.enabled = not not enabled
-	local module = self:GetModule("RaidTanks")
-	if module then
-		module.enabled = self.db.profile.raid.tanks.enabled
-		if self.db.profile.raid.tanks.enabled and type(module.Enable) == "function" and not module.anchorFrame then
-			module:Enable()
-		elseif type(module.RefreshAll) == "function" then
-			module:RefreshAll()
-		end
-	end
-
-	self:Info(string.format("Tank frames %s", self.db.profile.raid.tanks.enabled and "enabled" or "disabled"))
+	self.db.profile.raid.tanks.enabled = false
+	self:Info("Tank frames disabled")
 	self:RefreshAllFrameLocks()
 end
 
@@ -723,7 +653,7 @@ function XFrames:ToggleTankFramesEnabled()
 end
 
 function XFrames:IsTankTargetsEnabled()
-	return self.db and self.db.profile and self.db.profile.raid and self.db.profile.raid.tanks and self.db.profile.raid.tanks.targets and self.db.profile.raid.tanks.targets.enabled == true
+	return false
 end
 
 function XFrames:SetTankTargetsEnabled(enabled)
@@ -731,13 +661,8 @@ function XFrames:SetTankTargetsEnabled(enabled)
 		return
 	end
 
-	self.db.profile.raid.tanks.targets.enabled = not not enabled
-	local module = self:GetModule("RaidTanks")
-	if module and type(module.RefreshAll) == "function" then
-		module:RefreshAll()
-	end
-
-	self:Info(string.format("Tank targets %s", self.db.profile.raid.tanks.targets.enabled and "enabled" or "disabled"))
+	self.db.profile.raid.tanks.targets.enabled = false
+	self:Info("Tank targets disabled")
 	self:RefreshSettingsPanel()
 end
 

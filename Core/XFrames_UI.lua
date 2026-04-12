@@ -31,12 +31,6 @@ local BLIZZARD_UNIT_FRAME_NAMES = {
 	"PartyMemberFrame2",
 	"PartyMemberFrame3",
 	"PartyMemberFrame4",
-	"BossTargetFrameContainer",
-	"Boss1TargetFrame",
-	"Boss2TargetFrame",
-	"Boss3TargetFrame",
-	"Boss4TargetFrame",
-	"Boss5TargetFrame",
 	"TargetFrameToT",
 	"FocusFrameToT",
 }
@@ -435,7 +429,7 @@ function XFrames:CreateSettingsPanel()
 		return self.settingsFrame
 	end
 
-	local frame = createPanel(UIParent, 280, 586, "CENTER", UIParent, "CENTER", 0, 0)
+	local frame = createPanel(UIParent, 280, 506, "CENTER", UIParent, "CENTER", 0, 0)
 	local ui = self:GetUISettings()
 	frame:SetFrameStrata("DIALOG")
 	frame:SetMovable(true)
@@ -506,15 +500,6 @@ function XFrames:CreateSettingsPanel()
 	frame.cdbButton = createButton(frame, "Open CDB Settings", 118, "TOPLEFT", frame.buffBarsButton, "BOTTOMLEFT", 0, -10, function()
 		XFrames:OpenCDBSettings()
 	end, 220)
-	frame.raidFramesButton = createButton(frame, "Raid Frames: On", 118, "TOPLEFT", frame.cdbButton, "BOTTOMLEFT", 0, -10, function()
-		XFrames:ToggleRaidFramesEnabled()
-	end, 220)
-	frame.tankFramesButton = createButton(frame, "Tank Frames: Off", 118, "TOPLEFT", frame.raidFramesButton, "BOTTOMLEFT", 0, -10, function()
-		XFrames:ToggleTankFramesEnabled()
-	end, 220)
-	frame.tankTargetsButton = createButton(frame, "Tank Targets: Off", 118, "TOPLEFT", frame.tankFramesButton, "BOTTOMLEFT", 0, -10, function()
-		XFrames:ToggleTankTargetsEnabled()
-	end, 220)
 	frame.reloadButton = createButton(frame, "Reload UI", 78, "LEFT", frame.lockButton, "RIGHT", 8, 0, function()
 		ReloadUI()
 	end)
@@ -545,9 +530,6 @@ function XFrames:RefreshSettingsPanel()
 	setButtonLabel(self.settingsFrame.portraitsButton, self:GetPortraitStyle() == "class" and "Portraits: Class" or "Portraits: Live")
 	setButtonLabel(self.settingsFrame.buffBarsButton, self:AreBuffBarsEnabled() and "Buff Bars: On" or "Buff Bars: Off")
 	setButtonLabel(self.settingsFrame.cdbButton, _G.CDB and type(_G.CDB.ToggleSettings) == "function" and "Open CDB Settings" or "CDB Not Loaded")
-	setButtonLabel(self.settingsFrame.raidFramesButton, self:IsRaidFramesEnabled() and "Raid Frames: On" or "Raid Frames: Off")
-	setButtonLabel(self.settingsFrame.tankFramesButton, self:IsTankFramesEnabled() and "Tank Frames: On" or "Tank Frames: Off")
-	setButtonLabel(self.settingsFrame.tankTargetsButton, self:IsTankTargetsEnabled() and "Tank Targets: On" or "Tank Targets: Off")
 end
 
 function XFrames:OpenCDBSettings()

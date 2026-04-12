@@ -145,7 +145,7 @@ local defaults = {
 				},
 			},
 			boss = {
-				enabled = true,
+				enabled = false,
 				width = 156,
 				height = 48,
 				scale = 0.9,
@@ -261,7 +261,7 @@ function XFrames:InitializeDatabase()
 		self.db.profile.raid.tanks.scale = 1
 		self.db.profile.raid.tanks.spacing = self.db.profile.raid.tanks.spacing or 6
 		self.db.profile.raid.tanks.maxUnits = self.db.profile.raid.tanks.maxUnits or 4
-		self.db.profile.raid.tanks.enabled = self.db.profile.raid.tanks.enabled == true
+		self.db.profile.raid.tanks.enabled = false
 		self.db.profile.raid.tanks.position = self.db.profile.raid.tanks.position or {
 			point = "TOPLEFT",
 			relativePoint = "TOPLEFT",
@@ -272,9 +272,11 @@ function XFrames:InitializeDatabase()
 		self.db.profile.raid.tanks.targets.width = self.db.profile.raid.width
 		self.db.profile.raid.tanks.targets.height = self.db.profile.raid.height
 		self.db.profile.raid.tanks.targets.xOffset = self.db.profile.raid.tanks.targets.xOffset or 8
-		self.db.profile.raid.tanks.targets.enabled = self.db.profile.raid.tanks.targets.enabled == true
-		if not (IsInRaid and IsInRaid()) then
-			self.db.profile.raid.enabled = false
-		end
+		self.db.profile.raid.tanks.targets.enabled = false
+		self.db.profile.raid.enabled = false
+	end
+
+	if self.db.profile.target and self.db.profile.target.boss then
+		self.db.profile.target.boss.enabled = false
 	end
 end
