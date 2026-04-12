@@ -14,6 +14,7 @@ local InCombatLockdown = InCombatLockdown
 local NotifyInspect = NotifyInspect
 local UnitClass = UnitClass
 local UnitCreatureType = UnitCreatureType
+local UnitIsDeadOrGhost = UnitIsDeadOrGhost
 local UnitExists = UnitExists
 local UnitGUID = UnitGUID
 local UnitGroupRolesAssigned = UnitGroupRolesAssigned
@@ -38,6 +39,10 @@ local ROLE_BG_COLOR = {0.12, 0.14, 0.18, 0.96}
 local READY_CHECK_READY_TEX = "Interface\\RaidFrame\\ReadyCheck-Ready"
 local READY_CHECK_NOT_READY_TEX = "Interface\\RaidFrame\\ReadyCheck-NotReady"
 local READY_CHECK_WAITING_TEX = "Interface\\RaidFrame\\ReadyCheck-Waiting"
+local DEAD_BACKDROP_COLOR = {0.03, 0.03, 0.04, 0.96}
+local DEAD_BORDER_COLOR = {0.16, 0.16, 0.18, 0.95}
+local DEAD_TEXT_COLOR = {0.56, 0.58, 0.62}
+local DEAD_BAR_COLOR = {r = 0.12, g = 0.12, b = 0.14}
 local DIM_BACKDROP_COLOR = {0.04, 0.04, 0.05, 0.94}
 local DIM_BORDER_COLOR = {0.18, 0.18, 0.20, 0.95}
 local DIM_TEXT_COLOR = {0.55, 0.57, 0.60}
@@ -294,6 +299,17 @@ function Party:CreateUnitFrame(index)
 	frame.readyCheckIcon:SetSize(18, 18)
 	frame.readyCheckIcon:SetPoint("RIGHT", frame.roleFrame, "LEFT", -6, 0)
 	frame.readyCheckIcon:Hide()
+	frame.deadFrame = CreateFrame("Frame", nil, frame)
+	frame.deadFrame:SetAllPoints(frame)
+	frame.deadFrame:SetFrameLevel(frame:GetFrameLevel() + 20)
+	frame.deadFrame:Hide()
+	frame.deadOverlay = frame.deadFrame:CreateTexture(nil, "OVERLAY")
+	frame.deadOverlay:SetPoint("TOPLEFT", frame.deadFrame, "TOPLEFT", 1, -1)
+	frame.deadOverlay:SetPoint("BOTTOMRIGHT", frame.deadFrame, "BOTTOMRIGHT", -1, 1)
+	frame.deadOverlay:SetColorTexture(0, 0, 0, 0.45)
+	frame.deadText = createText(frame.deadFrame, "OVERLAY", "GameFontNormal", 16, "CENTER", frame.deadFrame, "CENTER", 0, 0, "CENTER")
+	frame.deadText:SetText("DEAD")
+	frame.deadText:SetTextColor(1, 0.2, 0.2)
 	frame.statusText = createText(frame, "OVERLAY", "GameFontHighlightSmall", 10, "TOPLEFT", frame.nameText, "BOTTOMLEFT", 0, -2, "LEFT")
 	frame.statusText:SetWidth(config.width - 154)
 	frame.statusText:SetWordWrap(false)
@@ -326,6 +342,11 @@ function Party:CreateUnitFrame(index)
 end
 
 function Party:UpdateFrameBorder(frame)
+	if self:IsDead(frame) then
+		frame.accentFrame:SetBackdropBorderColor(DEAD_BORDER_COLOR[1], DEAD_BORDER_COLOR[2], DEAD_BORDER_COLOR[3], 1)
+		return
+	end
+
 	local demoData = self:GetDemoData(frame)
 	local color
 	if demoData and RAID_CLASS_COLORS and RAID_CLASS_COLORS[demoData.classToken] then
@@ -337,6 +358,11 @@ function Party:UpdateFrameBorder(frame)
 end
 
 function Party:UpdatePortraitBorder(frame)
+	if self:IsDead(frame) then
+		frame.portraitFrame:SetBackdropBorderColor(DEAD_BORDER_COLOR[1], DEAD_BORDER_COLOR[2], DEAD_BORDER_COLOR[3], 1)
+		return
+	end
+
 	local demoData = self:GetDemoData(frame)
 	local color
 	if demoData and RAID_CLASS_COLORS and RAID_CLASS_COLORS[demoData.classToken] then
@@ -347,8 +373,21 @@ function Party:UpdatePortraitBorder(frame)
 	frame.portraitFrame:SetBackdropBorderColor(color.r, color.g, color.b, 1)
 end
 
+function Party:IsDead(frame)
+	if not frame then
+		return false
+	end
+
+	local demoData = self:GetDemoData(frame)
+	if demoData then
+		return demoData.isDead == true or demoData.isGhost == true
+	end
+
+	return UnitExists(frame.unit) and UnitIsDeadOrGhost and UnitIsDeadOrGhost(frame.unit) or false
+end
+
 function Party:IsOutOfRange(frame)
-	if not frame or self:GetDemoData(frame) then
+	if not frame or self:GetDemoData(frame) or self:IsDead(frame) then
 		return false
 	end
 
@@ -395,6 +434,10 @@ function Party:UpdateName(frame)
 	if demoData then
 		local color = RAID_CLASS_COLORS and RAID_CLASS_COLORS[demoData.classToken]
 		frame.nameText:SetText(demoData.name)
+		if self:IsDead(frame) then
+			frame.nameText:SetTextColor(unpack(DEAD_TEXT_COLOR))
+			return
+		end
 		if color then
 			frame.nameText:SetTextColor(color.r, color.g, color.b)
 		else
@@ -412,6 +455,10 @@ function Party:UpdateName(frame)
 	local name = UnitName(frame.unit) or frame.fallbackLabel
 	local color = getPartyAccentColor(frame.unit)
 	frame.nameText:SetText(name)
+	if self:IsDead(frame) then
+		frame.nameText:SetTextColor(unpack(DEAD_TEXT_COLOR))
+		return
+	end
 	frame.nameText:SetTextColor(color.r, color.g, color.b)
 end
 
@@ -435,6 +482,10 @@ end
 function Party:UpdateRole(frame)
 	local demoData = self:GetDemoData(frame)
 	local role = demoData and demoData.role or getRoleInfo(frame.unit)
+	if self:IsDead(frame) then
+		frame.roleFrame:Hide()
+		return
+	end
 	frame.roleFrame:SetShown(setRoleIcon(frame.roleIcon, role))
 end
 
@@ -455,6 +506,12 @@ end
 
 function Party:UpdateStatus(frame)
 	local demoData = self:GetDemoData(frame)
+	if self:IsDead(frame) then
+		frame.statusText:SetText("")
+		frame.statusText:SetTextColor(unpack(DEAD_TEXT_COLOR))
+		return
+	end
+
 	if demoData then
 		frame.statusText:SetText(demoData.className)
 	else
@@ -579,6 +636,13 @@ function Party:UpdateHealth(frame)
 	local bar = frame.healthBar
 	local demoData = self:GetDemoData(frame)
 	if demoData then
+		if self:IsDead(frame) then
+			bar:SetStatusBarColor(DEAD_BAR_COLOR.r, DEAD_BAR_COLOR.g, DEAD_BAR_COLOR.b)
+			bar:SetMinMaxValues(0, 1)
+			bar:SetValue(0)
+			bar.valueText:SetText("")
+			return
+		end
 		bar:SetStatusBarColor(HEALTH_BAR_COLOR.r, HEALTH_BAR_COLOR.g, HEALTH_BAR_COLOR.b)
 		XFrames:SetBarValues(bar, demoData.health, demoData.healthMax)
 		return
@@ -586,6 +650,14 @@ function Party:UpdateHealth(frame)
 
 	if not UnitExists(frame.unit) then
 		bar:SetStatusBarColor(HEALTH_BAR_COLOR.r, HEALTH_BAR_COLOR.g, HEALTH_BAR_COLOR.b)
+		bar:SetMinMaxValues(0, 1)
+		bar:SetValue(0)
+		bar.valueText:SetText("")
+		return
+	end
+
+	if self:IsDead(frame) then
+		bar:SetStatusBarColor(DEAD_BAR_COLOR.r, DEAD_BAR_COLOR.g, DEAD_BAR_COLOR.b)
 		bar:SetMinMaxValues(0, 1)
 		bar:SetValue(0)
 		bar.valueText:SetText("")
@@ -600,6 +672,13 @@ function Party:UpdatePower(frame)
 	local bar = frame.powerBar
 	local demoData = self:GetDemoData(frame)
 	if demoData then
+		if self:IsDead(frame) then
+			bar:SetStatusBarColor(DEAD_BAR_COLOR.r, DEAD_BAR_COLOR.g, DEAD_BAR_COLOR.b)
+			bar:SetMinMaxValues(0, 1)
+			bar:SetValue(0)
+			bar.valueText:SetText("")
+			return
+		end
 		bar:SetStatusBarColor(demoData.powerColor.r, demoData.powerColor.g, demoData.powerColor.b)
 		XFrames:SetBarValues(bar, demoData.power, demoData.powerMax)
 		return
@@ -614,8 +693,51 @@ function Party:UpdatePower(frame)
 		return
 	end
 
+	if self:IsDead(frame) then
+		bar:SetStatusBarColor(DEAD_BAR_COLOR.r, DEAD_BAR_COLOR.g, DEAD_BAR_COLOR.b)
+		bar:SetMinMaxValues(0, 1)
+		bar:SetValue(0)
+		bar.valueText:SetText("")
+		return
+	end
+
 	bar:SetStatusBarColor(color.r, color.g, color.b)
 	XFrames:SetBarValues(bar, UnitPower(frame.unit), UnitPowerMax(frame.unit))
+end
+
+function Party:UpdateDeadState(frame)
+	if not frame then
+		return
+	end
+
+	if self:IsDead(frame) then
+		frame:SetBackdropColor(unpack(DEAD_BACKDROP_COLOR))
+		frame:SetBackdropBorderColor(unpack(DEAD_BORDER_COLOR))
+		frame.deadFrame:Show()
+		return
+	end
+
+	if self:IsOutOfRange(frame) then
+		frame:SetBackdropColor(unpack(DIM_BACKDROP_COLOR))
+		frame:SetBackdropBorderColor(unpack(DIM_BORDER_COLOR))
+		frame.deadFrame:Hide()
+		return
+	end
+
+	frame:SetBackdropColor(unpack(BACKDROP_COLOR))
+	frame:SetBackdropBorderColor(unpack(BORDER_COLOR))
+	frame.deadFrame:Hide()
+end
+
+function Party:UpdateRangeText(frame)
+	if not frame or self:IsDead(frame) or not self:IsOutOfRange(frame) then
+		return
+	end
+
+	frame.nameText:SetTextColor(unpack(DIM_TEXT_COLOR))
+	frame.statusText:SetTextColor(unpack(DIM_TEXT_COLOR))
+	frame.specText:SetTextColor(unpack(DIM_TEXT_COLOR))
+	frame.rankText:SetTextColor(unpack(DIM_TEXT_COLOR))
 end
 
 function Party:UpdateRangeState(frame)
@@ -623,23 +745,7 @@ function Party:UpdateRangeState(frame)
 		return
 	end
 
-	if self:IsOutOfRange(frame) then
-		frame:SetBackdropColor(unpack(DIM_BACKDROP_COLOR))
-		frame:SetBackdropBorderColor(unpack(DIM_BORDER_COLOR))
-		frame.accentFrame:SetBackdropBorderColor(DIM_BORDER_COLOR[1], DIM_BORDER_COLOR[2], DIM_BORDER_COLOR[3], 1)
-		frame.portraitFrame:SetBackdropBorderColor(DIM_BORDER_COLOR[1], DIM_BORDER_COLOR[2], DIM_BORDER_COLOR[3], 1)
-		frame.nameText:SetTextColor(unpack(DIM_TEXT_COLOR))
-		frame.levelText:SetTextColor(unpack(DIM_TEXT_COLOR))
-		frame.statusText:SetTextColor(unpack(DIM_TEXT_COLOR))
-		frame.specText:SetTextColor(unpack(DIM_TEXT_COLOR))
-		frame.rankText:SetTextColor(unpack(DIM_TEXT_COLOR))
-		frame.healthBar:SetStatusBarColor(DIM_BAR_COLOR.r, DIM_BAR_COLOR.g, DIM_BAR_COLOR.b)
-		frame.powerBar:SetStatusBarColor(DIM_BAR_COLOR.r, DIM_BAR_COLOR.g, DIM_BAR_COLOR.b)
-		return
-	end
-
-	frame:SetBackdropColor(unpack(BACKDROP_COLOR))
-	frame:SetBackdropBorderColor(unpack(BORDER_COLOR))
+	self:UpdateDeadState(frame)
 	self:UpdateFrameBorder(frame)
 	self:UpdatePortraitBorder(frame)
 	self:UpdateName(frame)
@@ -649,6 +755,7 @@ function Party:UpdateRangeState(frame)
 	self:UpdateRank(frame)
 	self:UpdateHealth(frame)
 	self:UpdatePower(frame)
+	self:UpdateRangeText(frame)
 end
 
 function Party:RefreshFrame(frame)
@@ -660,6 +767,7 @@ function Party:RefreshFrame(frame)
 	if not UnitExists(frame.unit) and not demoData then
 		if XFrames:IsFramesUnlocked() then
 			frame:Show()
+			self:UpdateDeadState(frame)
 			self:UpdateFrameBorder(frame)
 			self:UpdateName(frame)
 			self:UpdateLevel(frame)
@@ -679,6 +787,7 @@ function Party:RefreshFrame(frame)
 	end
 
 	frame:Show()
+	self:UpdateDeadState(frame)
 	self:UpdateFrameBorder(frame)
 	self:UpdateName(frame)
 	self:UpdateLevel(frame)
@@ -815,6 +924,7 @@ function Party:RegisterEvents()
 	frame:RegisterUnitEvent("UNIT_MAXPOWER", "party1", "party2", "party3", "party4")
 	frame:RegisterUnitEvent("UNIT_DISPLAYPOWER", "party1", "party2", "party3", "party4")
 	frame:RegisterUnitEvent("UNIT_LEVEL", "party1", "party2", "party3", "party4")
+	frame:RegisterUnitEvent("UNIT_FLAGS", "party1", "party2", "party3", "party4")
 	frame:SetScript("OnEvent", function(_, eventName, ...)
 		XFrames:SafeCall("module Party:OnEvent", self.OnEvent, self, eventName, ...)
 	end)
