@@ -464,7 +464,7 @@ function Target:ProcessInspectQueue()
 		local item = table.remove(self.inspectQueue, 1)
 		self.inspectQueued[item.guid] = nil
 
-		if UnitExists(item.unit) and UnitGUID(item.unit) == item.guid and UnitIsPlayer(item.unit) and CanInspect(item.unit, false) then
+		if UnitExists(item.unit) and UnitIsPlayer(item.unit) and CanInspect(item.unit, false) then
 			NotifyInspect(item.unit)
 			self.inspectPendingGUID = item.guid
 			self.inspectPendingUnit = item.unit
@@ -684,7 +684,7 @@ function Target:RefreshFrame(frame)
 
 	if not UnitExists(frame.unit) then
 		if XFrames:IsFramesUnlocked() then
-			frame:Show()
+			XFrames:SetFrameShownSafely(frame, true)
 			self:UpdateFrameBorder(frame)
 			self:UpdateName(frame)
 			self:UpdateLevel(frame)
@@ -699,7 +699,7 @@ function Target:RefreshFrame(frame)
 	end
 
 	if XFrames:IsFramesUnlocked() then
-		frame:Show()
+		XFrames:SetFrameShownSafely(frame, true)
 	end
 	self:UpdateFrameBorder(frame)
 	self:UpdateName(frame)
@@ -733,11 +733,11 @@ function Target:RefreshBossFrames()
 
 	local enabled = XFrames.db.profile.target.boss and XFrames.db.profile.target.boss.enabled ~= false
 	if not enabled then
-		self.bossAnchor:Hide()
+		XFrames:SetFrameShownSafely(self.bossAnchor, false)
 		for index = 1, (XFrames.db.profile.target.boss.maxUnits or 5) do
 			local frame = self.bossFrames and self.bossFrames[index]
 			if frame then
-				frame:Hide()
+				XFrames:SetFrameShownSafely(frame, false)
 			end
 		end
 		return
@@ -749,7 +749,7 @@ function Target:RefreshBossFrames()
 		local frame = self.bossFrames and self.bossFrames[index]
 		if frame then
 			if UnitExists(frame.unit) then
-				frame:Show()
+				XFrames:SetFrameShownSafely(frame, true)
 				self:UpdateFrameBorder(frame)
 				self:UpdateName(frame)
 				self:UpdateLevel(frame)
@@ -758,7 +758,7 @@ function Target:RefreshBossFrames()
 				self:UpdatePower(frame)
 				anyVisible = true
 			elseif XFrames:IsFramesUnlocked() then
-				frame:Show()
+				XFrames:SetFrameShownSafely(frame, true)
 				frame.nameText:SetText(frame.fallbackLabel)
 				frame.nameText:SetTextColor(1, 1, 1)
 				frame.levelText:SetText("")
@@ -774,15 +774,15 @@ function Target:RefreshBossFrames()
 				frame.powerBar.valueText:SetText("")
 				anyVisible = true
 			else
-				frame:Hide()
+				XFrames:SetFrameShownSafely(frame, false)
 			end
 		end
 	end
 
 	if anyVisible then
-		self.bossAnchor:Show()
+		XFrames:SetFrameShownSafely(self.bossAnchor, true)
 	else
-		self.bossAnchor:Hide()
+		XFrames:SetFrameShownSafely(self.bossAnchor, false)
 	end
 end
 

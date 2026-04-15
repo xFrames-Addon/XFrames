@@ -290,6 +290,52 @@ function XFrames:RegisterMovableFrame(frame, position, label)
 	self:RefreshDragState(frame)
 end
 
+function XFrames:SetFrameShownSafely(frame, shown)
+	if not frame then
+		return false
+	end
+
+	if shown then
+		if frame:IsShown() then
+			frame.xfDeferredVisibility = nil
+			return true
+		end
+	else
+		if not frame:IsShown() then
+			frame.xfDeferredVisibility = nil
+			return true
+		end
+	end
+
+	if InCombatLockdown and InCombatLockdown() and frame.IsProtected and frame:IsProtected() then
+		frame.xfDeferredVisibility = not not shown
+		return false
+	end
+
+	frame.xfDeferredVisibility = nil
+	if shown then
+		frame:Show()
+	else
+		frame:Hide()
+	end
+
+	return true
+end
+
+function XFrames:ApplyDeferredFrameVisibility()
+	for _, module in pairs(self.modules) do
+		if type(module.ForEachFrame) == "function" then
+			module:ForEachFrame(function(frame)
+				if frame and frame.xfDeferredVisibility ~= nil then
+					local shown = frame.xfDeferredVisibility
+					frame.xfDeferredVisibility = nil
+					self:SetFrameShownSafely(frame, shown)
+				end
+			end)
+		end
+	end
+end
+
 function XFrames:RefreshAllFrameLocks()
 	for _, module in pairs(self.modules) do
 		if type(module.ForEachFrame) == "function" then
@@ -327,6 +373,11 @@ end
 function XFrames:ApplyBlizzardFrameVisibility()
 	local ui = self:GetUISettings()
 	if not ui then
+		return
+	end
+
+	if InCombatLockdown and InCombatLockdown() then
+		self.pendingBlizzardFrameVisibility = true
 		return
 	end
 
@@ -381,6 +432,11 @@ end
 function XFrames:ApplyBlizzardCastBarVisibility()
 	local ui = self:GetUISettings()
 	if not ui then
+		return
+	end
+
+	if InCombatLockdown and InCombatLockdown() then
+		self.pendingBlizzardCastBarVisibility = true
 		return
 	end
 

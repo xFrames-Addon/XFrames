@@ -178,7 +178,7 @@ function PlayerPet:Refresh()
 
 	if not UnitExists("pet") then
 		if XFrames:IsFramesUnlocked() then
-			self.frame:Show()
+			XFrames:SetFrameShownSafely(self.frame, true)
 			self:UpdateFrameBorder()
 			self:UpdateName()
 			self:UpdateStatus()
@@ -190,7 +190,7 @@ function PlayerPet:Refresh()
 	end
 
 	if XFrames:IsFramesUnlocked() then
-		self.frame:Show()
+		XFrames:SetFrameShownSafely(self.frame, true)
 	end
 	self:UpdateFrameBorder()
 	self:UpdateName()

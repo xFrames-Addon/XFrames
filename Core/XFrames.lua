@@ -992,6 +992,18 @@ function XFrames.events:PLAYER_REGEN_ENABLED()
 		XFrames.pendingDiagnosticCVars = nil
 		XFrames:ApplyDiagnosticCVars()
 	end
+
+	if XFrames.pendingBlizzardFrameVisibility then
+		XFrames.pendingBlizzardFrameVisibility = nil
+		XFrames:ApplyBlizzardFrameVisibility()
+	end
+
+	if XFrames.pendingBlizzardCastBarVisibility then
+		XFrames.pendingBlizzardCastBarVisibility = nil
+		XFrames:ApplyBlizzardCastBarVisibility()
+	end
+
+	XFrames:ApplyDeferredFrameVisibility()
 end
 
 XFrames:SetScript("OnEvent", function(_, event, ...)

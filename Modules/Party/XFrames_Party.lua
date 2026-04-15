@@ -574,9 +574,10 @@ function Party:ProcessInspectQueue()
 		local item = table.remove(self.inspectQueue, 1)
 		self.inspectQueued[item.guid] = nil
 
-		if UnitExists(item.unit) and UnitGUID(item.unit) == item.guid and UnitIsPlayer(item.unit) and CanInspect(item.unit, false) then
+		if UnitExists(item.unit) and UnitIsPlayer(item.unit) and CanInspect(item.unit, false) then
 			NotifyInspect(item.unit)
 			self.inspectPendingGUID = item.guid
+			self.inspectPendingUnit = item.unit
 			return
 		end
 	end
@@ -587,15 +588,16 @@ function Party:HandleInspectReady(inspectGUID)
 		return
 	end
 
-	for index = 1, 4 do
-		local unit = "party" .. index
-		if UnitExists(unit) and UnitGUID(unit) == inspectGUID then
-			local specID = GetInspectSpecialization(unit)
-			if specID ~= nil and GetSpecializationInfoByID then
-				local ok, _, name = pcall(GetSpecializationInfoByID, specID)
-				if ok and name then
+	local pendingUnit = self.inspectPendingUnit
+	if pendingUnit and UnitExists(pendingUnit) then
+		local specID = GetInspectSpecialization(pendingUnit)
+		if specID ~= nil and GetSpecializationInfoByID then
+			local ok, _, name = pcall(GetSpecializationInfoByID, specID)
+			if ok and name then
+				local pendingGUID = self.inspectPendingGUID
+				if pendingGUID then
 					self.inspectCache = self.inspectCache or {}
-					self.inspectCache[inspectGUID] = XFrames:FormatSpecLabel(name)
+					self.inspectCache[pendingGUID] = XFrames:FormatSpecLabel(name)
 				end
 			end
 		end
@@ -605,9 +607,8 @@ function Party:HandleInspectReady(inspectGUID)
 		ClearInspectPlayer()
 	end
 
-	if self.inspectPendingGUID == inspectGUID then
-		self.inspectPendingGUID = nil
-	end
+	self.inspectPendingGUID = nil
+	self.inspectPendingUnit = nil
 
 	self:RefreshAll()
 	self:ProcessInspectQueue()
@@ -766,7 +767,7 @@ function Party:RefreshFrame(frame)
 	local demoData = self:GetDemoData(frame)
 	if not UnitExists(frame.unit) and not demoData then
 		if XFrames:IsFramesUnlocked() then
-			frame:Show()
+			XFrames:SetFrameShownSafely(frame, true)
 			self:UpdateDeadState(frame)
 			self:UpdateFrameBorder(frame)
 			self:UpdateName(frame)
@@ -781,12 +782,12 @@ function Party:RefreshFrame(frame)
 			self:UpdatePower(frame)
 			self:UpdateRangeState(frame)
 		else
-			frame:Hide()
+			XFrames:SetFrameShownSafely(frame, false)
 		end
 		return
 	end
 
-	frame:Show()
+	XFrames:SetFrameShownSafely(frame, true)
 	self:UpdateDeadState(frame)
 	self:UpdateFrameBorder(frame)
 	self:UpdateName(frame)
@@ -811,23 +812,23 @@ function Party:RefreshAnchor()
 	end
 
 	if XFrames:IsFramesUnlocked() then
-		self.anchorFrame:Show()
+		XFrames:SetFrameShownSafely(self.anchorFrame, true)
 		return
 	end
 
 	if XFrames:IsTestingPreviewActive("party") then
-		self.anchorFrame:Show()
+		XFrames:SetFrameShownSafely(self.anchorFrame, true)
 		return
 	end
 
 	for index = 1, 4 do
 		if UnitExists("party" .. index) then
-			self.anchorFrame:Show()
+			XFrames:SetFrameShownSafely(self.anchorFrame, true)
 			return
 		end
 	end
 
-	self.anchorFrame:Hide()
+	XFrames:SetFrameShownSafely(self.anchorFrame, false)
 end
 
 function Party:RefreshAll()
