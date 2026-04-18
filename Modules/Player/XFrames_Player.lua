@@ -21,6 +21,7 @@ local UnitLevel = UnitLevel
 
 local PERFORMANCE_UPDATE_INTERVAL = 0.5
 local HEALTH_BAR_COLOR = {r = 0.18, g = 0.62, b = 0.32}
+local PERFORMANCE_TEXT_COLOR = {1.00, 0.82, 0.18}
 local BACKDROP_COLOR = {0.08, 0.09, 0.11, 0.92}
 local BORDER_COLOR = {0.24, 0.27, 0.31, 0.95}
 local PORTRAIT_BG_COLOR = {0.10, 0.11, 0.14, 0.98}
@@ -158,6 +159,10 @@ function Player:CreateFrame()
 	frame.statusText:SetWidth(config.width - 148)
 	frame.statusText:SetWordWrap(false)
 	frame.rankText = createText(frame, "OVERLAY", "GameFontHighlightSmall", 10, "RIGHT", frame, "RIGHT", -10, -24, "RIGHT")
+	frame.rankText:SetWidth(90)
+	frame.rankText:SetWordWrap(false)
+	frame.rankText:SetJustifyH("RIGHT")
+	frame.rankText:SetTextColor(unpack(PERFORMANCE_TEXT_COLOR))
 
 	frame.healthBar = createBar(frame, 14, "TOPLEFT", frame, "TOPLEFT", 64, -40)
 	frame.healthBar:SetPoint("RIGHT", frame, "RIGHT", -10, 0)
@@ -277,6 +282,7 @@ end
 function Player:UpdateRank()
 	if XFrames:GetPartySubtitleMode() == "performance" then
 		self.frame.rankText:SetText(XFrames:GetPerformanceTextForUnit("player") or "")
+		self.frame.rankText:SetTextColor(unpack(PERFORMANCE_TEXT_COLOR))
 		return
 	end
 

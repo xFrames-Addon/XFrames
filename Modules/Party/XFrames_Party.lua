@@ -30,6 +30,7 @@ local GetReadyCheckStatus = GetReadyCheckStatus
 local PERFORMANCE_UPDATE_INTERVAL = 0.5
 
 local HEALTH_BAR_COLOR = {r = 0.18, g = 0.62, b = 0.32}
+local PERFORMANCE_TEXT_COLOR = {1.00, 0.82, 0.18}
 local BACKDROP_COLOR = {0.08, 0.09, 0.11, 0.92}
 local BORDER_COLOR = {0.24, 0.27, 0.31, 0.95}
 local PORTRAIT_BG_COLOR = {0.10, 0.11, 0.14, 0.98}
@@ -315,7 +316,10 @@ function Party:CreateUnitFrame(index)
 	frame.statusText:SetWordWrap(false)
 	frame.statusText:SetTextColor(unpack(SECONDARY_TEXT_COLOR))
 	frame.rankText = createText(frame, "OVERLAY", "GameFontHighlightSmall", 10, "RIGHT", frame, "RIGHT", -10, -24, "RIGHT")
-	frame.rankText:SetTextColor(unpack(SECONDARY_TEXT_COLOR))
+	frame.rankText:SetWidth(90)
+	frame.rankText:SetWordWrap(false)
+	frame.rankText:SetJustifyH("RIGHT")
+	frame.rankText:SetTextColor(unpack(PERFORMANCE_TEXT_COLOR))
 
 	frame.healthBar = createBar(frame, 14, "TOPLEFT", frame, "TOPLEFT", 64, -40)
 	frame.powerBar = createBar(frame, 12, "TOPLEFT", frame.healthBar, "BOTTOMLEFT", 0, -6)
@@ -529,7 +533,11 @@ function Party:UpdateRank(frame)
 	else
 		frame.rankText:SetText("")
 	end
-	frame.rankText:SetTextColor(unpack(SECONDARY_TEXT_COLOR))
+	if XFrames:GetPartySubtitleMode() == "performance" then
+		frame.rankText:SetTextColor(unpack(PERFORMANCE_TEXT_COLOR))
+	else
+		frame.rankText:SetTextColor(unpack(SECONDARY_TEXT_COLOR))
+	end
 end
 
 function Party:UpdateSpec(frame)
