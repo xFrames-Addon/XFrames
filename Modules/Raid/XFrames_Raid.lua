@@ -667,7 +667,6 @@ end
 
 function Raid:OnEvent()
 	self:RefreshAll()
-	XFrames:ApplyBlizzardFrameVisibility()
 end
 
 function Raid:RegisterEvents()

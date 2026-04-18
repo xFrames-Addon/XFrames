@@ -884,7 +884,6 @@ function Party:OnEvent(event, unit)
 
 	if event == "GROUP_ROSTER_UPDATE" or event == "PLAYER_ENTERING_WORLD" then
 		self:RefreshAll()
-		XFrames:ApplyBlizzardFrameVisibility()
 		return
 	end
 
