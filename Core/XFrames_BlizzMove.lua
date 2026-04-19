@@ -3,6 +3,7 @@ local _, ns = ...
 local XFrames = ns.XFrames
 
 local CreateFrame = CreateFrame
+local C_Timer = C_Timer
 local InCombatLockdown = InCombatLockdown
 local hooksecurefunc = hooksecurefunc
 
@@ -99,6 +100,35 @@ function XFrames:ApplyBlizzMovePosition(frame)
 	end
 end
 
+function XFrames:QueueBlizzMovePosition(frame)
+	if not frame or not frame.xfPosition or not self:IsBlizzMoveEnabled() then
+		return
+	end
+
+	if InCombatLockdown and InCombatLockdown() then
+		frame.xfPendingPositionApply = true
+		self.pendingBlizzMovePosition = true
+		return
+	end
+
+	if not C_Timer or type(C_Timer.After) ~= "function" then
+		self:ApplyBlizzMovePosition(frame)
+		return
+	end
+
+	C_Timer.After(0, function()
+		if frame and frame.xfPosition and XFrames:IsBlizzMoveEnabled() then
+			XFrames:ApplyBlizzMovePosition(frame)
+		end
+	end)
+
+	C_Timer.After(0.05, function()
+		if frame and frame.xfPosition and XFrames:IsBlizzMoveEnabled() then
+			XFrames:ApplyBlizzMovePosition(frame)
+		end
+	end)
+end
+
 function XFrames:RefreshBlizzMoveHandles()
 	local unlocked = self:IsFramesUnlocked()
 	local enabled = self:IsBlizzMoveEnabled()
@@ -115,7 +145,7 @@ end
 function XFrames:ApplyDeferredBlizzMovePosition()
 	for _, frame in pairs(self.blizzMoveFrames or {}) do
 		if frame and frame.xfPendingPositionApply then
-			self:ApplyBlizzMovePosition(frame)
+			self:QueueBlizzMovePosition(frame)
 		end
 	end
 end
@@ -161,17 +191,18 @@ function XFrames:RegisterBlizzMoveFrame(frame, key, label)
 			pcall(frame.SetUserPlaced, frame, true)
 		end
 		XFrames:SaveFramePosition(frame)
+		XFrames:QueueBlizzMovePosition(frame)
 	end)
 
 	frame.xfBlizzMoveHandle = handle
 	frame:HookScript("OnShow", function(shownFrame)
-		XFrames:ApplyBlizzMovePosition(shownFrame)
+		XFrames:QueueBlizzMovePosition(shownFrame)
 		XFrames:RefreshBlizzMoveHandles()
 	end)
 
 	self.blizzMoveFrames[key] = frame
 	if storedPosition then
-		self:ApplyBlizzMovePosition(frame)
+		self:QueueBlizzMovePosition(frame)
 	end
 	self:RefreshBlizzMoveHandles()
 end
