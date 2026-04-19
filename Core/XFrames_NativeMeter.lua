@@ -8,6 +8,21 @@ local DAMAGE_METER_TYPE_DPS = 1
 local DAMAGE_METER_TYPE_HPS = 3
 local METER_CACHE_TTL = 0.5
 
+local function debugMeterTrace(self, unit, stage, detail)
+	if not self or not self.IsDebugEnabled or not self:IsDebugEnabled() then
+		return
+	end
+
+	self.nativeMeterDebugSeen = self.nativeMeterDebugSeen or {}
+	local key = table.concat({ tostring(unit or "nil"), tostring(stage or "stage"), tostring(detail or "") }, "|")
+	if self.nativeMeterDebugSeen[key] then
+		return
+	end
+
+	self.nativeMeterDebugSeen[key] = true
+	self:Debug(string.format("meter %s %s%s", tostring(unit or "nil"), tostring(stage or "stage"), detail and detail ~= "" and (": " .. tostring(detail)) or ""))
+end
+
 local GetTime = GetTime
 local InCombatLockdown = InCombatLockdown
 local UnitExists = UnitExists
@@ -112,6 +127,7 @@ end
 
 function XFrames:InvalidateMeterCache()
 	self.nativeMeterCache = nil
+	self.nativeMeterDebugSeen = nil
 end
 
 function XFrames:GetPartySubtitleMode()
@@ -585,22 +601,34 @@ end
 function XFrames:GetPerformanceTextForUnit(unit)
 	local meterType, label = self:GetPerformanceMetricForUnit(unit)
 	if not meterType or not label then
+		debugMeterTrace(self, unit, "metric-missing", UnitExists and UnitExists(unit) and (UnitGroupRolesAssigned and UnitGroupRolesAssigned(unit) or "no-role") or "unit-missing")
 		return nil
 	end
 
 	local source = self:GetNativeMeterSourceForUnit(unit, meterType)
 	if source then
-		local formattedText = self:FormatNativeMeterText(getSourceRate(source), label)
-		if formattedText then
-			return formattedText
+		local rate = getSourceRate(source)
+		if rate == nil then
+			debugMeterTrace(self, unit, "native-rate-missing", label)
+		else
+			local formattedText = self:FormatNativeMeterText(rate, label)
+			if formattedText then
+				debugMeterTrace(self, unit, "native-ok", formattedText)
+				return formattedText
+			end
+			debugMeterTrace(self, unit, "native-format-missing", label)
 		end
+	else
+		debugMeterTrace(self, unit, "native-source-missing", label)
 	end
 
 	if type(self.GetMeterTextForUnit) == "function" then
 		local ok, fallbackText = pcall(self.GetMeterTextForUnit, self, unit, meterType, label)
 		if ok and fallbackText then
+			debugMeterTrace(self, unit, "fallback-ok", fallbackText)
 			return fallbackText
 		end
+		debugMeterTrace(self, unit, ok and "fallback-empty" or "fallback-error", label)
 	end
 
 	return nil
