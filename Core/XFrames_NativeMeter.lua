@@ -589,11 +589,21 @@ function XFrames:GetPerformanceTextForUnit(unit)
 	end
 
 	local source = self:GetNativeMeterSourceForUnit(unit, meterType)
-	if not source then
-		return nil
+	if source then
+		local formattedText = self:FormatNativeMeterText(getSourceRate(source), label)
+		if formattedText then
+			return formattedText
+		end
 	end
 
-	return self:FormatNativeMeterText(getSourceRate(source), label)
+	if type(self.GetMeterTextForUnit) == "function" then
+		local ok, fallbackText = pcall(self.GetMeterTextForUnit, self, unit, meterType, label)
+		if ok and fallbackText then
+			return fallbackText
+		end
+	end
+
+	return nil
 end
 
 function XFrames.events:DAMAGE_METER_CURRENT_SESSION_UPDATED()
