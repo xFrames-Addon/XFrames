@@ -11,6 +11,10 @@ local defaults = {
 			hideBlizzardCastBars = true,
 			showBuffBars = true,
 			portraitStyle = "portrait",
+			blizzMove = {
+				enabled = true,
+				positions = {},
+			},
 			settingsPosition = {
 				point = "CENTER",
 				relativePoint = "CENTER",

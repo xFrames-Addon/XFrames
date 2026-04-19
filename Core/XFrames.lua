@@ -366,6 +366,28 @@ function XFrames:RegisterSlashCommands()
 			printf("|cff33ff99XFrames|r blizzard commands: hide, show, toggle")
 			return
 		end
+		if command == "blizzmove" or command == "windows" then
+			arg = trim(arg)
+			if arg == "" or arg == "toggle" then
+				self:ToggleBlizzMove()
+				return
+			end
+			if arg == "on" or arg == "enable" then
+				self:SetBlizzMoveEnabled(true)
+				return
+			end
+			if arg == "off" or arg == "disable" then
+				self:SetBlizzMoveEnabled(false)
+				return
+			end
+			if arg == "status" then
+				printf("|cff33ff99XFrames|r blizzard window moving: %s", self:IsBlizzMoveEnabled() and "on" or "off")
+				return
+			end
+			printf("|cff33ff99XFrames|r blizzmove commands: on, off, toggle, status")
+			return
+		end
+
 
 		if command == "castbars" or command == "casts" then
 			arg = trim(arg)
@@ -497,7 +519,7 @@ function XFrames:RegisterSlashCommands()
 			return
 		end
 
-		printf("|cff33ff99XFrames|r commands: status, settings, lock, unlock, toggle, blizzard, castbars, portraits, buffs, party, reload, debug")
+		printf("|cff33ff99XFrames|r commands: status, settings, lock, unlock, toggle, blizzard, blizzmove, castbars, portraits, buffs, party, reload, debug")
 	end
 end
 
@@ -978,12 +1000,14 @@ function XFrames.events:PLAYER_LOGIN()
 	XFrames:ApplyDiagnosticCVars()
 	XFrames:ForEachModule("Enable")
 	XFrames:InitializeUI()
+	XFrames:InitializeBlizzMove()
 end
 
 function XFrames.events:PLAYER_ENTERING_WORLD()
 	if XFrames.initialized then
 		XFrames:ApplyBlizzardFrameVisibility()
 		XFrames:ApplyBlizzardCastBarVisibility()
+		XFrames:SyncBlizzMoveFrames()
 	end
 end
 
@@ -1001,6 +1025,11 @@ function XFrames.events:PLAYER_REGEN_ENABLED()
 	if XFrames.pendingBlizzardCastBarVisibility then
 		XFrames.pendingBlizzardCastBarVisibility = nil
 		XFrames:ApplyBlizzardCastBarVisibility()
+	end
+
+	if XFrames.pendingBlizzMovePosition then
+		XFrames.pendingBlizzMovePosition = nil
+		XFrames:ApplyDeferredBlizzMovePosition()
 	end
 
 	XFrames:ApplyDeferredFrameVisibility()

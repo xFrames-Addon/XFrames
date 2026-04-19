@@ -337,6 +337,7 @@ function XFrames:ApplyDeferredFrameVisibility()
 end
 
 function XFrames:RefreshAllFrameLocks()
+	self:RefreshBlizzMoveHandles()
 	for _, module in pairs(self.modules) do
 		if type(module.ForEachFrame) == "function" then
 			module:ForEachFrame(function(frame)
@@ -485,7 +486,7 @@ function XFrames:CreateSettingsPanel()
 		return self.settingsFrame
 	end
 
-	local frame = createPanel(UIParent, 280, 506, "CENTER", UIParent, "CENTER", 0, 0)
+	local frame = createPanel(UIParent, 280, 548, "CENTER", UIParent, "CENTER", 0, 0)
 	local ui = self:GetUISettings()
 	frame:SetFrameStrata("DIALOG")
 	frame:SetMovable(true)
@@ -522,6 +523,10 @@ function XFrames:CreateSettingsPanel()
 	frame.meterModeText:SetWidth(256)
 	frame.meterModeText:SetWordWrap(true)
 
+	frame.blizzMoveText = createText(frame, "GameFontHighlightSmall", 10, "TOPLEFT", frame.meterModeText, "BOTTOMLEFT", 0, -12, "LEFT")
+	frame.blizzMoveText:SetWidth(256)
+	frame.blizzMoveText:SetWordWrap(true)
+
 	frame.lockButton = createButton(frame, "Unlock Frames", 118, "BOTTOMLEFT", frame, "BOTTOMLEFT", 12, 18, function()
 		XFrames:ToggleFrameLocks()
 	end)
@@ -541,7 +546,10 @@ function XFrames:CreateSettingsPanel()
 
 		XFrames:SetOutOfCombatMeterMode("overall")
 	end, 220)
-	frame.blizzardButton = createButton(frame, "Hide Blizzard", 118, "TOPLEFT", frame.meterModeButton, "BOTTOMLEFT", 0, -10, function()
+	frame.blizzMoveButton = createButton(frame, "BlizzMove: On", 118, "TOPLEFT", frame.blizzMoveText, "BOTTOMLEFT", 0, -10, function()
+		XFrames:ToggleBlizzMove()
+	end, 220)
+	frame.blizzardButton = createButton(frame, "Hide Blizzard", 118, "TOPLEFT", frame.blizzMoveButton, "BOTTOMLEFT", 0, -10, function()
 		XFrames:ToggleBlizzardFrames()
 	end, 220)
 	frame.castBarsButton = createButton(frame, "Hide Cast Bars", 118, "TOPLEFT", frame.blizzardButton, "BOTTOMLEFT", 0, -10, function()
@@ -579,8 +587,10 @@ function XFrames:RefreshSettingsPanel()
 	setButtonLabel(self.settingsFrame.lockButton, unlocked and "Lock Frames" or "Unlock Frames")
 	self.settingsFrame.partyModeText:SetText("Show DPS in player and party frames.")
 	self.settingsFrame.meterModeText:SetText("Out-of-combat meter source.")
+	self.settingsFrame.blizzMoveText:SetText("Allow moving Blizzard windows while XFrames is unlocked.")
 	setButtonLabel(self.settingsFrame.partyModeButton, self:GetPartySubtitleMode() == "performance" and "Show DPS: On" or "Show DPS: Off")
 	setButtonLabel(self.settingsFrame.meterModeButton, self:GetOutOfCombatMeterMode() == "overall" and "OOC Meter: Overall" or "OOC Meter: Segment")
+	setButtonLabel(self.settingsFrame.blizzMoveButton, self:IsBlizzMoveEnabled() and "BlizzMove: On" or "BlizzMove: Off")
 	setButtonLabel(self.settingsFrame.blizzardButton, ui and ui.hideBlizzard ~= false and "Show Blizzard" or "Hide Blizzard")
 	setButtonLabel(self.settingsFrame.castBarsButton, ui and ui.hideBlizzardCastBars ~= false and "Show Cast Bars" or "Hide Cast Bars")
 	setButtonLabel(self.settingsFrame.portraitsButton, self:GetPortraitStyle() == "class" and "Portraits: Class" or "Portraits: Live")
