@@ -351,6 +351,11 @@ function Party:UpdateFrameBorder(frame)
 		return
 	end
 
+	if self:IsOutOfRange(frame) then
+		frame.accentFrame:SetBackdropBorderColor(DIM_BORDER_COLOR[1], DIM_BORDER_COLOR[2], DIM_BORDER_COLOR[3], 1)
+		return
+	end
+
 	local demoData = self:GetDemoData(frame)
 	local color
 	if demoData and RAID_CLASS_COLORS and RAID_CLASS_COLORS[demoData.classToken] then
@@ -364,6 +369,11 @@ end
 function Party:UpdatePortraitBorder(frame)
 	if self:IsDead(frame) then
 		frame.portraitFrame:SetBackdropBorderColor(DEAD_BORDER_COLOR[1], DEAD_BORDER_COLOR[2], DEAD_BORDER_COLOR[3], 1)
+		return
+	end
+
+	if self:IsOutOfRange(frame) then
+		frame.portraitFrame:SetBackdropBorderColor(DIM_BORDER_COLOR[1], DIM_BORDER_COLOR[2], DIM_BORDER_COLOR[3], 1)
 		return
 	end
 
@@ -479,7 +489,11 @@ function Party:UpdateLevel(frame)
 		return
 	end
 
-	frame.levelText:SetTextColor(unpack(LEVEL_TEXT_COLOR))
+	if self:IsOutOfRange(frame) then
+		frame.levelText:SetTextColor(unpack(DIM_TEXT_COLOR))
+	else
+		frame.levelText:SetTextColor(unpack(LEVEL_TEXT_COLOR))
+	end
 	XFrames:SetValueText(frame.levelText, UnitLevel(frame.unit))
 end
 
@@ -491,6 +505,17 @@ function Party:UpdateRole(frame)
 		return
 	end
 	frame.roleFrame:SetShown(setRoleIcon(frame.roleIcon, role))
+	if frame.roleFrame:IsShown() then
+		if self:IsOutOfRange(frame) then
+			frame.roleFrame:SetBackdropBorderColor(DIM_BORDER_COLOR[1], DIM_BORDER_COLOR[2], DIM_BORDER_COLOR[3], 1)
+			frame.roleIcon:SetVertexColor(0.6, 0.6, 0.6)
+			frame.roleIcon:SetAlpha(0.75)
+		else
+			frame.roleFrame:SetBackdropBorderColor(BORDER_COLOR[1], BORDER_COLOR[2], BORDER_COLOR[3], 1)
+			frame.roleIcon:SetVertexColor(1, 1, 1)
+			frame.roleIcon:SetAlpha(1)
+		end
+	end
 end
 
 function Party:UpdateReadyCheck(frame)
@@ -638,6 +663,15 @@ function Party:UpdatePortrait(frame)
 	end
 
 	XFrames:ApplyUnitPortrait(frame.portraitTexture, frame.unit)
+	if self:IsOutOfRange(frame) and frame.portraitTexture.SetDesaturated then
+		frame.portraitTexture:SetDesaturated(true)
+		frame.portraitTexture:SetVertexColor(0.7, 0.7, 0.7)
+	else
+		if frame.portraitTexture.SetDesaturated then
+			frame.portraitTexture:SetDesaturated(false)
+		end
+		frame.portraitTexture:SetVertexColor(1, 1, 1)
+	end
 	self:UpdatePortraitBorder(frame)
 end
 
@@ -674,7 +708,11 @@ function Party:UpdateHealth(frame)
 	end
 
 	XFrames:SetBarValues(bar, UnitHealth(frame.unit), UnitHealthMax(frame.unit))
-	bar:SetStatusBarColor(HEALTH_BAR_COLOR.r, HEALTH_BAR_COLOR.g, HEALTH_BAR_COLOR.b)
+	if self:IsOutOfRange(frame) then
+		bar:SetStatusBarColor(DIM_BAR_COLOR.r, DIM_BAR_COLOR.g, DIM_BAR_COLOR.b)
+	else
+		bar:SetStatusBarColor(HEALTH_BAR_COLOR.r, HEALTH_BAR_COLOR.g, HEALTH_BAR_COLOR.b)
+	end
 end
 
 function Party:UpdatePower(frame)
@@ -710,7 +748,11 @@ function Party:UpdatePower(frame)
 		return
 	end
 
-	bar:SetStatusBarColor(color.r, color.g, color.b)
+	if self:IsOutOfRange(frame) then
+		bar:SetStatusBarColor(DIM_BAR_COLOR.r, DIM_BAR_COLOR.g, DIM_BAR_COLOR.b)
+	else
+		bar:SetStatusBarColor(color.r, color.g, color.b)
+	end
 	XFrames:SetBarValues(bar, UnitPower(frame.unit), UnitPowerMax(frame.unit))
 end
 
