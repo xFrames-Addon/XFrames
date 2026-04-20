@@ -40,6 +40,9 @@ local AURA_BORDER_COLOR = {r = 0.18, g = 0.20, b = 0.24}
 local AURA_PLACEHOLDER_COLOR = {r = 0.10, g = 0.11, b = 0.14, a = 0.55}
 local CAST_BAR_COLOR = {r = 0.22, g = 0.78, b = 0.32}
 local CHANNEL_BAR_COLOR = {r = 0.22, g = 0.78, b = 0.32}
+local DIM_TEXT_COLOR = {0.55, 0.57, 0.60}
+local DIM_BAR_COLOR = {r = 0.16, g = 0.16, b = 0.18}
+local DIM_BORDER_COLOR = {0.18, 0.18, 0.20, 0.95}
 local TIMER_DIRECTION = Enum and Enum.StatusBarTimerDirection
 local BAR_INTERPOLATION = Enum and Enum.StatusBarInterpolation
 local BOSS_HEALTH_BAR_COLOR = {r = 0.78, g = 0.22, b = 0.22}
@@ -197,8 +200,21 @@ function Target:CreateUnitFrame(key, unit, config, accent)
 	return frame
 end
 
+function Target:IsOutOfRange(frame)
+	if not frame or frame.isBoss or not UnitExists(frame.unit) then
+		return false
+	end
+
+	return XFrames:IsUnitOutOfRange(frame.unit)
+end
+
 function Target:UpdatePortraitBorder(frame)
 	if not frame.portraitFrame then
+		return
+	end
+
+	if self:IsOutOfRange(frame) then
+		frame.portraitFrame:SetBackdropBorderColor(DIM_BORDER_COLOR[1], DIM_BORDER_COLOR[2], DIM_BORDER_COLOR[3], 1)
 		return
 	end
 
@@ -212,6 +228,11 @@ function Target:UpdatePortraitBorder(frame)
 end
 
 function Target:UpdateFrameBorder(frame)
+	if self:IsOutOfRange(frame) then
+		frame.accentFrame:SetBackdropBorderColor(DIM_BORDER_COLOR[1], DIM_BORDER_COLOR[2], DIM_BORDER_COLOR[3], 1)
+		return
+	end
+
 	local color = XFrames:GetUnitAccentColor(frame.unit)
 	frame.accentFrame:SetBackdropBorderColor(color.r, color.g, color.b, 1)
 end
@@ -408,7 +429,9 @@ function Target:UpdateName(frame)
 	local color = UnitIsPlayer(frame.unit) and class and RAID_CLASS_COLORS and RAID_CLASS_COLORS[class]
 
 	frame.nameText:SetText(name)
-	if color then
+	if self:IsOutOfRange(frame) then
+		frame.nameText:SetTextColor(unpack(DIM_TEXT_COLOR))
+	elseif color then
 		frame.nameText:SetTextColor(color.r, color.g, color.b)
 	else
 		frame.nameText:SetTextColor(1, 1, 1)
@@ -430,6 +453,11 @@ function Target:UpdateSpec(frame)
 	end
 
 	frame.specText:SetText(self:GetInspectSpecName(frame.unit))
+	if self:IsOutOfRange(frame) then
+		frame.specText:SetTextColor(unpack(DIM_TEXT_COLOR))
+	else
+		frame.specText:SetTextColor(1, 1, 1)
+	end
 end
 
 function Target:QueueInspect(unit)
@@ -511,12 +539,22 @@ function Target:UpdateLevel(frame)
 		return
 	end
 
+	if self:IsOutOfRange(frame) then
+		frame.levelText:SetTextColor(unpack(DIM_TEXT_COLOR))
+	else
+		frame.levelText:SetTextColor(1, 1, 1)
+	end
 	XFrames:SetValueText(frame.levelText, UnitLevel(frame.unit))
 end
 
 function Target:UpdateStatus(frame)
 	if frame.statusText then
 		frame.statusText:SetText(getStatusText(frame.unit, frame.fallbackLabel))
+		if self:IsOutOfRange(frame) then
+			frame.statusText:SetTextColor(unpack(DIM_TEXT_COLOR))
+		else
+			frame.statusText:SetTextColor(1, 1, 1)
+		end
 	end
 end
 
@@ -533,6 +571,15 @@ function Target:UpdatePortrait(frame)
 	end
 
 	XFrames:ApplyUnitPortrait(frame.portraitTexture, frame.unit)
+	if self:IsOutOfRange(frame) and frame.portraitTexture.SetDesaturated then
+		frame.portraitTexture:SetDesaturated(true)
+		frame.portraitTexture:SetVertexColor(0.7, 0.7, 0.7)
+	else
+		if frame.portraitTexture.SetDesaturated then
+			frame.portraitTexture:SetDesaturated(false)
+		end
+		frame.portraitTexture:SetVertexColor(1, 1, 1)
+	end
 	self:UpdatePortraitBorder(frame)
 end
 
@@ -551,7 +598,11 @@ function Target:UpdateHealth(frame)
 	local value = UnitHealth(frame.unit)
 	local maxValue = UnitHealthMax(frame.unit)
 
-	bar:SetStatusBarColor(accent.r, accent.g, accent.b)
+	if self:IsOutOfRange(frame) then
+		bar:SetStatusBarColor(DIM_BAR_COLOR.r, DIM_BAR_COLOR.g, DIM_BAR_COLOR.b)
+	else
+		bar:SetStatusBarColor(accent.r, accent.g, accent.b)
+	end
 	XFrames:SetBarValues(bar, value, maxValue)
 end
 
@@ -570,7 +621,11 @@ function Target:UpdatePower(frame)
 	local value = UnitPower(frame.unit)
 	local maxValue = UnitPowerMax(frame.unit)
 
-	bar:SetStatusBarColor(color.r, color.g, color.b)
+	if self:IsOutOfRange(frame) then
+		bar:SetStatusBarColor(DIM_BAR_COLOR.r, DIM_BAR_COLOR.g, DIM_BAR_COLOR.b)
+	else
+		bar:SetStatusBarColor(color.r, color.g, color.b)
+	end
 	XFrames:SetBarValues(bar, value, maxValue)
 end
 
