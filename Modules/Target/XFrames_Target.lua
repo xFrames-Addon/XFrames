@@ -17,6 +17,7 @@ local UnitCastingInfo = UnitCastingInfo
 local UnitCastingDuration = UnitCastingDuration
 local UnitChannelInfo = UnitChannelInfo
 local UnitChannelDuration = UnitChannelDuration
+local UnitClassification = UnitClassification
 local UnitCreatureType = UnitCreatureType
 local UnitExists = UnitExists
 local UnitHealth = UnitHealth
@@ -46,6 +47,12 @@ local DIM_BORDER_COLOR = {0.18, 0.18, 0.20, 0.95}
 local TIMER_DIRECTION = Enum and Enum.StatusBarTimerDirection
 local BAR_INTERPOLATION = Enum and Enum.StatusBarInterpolation
 local BOSS_HEALTH_BAR_COLOR = {r = 0.78, g = 0.22, b = 0.22}
+local CLASSIFICATION_COLORS = {
+	boss = {1.00, 0.32, 0.32},
+	elite = {1.00, 0.82, 0.22},
+	rare = {0.50, 0.82, 1.00},
+	rareelite = {0.82, 0.60, 1.00},
+}
 
 local function createText(parent, layer, template, size, anchorPoint, relativeTo, relativePoint, x, y, justify)
 	local text = parent:CreateFontString(nil, layer, template)
@@ -133,6 +140,33 @@ local function getStatusText(unit, fallbackLabel)
 	return UnitCreatureType(unit) or fallbackLabel
 end
 
+local function getClassificationInfo(unit)
+	if not UnitExists(unit) then
+		return nil, nil
+	end
+
+	local classification = UnitClassification and UnitClassification(unit) or nil
+	local level = UnitLevel(unit)
+
+	if classification == "worldboss" or level == -1 then
+		return "BOSS", CLASSIFICATION_COLORS.boss
+	end
+
+	if classification == "rareelite" then
+		return "RARE+", CLASSIFICATION_COLORS.rareelite
+	end
+
+	if classification == "elite" then
+		return "ELITE", CLASSIFICATION_COLORS.elite
+	end
+
+	if classification == "rare" then
+		return "RARE", CLASSIFICATION_COLORS.rare
+	end
+
+	return nil, nil
+end
+
 function Target:CreateUnitFrame(key, unit, config, accent)
 	local frameName = key == "focus" and "XFramesFocusFrame" or "XFramesTargetFrame"
 	local frame = CreateFrame("Button", frameName, UIParent, "SecureUnitButtonTemplate,BackdropTemplate")
@@ -166,7 +200,12 @@ function Target:CreateUnitFrame(key, unit, config, accent)
 	frame.specText:SetJustifyH("CENTER")
 
 	frame.nameText = createText(frame, "OVERLAY", "GameFontNormalLarge", 13, "TOPLEFT", frame, "TOPLEFT", 64, -10, "LEFT")
+	frame.nameText:SetWidth(config.width - 176)
+	frame.nameText:SetWordWrap(false)
 	frame.levelText = createText(frame, "OVERLAY", "GameFontHighlight", 12, "TOPRIGHT", frame, "TOPRIGHT", -10, -10, "RIGHT")
+	frame.classificationText = createText(frame, "OVERLAY", "GameFontHighlightSmall", 10, "RIGHT", frame.levelText, "LEFT", -8, 0, "RIGHT")
+	frame.classificationText:SetWidth(56)
+	frame.classificationText:SetWordWrap(false)
 	frame.statusText = createText(frame, "OVERLAY", "GameFontHighlightSmall", 10, "TOPLEFT", frame.nameText, "BOTTOMLEFT", 0, -2, "LEFT")
 
 	frame.healthBar = createBar(frame, 14, "TOPLEFT", frame, "TOPLEFT", 64, -40)
@@ -547,6 +586,30 @@ function Target:UpdateLevel(frame)
 	XFrames:SetValueText(frame.levelText, UnitLevel(frame.unit))
 end
 
+function Target:UpdateClassification(frame)
+	if not frame.classificationText then
+		return
+	end
+
+	if not UnitExists(frame.unit) then
+		frame.classificationText:SetText("")
+		return
+	end
+
+	local label, color = getClassificationInfo(frame.unit)
+	if not label or not color then
+		frame.classificationText:SetText("")
+		return
+	end
+
+	frame.classificationText:SetText(label)
+	if self:IsOutOfRange(frame) then
+		frame.classificationText:SetTextColor(unpack(DIM_TEXT_COLOR))
+	else
+		frame.classificationText:SetTextColor(color[1], color[2], color[3])
+	end
+end
+
 function Target:UpdateStatus(frame)
 	if frame.statusText then
 		frame.statusText:SetText(getStatusText(frame.unit, frame.fallbackLabel))
@@ -743,6 +806,7 @@ function Target:RefreshFrame(frame)
 			self:UpdateFrameBorder(frame)
 			self:UpdateName(frame)
 			self:UpdateLevel(frame)
+			self:UpdateClassification(frame)
 			self:UpdateStatus(frame)
 			self:UpdateSpec(frame)
 			self:UpdatePortrait(frame)
@@ -759,6 +823,7 @@ function Target:RefreshFrame(frame)
 	self:UpdateFrameBorder(frame)
 	self:UpdateName(frame)
 	self:UpdateLevel(frame)
+	self:UpdateClassification(frame)
 	self:UpdateStatus(frame)
 	self:UpdateSpec(frame)
 	self:UpdatePortrait(frame)
