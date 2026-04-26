@@ -53,6 +53,7 @@ local RANGE_UPDATE_INTERVAL = 0.25
 local LOW_HEALTH_THRESHOLD = 0.30
 local LOW_HEALTH_FLASH_INTERVAL = 0.40
 local LOW_HEALTH_ALERT_COLOR = {1.00, 0.18, 0.18}
+local DISPEL_ALERT_FALLBACK_COLOR = {r = 1.00, g = 0.18, b = 0.18}
 local DEMO_MEMBERS = {
 	{className = "Warrior", classToken = "WARRIOR", role = "TANK", name = "Tankard", level = 80, health = 920000, healthMax = 1000000, power = 35, powerMax = 100, powerColor = {r = 0.78, g = 0.24, b = 0.18}},
 	{className = "Priest", classToken = "PRIEST", role = "HEALER", name = "Mendra", level = 80, health = 760000, healthMax = 820000, power = 220000, powerMax = 250000, powerColor = {r = 0.20, g = 0.44, b = 0.86}},
@@ -377,6 +378,18 @@ function Party:UpdateFrameBorder(frame)
 		color = getPartyAccentColor(frame.unit)
 	end
 
+	local dispelColor = self:GetDispellableAlertColor(frame)
+	if dispelColor then
+		local phase = GetTime and GetTime() or 0
+		local flashOn = math.floor(phase / LOW_HEALTH_FLASH_INTERVAL) % 2 == 0
+		if flashOn then
+			frame.accentFrame:SetBackdropBorderColor(dispelColor.r, dispelColor.g, dispelColor.b, 1)
+		else
+			frame.accentFrame:SetBackdropBorderColor(color.r, color.g, color.b, 1)
+		end
+		return
+	end
+
 	if self:IsLowHealth(frame) then
 		local phase = GetTime and GetTime() or 0
 		local flashOn = math.floor(phase / LOW_HEALTH_FLASH_INTERVAL) % 2 == 0
@@ -454,6 +467,19 @@ function Party:IsLowHealth(frame)
 	end
 
 	return (UnitHealth(frame.unit) / maxHealth) <= LOW_HEALTH_THRESHOLD
+end
+
+function Party:GetDispellableAlertColor(frame)
+	if not frame or self:GetDemoData(frame) or self:IsDead(frame) or self:IsOutOfRange(frame) then
+		return nil
+	end
+
+	local aura = XFrames:GetFirstDispellableAura(frame.unit)
+	if not aura then
+		return nil
+	end
+
+	return XFrames:GetDispellableAuraColor(frame.unit, aura) or DISPEL_ALERT_FALLBACK_COLOR
 end
 
 function Party:IsDemoModeActive()
@@ -1023,6 +1049,7 @@ function Party:RegisterEvents()
 	frame:RegisterUnitEvent("UNIT_DISPLAYPOWER", "party1", "party2", "party3", "party4")
 	frame:RegisterUnitEvent("UNIT_LEVEL", "party1", "party2", "party3", "party4")
 	frame:RegisterUnitEvent("UNIT_FLAGS", "party1", "party2", "party3", "party4")
+	frame:RegisterUnitEvent("UNIT_AURA", "party1", "party2", "party3", "party4")
 	frame:SetScript("OnEvent", function(_, eventName, ...)
 		XFrames:SafeCall("module Party:OnEvent", self.OnEvent, self, eventName, ...)
 	end)

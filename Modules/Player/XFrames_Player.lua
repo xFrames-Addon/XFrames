@@ -5,6 +5,7 @@ local Player = {}
 
 local RAID_CLASS_COLORS = RAID_CLASS_COLORS
 local CreateFrame = CreateFrame
+local GetTime = GetTime
 local GetSpecialization = GetSpecialization
 local GetSpecializationInfo = GetSpecializationInfo
 local UnitClass = UnitClass
@@ -14,12 +15,14 @@ local UnitChannelInfo = UnitChannelInfo
 local UnitChannelDuration = UnitChannelDuration
 local UnitHealth = UnitHealth
 local UnitHealthMax = UnitHealthMax
+local UnitIsDeadOrGhost = UnitIsDeadOrGhost
 local UnitName = UnitName
 local UnitPower = UnitPower
 local UnitPowerMax = UnitPowerMax
 local UnitLevel = UnitLevel
 
 local PERFORMANCE_UPDATE_INTERVAL = 0.5
+local ALERT_UPDATE_INTERVAL = 0.2
 local HEALTH_BAR_COLOR = {r = 0.18, g = 0.62, b = 0.32}
 local PERFORMANCE_TEXT_COLOR = {1.00, 0.82, 0.18}
 local BACKDROP_COLOR = {0.08, 0.09, 0.11, 0.92}
@@ -31,6 +34,8 @@ local AURA_BORDER_COLOR = {r = 0.18, g = 0.20, b = 0.24}
 local AURA_PLACEHOLDER_COLOR = {r = 0.10, g = 0.11, b = 0.14, a = 0.55}
 local TIMER_DIRECTION = Enum and Enum.StatusBarTimerDirection
 local BAR_INTERPOLATION = Enum and Enum.StatusBarInterpolation
+local DISPEL_FLASH_INTERVAL = 0.40
+local DISPEL_ALERT_FALLBACK_COLOR = {r = 1.00, g = 0.18, b = 0.18}
 
 local function getStatusText()
 	local className = UnitClass("player")
@@ -252,8 +257,30 @@ function Player:UpdatePortraitBorder()
 	end
 end
 
+function Player:GetDispellableAlertColor()
+	local aura = XFrames:GetFirstDispellableAura("player")
+	if not aura then
+		return nil
+	end
+
+	return XFrames:GetDispellableAuraColor("player", aura) or DISPEL_ALERT_FALLBACK_COLOR
+end
+
 function Player:UpdateFrameBorder()
 	local color = XFrames:GetUnitAccentColor("player")
+	local dispelColor = not (UnitIsDeadOrGhost and UnitIsDeadOrGhost("player")) and self:GetDispellableAlertColor() or nil
+
+	if dispelColor then
+		local phase = GetTime and GetTime() or 0
+		local flashOn = math.floor(phase / DISPEL_FLASH_INTERVAL) % 2 == 0
+		if flashOn then
+			self.frame.accentFrame:SetBackdropBorderColor(dispelColor.r, dispelColor.g, dispelColor.b, 1)
+		else
+			self.frame.accentFrame:SetBackdropBorderColor(color.r, color.g, color.b, 1)
+		end
+		return
+	end
+
 	self.frame.accentFrame:SetBackdropBorderColor(color.r, color.g, color.b, 1)
 end
 
@@ -497,6 +524,14 @@ function Player:RefreshPerformanceMode()
 	end
 
 	self.frame:SetScript("OnUpdate", function(_, elapsed)
+		self.alertElapsed = (self.alertElapsed or 0) + elapsed
+		if self.alertElapsed >= ALERT_UPDATE_INTERVAL then
+			self.alertElapsed = 0
+			if self:GetDispellableAlertColor() then
+				self:UpdateFrameBorder()
+			end
+		end
+
 		self.performanceElapsed = (self.performanceElapsed or 0) + elapsed
 		if self.performanceElapsed < PERFORMANCE_UPDATE_INTERVAL then
 			return
@@ -546,6 +581,7 @@ function Player:OnEvent(event, unit)
 	end
 
 	if event == "UNIT_AURA" then
+		self:UpdateFrameBorder()
 		self:UpdateBuffs()
 		self:UpdateDebuffs()
 		return

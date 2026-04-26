@@ -66,6 +66,45 @@ function XFrames:GetAuraDispelColor(dispelName)
 	return DebuffTypeColor[dispelName]
 end
 
+function XFrames:GetFirstDispellableAura(unit)
+	if not unit or not (C_UnitAuras and C_UnitAuras.GetAuraDataByIndex) then
+		return nil
+	end
+
+	local ok, aura = pcall(C_UnitAuras.GetAuraDataByIndex, unit, 1, "HARMFUL|RAID")
+	if not ok then
+		return nil
+	end
+
+	return aura
+end
+
+function XFrames:HasDispellableAura(unit)
+	return self:GetFirstDispellableAura(unit) ~= nil
+end
+
+function XFrames:GetDispellableAuraColor(unit, aura)
+	if not unit or not aura then
+		return nil
+	end
+
+	if C_UnitAuras and C_UnitAuras.GetAuraDispelTypeColor and aura.auraInstanceID then
+		local ok, color = pcall(C_UnitAuras.GetAuraDispelTypeColor, unit, aura.auraInstanceID)
+		if ok and color then
+			if color.GetRGBA then
+				local r, g, b, a = color:GetRGBA()
+				return {r = r, g = g, b = b, a = a}
+			end
+
+			if color.r and color.g and color.b then
+				return color
+			end
+		end
+	end
+
+	return self:GetAuraDispelColor(aura.dispelName)
+end
+
 function XFrames:CreateAuraButton(parent, index, size, options)
 	options = options or {}
 
@@ -174,7 +213,7 @@ function XFrames:ApplyAuraButton(button, unit, aura, options)
 	button:SetBackdropBorderColor(borderColor.r, borderColor.g, borderColor.b, borderColor.a or 0.9)
 
 	if options.showDispelHighlight then
-		local dispelColor = self:GetAuraDispelColor(aura.dispelName)
+		local dispelColor = self:GetDispellableAuraColor(unit, aura)
 		if dispelColor then
 			button.dispelGlow:SetBackdropBorderColor(dispelColor.r, dispelColor.g, dispelColor.b, 0.95)
 			button.dispelGlow:Show()
