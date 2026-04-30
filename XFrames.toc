@@ -3,6 +3,7 @@
 ## Notes: Retail-only unit frames rebuilt from scratch
 ## Author: Jim Adkins, OpenAI Codex
 ## Version: 0.1.0
+## X-Build: 2026.04.30.1
 ## SavedVariables: XFramesDB
 
 Core/XFrames.lua

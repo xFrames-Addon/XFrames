@@ -30,6 +30,7 @@ local UnitPhaseReason = UnitPhaseReason
 local UnitPowerType = UnitPowerType
 local UnitSelectionColor = UnitSelectionColor
 local SetPortraitTexture = SetPortraitTexture
+local GetAddOnMetadata = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
 
 local DEFAULT_POWER_BAR_COLOR = {r = 0.24, g = 0.28, b = 0.36}
 local DEFAULT_UNIT_ACCENT_COLOR = {r = 0.24, g = 0.27, b = 0.31}
@@ -103,6 +104,41 @@ function XFrames:RegisterModule(name, module)
 
 	module.name = name
 	self.modules[name] = module
+end
+
+function XFrames:GetAddonVersion()
+	if not GetAddOnMetadata then
+		return ""
+	end
+
+	return GetAddOnMetadata(self.name, "Version") or ""
+end
+
+function XFrames:GetAddonBuild()
+	if not GetAddOnMetadata then
+		return ""
+	end
+
+	return GetAddOnMetadata(self.name, "X-Build") or ""
+end
+
+function XFrames:GetAddonVersionLabel()
+	local version = self:GetAddonVersion()
+	local build = self:GetAddonBuild()
+
+	if version ~= "" and build ~= "" then
+		return string.format("v%s build %s", version, build)
+	end
+
+	if version ~= "" then
+		return string.format("v%s", version)
+	end
+
+	if build ~= "" then
+		return string.format("build %s", build)
+	end
+
+	return ""
 end
 
 function XFrames:SetTestingPreview(kind, data)
