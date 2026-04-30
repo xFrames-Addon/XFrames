@@ -447,6 +447,28 @@ function XFrames:RegisterSlashCommands()
 			return
 		end
 
+		if command == "attributes" or command == "attribute" or command == "stats" then
+			arg = trim(arg)
+			if arg == "" or arg == "toggle" then
+				self:ToggleAttributesFrameEnabled()
+				return
+			end
+			if arg == "on" or arg == "show" or arg == "enable" then
+				self:SetAttributesFrameEnabled(true)
+				return
+			end
+			if arg == "off" or arg == "hide" or arg == "disable" then
+				self:SetAttributesFrameEnabled(false)
+				return
+			end
+			if arg == "status" then
+				printf("|cff33ff99XFrames|r attribute frame: %s", self:IsAttributesFrameEnabled() and "on" or "off")
+				return
+			end
+			printf("|cff33ff99XFrames|r attribute commands: on, off, toggle, status")
+			return
+		end
+
 		if command == "reload" then
 			ReloadUI()
 			return
@@ -519,7 +541,7 @@ function XFrames:RegisterSlashCommands()
 			return
 		end
 
-		printf("|cff33ff99XFrames|r commands: status, settings, lock, unlock, toggle, blizzard, blizzmove, castbars, portraits, buffs, party, reload, debug")
+		printf("|cff33ff99XFrames|r commands: status, settings, lock, unlock, toggle, blizzard, blizzmove, castbars, portraits, buffs, attributes, party, reload, debug")
 	end
 end
 
@@ -609,6 +631,24 @@ end
 
 function XFrames:ToggleBuffBarsEnabled()
 	self:SetBuffBarsEnabled(not self:AreBuffBarsEnabled())
+end
+
+function XFrames:IsAttributesFrameEnabled()
+	return self.db and self.db.profile and self.db.profile.attributes and self.db.profile.attributes.enabled ~= false
+end
+
+function XFrames:SetAttributesFrameEnabled(enabled)
+	if not (self.db and self.db.profile and self.db.profile.attributes) then
+		return
+	end
+
+	self.db.profile.attributes.enabled = not not enabled
+	self:Info(string.format("Attribute frame %s", self.db.profile.attributes.enabled and "enabled" or "disabled"))
+	self:RefreshAllFrameLocks()
+end
+
+function XFrames:ToggleAttributesFrameEnabled()
+	self:SetAttributesFrameEnabled(not self:IsAttributesFrameEnabled())
 end
 
 function XFrames:SetPortraitStyle(style)
@@ -1025,6 +1065,7 @@ function XFrames.events:PLAYER_REGEN_ENABLED()
 	if XFrames.pendingBlizzardCastBarVisibility then
 		XFrames.pendingBlizzardCastBarVisibility = nil
 		XFrames:ApplyBlizzardCastBarVisibility()
+		XFrames:SyncBlizzMoveFrames()
 	end
 
 	if XFrames.pendingBlizzMovePosition then

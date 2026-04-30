@@ -178,6 +178,18 @@ local defaults = {
 				y = -70,
 			},
 		},
+		attributes = {
+			enabled = true,
+			width = 186,
+			height = 116,
+			scale = 1,
+			position = {
+				point = "CENTER",
+				relativePoint = "CENTER",
+				x = -130,
+				y = -290,
+			},
+		},
 		raid = {
 			enabled = false,
 			width = 96,
