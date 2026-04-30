@@ -166,13 +166,6 @@ function Attributes:OnEvent(event, unit)
 		return
 	end
 
-	if event == "PLAYER_SPECIALIZATION_CHANGED" or event == "ACTIVE_TALENT_GROUP_CHANGED" then
-		if GetSpecialization and GetSpecialization() then
-			self:Refresh()
-			return
-		end
-	end
-
 	self:Refresh()
 end
 
@@ -190,7 +183,6 @@ function Attributes:RegisterEvents()
 	frame:RegisterEvent("MASTERY_UPDATE")
 	frame:RegisterEvent("PLAYER_EQUIPMENT_CHANGED")
 	frame:RegisterEvent("UNIT_STATS")
-	frame:RegisterUnitEvent("UNIT_AURA", "player")
 	frame:SetScript("OnEvent", function(_, event, ...)
 		XFrames:SafeCall("module Attributes:OnEvent", self.OnEvent, self, event, ...)
 	end)
