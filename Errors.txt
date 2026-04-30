@@ -60,3 +60,29 @@ args = <table> {
  2 = "INSPECT_READY"
  3 = "Player-3684-0DFF0F79"
 }
+Message: module Attributes:OnEvent failed: .../XFrames/Modules/Player/XFrames_PlayerAttributes.lua:68: attempt to compare local 'bestValue' (a secret number value, while execution tainted by 'XFrames')
+Time: Thu Apr 30 10:53:43 2026
+Count: 14
+Stack:
+[Interface/AddOns/XFrames/Core/XFrames.lua]:255: in function 'SafeCall'
+[Interface/AddOns/XFrames/Modules/Player/XFrames_PlayerAttributes.lua]:195: in function <.../XFrames/Modules/Player/XFrames_PlayerAttributes.lua:194>
+
+Locals:
+self=Frame <XFrames.lua:3>{
+ blizzMoveFrames=<table>
+ db=<table>
+ events=<table>
+ name="XFrames"
+ settingsFrame=Frame <XFrames_UI.lua:49>
+ blizzMoveInitialized=true
+ minimapButton=XFramesMinimapButton <XFrames_UI.lua:637>
+ nativeMeterCache=<table>
+ initialized=true
+ modules=<table>
+}
+scope="module Attributes:OnEvent"
+args=<table>{
+ 1=<table>
+ 2="PLAYER_DAMAGE_DONE_MODS"
+ 3="player"
+}
