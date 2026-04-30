@@ -13,6 +13,5 @@ Core/XFrames_UI.lua
 Core/XFrames_BlizzMove.lua
 Modules/Player/XFrames_Player.lua
 Modules/Player/XFrames_PlayerPet.lua
-Modules/Player/XFrames_PlayerAttributes.lua
 Modules/Party/XFrames_Party.lua
 Modules/Target/XFrames_Target.lua
