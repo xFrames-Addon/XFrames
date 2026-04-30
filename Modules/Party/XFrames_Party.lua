@@ -50,9 +50,7 @@ local DIM_BORDER_COLOR = {0.18, 0.18, 0.20, 0.95}
 local DIM_TEXT_COLOR = {0.55, 0.57, 0.60}
 local DIM_BAR_COLOR = {r = 0.16, g = 0.16, b = 0.18}
 local RANGE_UPDATE_INTERVAL = 0.25
-local LOW_HEALTH_THRESHOLD = 0.30
-local LOW_HEALTH_FLASH_INTERVAL = 0.40
-local LOW_HEALTH_ALERT_COLOR = {1.00, 0.18, 0.18}
+local ALERT_FLASH_INTERVAL = 0.40
 local DISPEL_ALERT_FALLBACK_COLOR = {r = 1.00, g = 0.18, b = 0.18}
 local DEMO_MEMBERS = {
 	{className = "Warrior", classToken = "WARRIOR", role = "TANK", name = "Tankard", level = 80, health = 920000, healthMax = 1000000, power = 35, powerMax = 100, powerColor = {r = 0.78, g = 0.24, b = 0.18}},
@@ -381,20 +379,9 @@ function Party:UpdateFrameBorder(frame)
 	local dispelColor = self:GetDispellableAlertColor(frame)
 	if dispelColor then
 		local phase = GetTime and GetTime() or 0
-		local flashOn = math.floor(phase / LOW_HEALTH_FLASH_INTERVAL) % 2 == 0
+		local flashOn = math.floor(phase / ALERT_FLASH_INTERVAL) % 2 == 0
 		if flashOn then
 			frame.accentFrame:SetBackdropBorderColor(dispelColor.r, dispelColor.g, dispelColor.b, 1)
-		else
-			frame.accentFrame:SetBackdropBorderColor(color.r, color.g, color.b, 1)
-		end
-		return
-	end
-
-	if self:IsLowHealth(frame) then
-		local phase = GetTime and GetTime() or 0
-		local flashOn = math.floor(phase / LOW_HEALTH_FLASH_INTERVAL) % 2 == 0
-		if flashOn then
-			frame.accentFrame:SetBackdropBorderColor(LOW_HEALTH_ALERT_COLOR[1], LOW_HEALTH_ALERT_COLOR[2], LOW_HEALTH_ALERT_COLOR[3], 1)
 		else
 			frame.accentFrame:SetBackdropBorderColor(color.r, color.g, color.b, 1)
 		end
@@ -444,29 +431,6 @@ function Party:IsOutOfRange(frame)
 	end
 
 	return UnitExists(frame.unit) and XFrames:IsUnitOutOfRange(frame.unit) or false
-end
-
-function Party:IsLowHealth(frame)
-	if not frame or self:IsDead(frame) or self:IsOutOfRange(frame) then
-		return false
-	end
-
-	local demoData = self:GetDemoData(frame)
-	if demoData then
-		local maxHealth = demoData.healthMax or 0
-		return maxHealth > 0 and ((demoData.health or 0) / maxHealth) <= LOW_HEALTH_THRESHOLD
-	end
-
-	if not UnitExists(frame.unit) then
-		return false
-	end
-
-	local maxHealth = UnitHealthMax(frame.unit)
-	if not maxHealth or maxHealth <= 0 then
-		return false
-	end
-
-	return (UnitHealth(frame.unit) / maxHealth) <= LOW_HEALTH_THRESHOLD
 end
 
 function Party:GetDispellableAlertColor(frame)
