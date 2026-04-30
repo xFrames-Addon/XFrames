@@ -601,39 +601,26 @@ end
 function XFrames:GetPerformanceTextForUnit(unit)
 	local meterType, label = self:GetPerformanceMetricForUnit(unit)
 	if not meterType or not label then
-		debugMeterTrace(self, unit, "metric-missing", UnitExists and UnitExists(unit) and (UnitGroupRolesAssigned and UnitGroupRolesAssigned(unit) or "no-role") or "unit-missing")
 		return nil
 	end
 
 	local source = self:GetNativeMeterSourceForUnit(unit, meterType)
 	if source then
-		local rate = getSourceRate(source)
-		if rate == nil then
-			debugMeterTrace(self, unit, "native-rate-missing", label)
-		else
-			local formattedText = self:FormatNativeMeterText(rate, label)
-			if formattedText then
-				debugMeterTrace(self, unit, "native-ok", formattedText)
-				return formattedText
-			end
-			debugMeterTrace(self, unit, "native-format-missing", label)
+		local formattedText = self:FormatNativeMeterText(getSourceRate(source), label)
+		if formattedText then
+			return formattedText
 		end
-	else
-		debugMeterTrace(self, unit, "native-source-missing", label)
 	end
 
 	if type(self.GetMeterTextForUnit) == "function" then
 		local ok, fallbackText = pcall(self.GetMeterTextForUnit, self, unit, meterType, label)
 		if ok and fallbackText then
-			debugMeterTrace(self, unit, "fallback-ok", fallbackText)
 			return fallbackText
 		end
-		debugMeterTrace(self, unit, ok and "fallback-empty" or "fallback-error", label)
 	end
 
 	return nil
 end
-
 function XFrames.events:DAMAGE_METER_CURRENT_SESSION_UPDATED()
 	XFrames:InvalidateMeterCache()
 end

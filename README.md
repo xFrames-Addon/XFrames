@@ -49,3 +49,12 @@ Built-in debugging is part of the core design.
 See:
 
 - `DEBUGGING.md`
+
+## Continuity Docs
+
+For moving between machines or resuming work in a new Codex session, start with:
+
+- `CONTINUITY.md`
+- `MIDNIGHT_RULES.md`
+- `LEARNED_BEHAVIORS.md`
+- `DEBUGGING_WORKFLOW.md`
